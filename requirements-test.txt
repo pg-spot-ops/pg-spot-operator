@@ -9,4 +9,7 @@ mypy
 gitchangelog
 mkdocs
 typed-argument-parser
+boto3
+requests
+types-requests
 

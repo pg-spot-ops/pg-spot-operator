@@ -4,3 +4,5 @@
 # or run `make init` to create this file automatically based on the template.
 # You can also run `make switch-to-poetry` to use the poetry package manager.
 typed-argument-parser
+boto3
+requests
