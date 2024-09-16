@@ -1,0 +1,22 @@
+# User provided manifest as provided
+---
+api_version: v1
+kind: pg_spot_operator_instance
+cloud: aws
+region: eu-north-1
+instance_name: hello-aws
+#destroy_target_time_utc: now
+pg:
+  admin_user: admin
+  admin_user_password: seitselehma
+  major_ver: 16
+backup:  # Only supported backup tool is pgBackRest currently
+  type: none  # none | pgbackrest
+  s3_bucket: pg-spot-ops-dev
+  pgbackrest:
+    global_settings:
+      repo1-s3-region: eu-north-1
+      repo1-s3-endpoint: s3.eu-north-1.amazonaws.com
+access:
+  extra_ssh_pub_key_paths:
+    - ~/.ssh/google_compute_engine.pub

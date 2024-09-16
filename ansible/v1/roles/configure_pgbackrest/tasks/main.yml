@@ -1,0 +1,148 @@
+---
+# Installs pgBackRest + generates the config file + installs nightly Crons
+# Assuming Postgres repos already installed
+
+- name: Backup section
+  debug:
+    var: backup | d({})
+
+- block:
+  - block:
+    # Ensure bucket exists
+    - name: Check if bucket there
+      become: false
+      amazon.aws.s3_bucket_info:
+        name_filter: "pgspotops-{{ instance_name }}"
+      register: bucket_info
+      delegate_to: 127.0.0.1
+
+    - name: Try create the bucket if not existing
+      become: false
+      amazon.aws.s3_bucket:
+        name: "pgspotops-{{ instance_name }}"
+        state: present
+      delegate_to: 127.0.0.1
+      when: not bucket_info['buckets']
+
+    when: not backup.s3_bucket | d('')
+
+  - name: Install pgBackRest from PGDG repos
+    ansible.builtin.apt:
+      name: pgbackrest
+      state: present
+    register: result
+    until: result is success
+    delay: 30
+    retries: 3
+
+  - name: Ensure jq
+    ansible.builtin.apt:
+      name: jq
+      state: present
+    register: result
+    until: result is success
+    delay: 30
+    retries: 3
+
+  - name: Try read backup.cipher_password from backup.cipher_password_file if former not set
+    set_fact:
+      backup: "{{ backup | combine({'cipher_password': lookup('ansible.builtin.file', backup.cipher_password_file)}) }}"
+    when: backup.encryption|d(False) and not backup.cipher_password|d('') and backup.cipher_password_file|d('')
+
+  - name: Try read backup.s3_key from backup.s3_key_file if former not set
+    set_fact:
+      backup: "{{ backup | combine({'s3_key': lookup('ansible.builtin.file', backup.s3_key_file)}) }}"
+    when: not backup.s3_key|d('') and backup.s3_key_file|d('')
+
+  - name: Try read backup.s3_key_secret from backup.s3_key_secret_file if former not set
+    set_fact:
+      backup: "{{ backup | combine({'s3_key_secret': lookup('ansible.builtin.file', backup.s3_key_secret_file)}) }}"
+    when: not backup.s3_key_secret|d('') and backup.s3_key_secret_file|d('')
+
+  - name: Check we have a cipher-pass when backup_encryption set
+    ansible.builtin.assert:
+      that: backup.cipher_password|d('') | length > 0
+      quiet: true
+    when: backup.encryption | d(False) is truthy
+
+  - name: Set archive_command
+    ansible.builtin.lineinfile:
+      path: /etc/postgresql/{{ pg.major_ver }}/{{ postgres_cluster_name }}/postgresql.conf
+      line: "{{ item }}"
+    loop: "{{ postgres_archiving_settings }}"
+
+  - name: Reload Postgres config
+    service: name=postgresql state=reloaded
+    changed_when: false
+
+  - name: Check if Postgres restart required
+    become: true
+    become_user: postgres
+    ansible.builtin.command:
+      "psql -p {{  pg.port | d(5432) }} -XAtc \"select bool_or(pending_restart) from pg_settings;\""
+    register: pending_restart
+    changed_when: pending_restart.stdout == 't'
+
+  - name: Restart postgres if necessary
+    service: name=postgresql state=restarted
+    when: pending_restart.stdout == 't'
+
+  - name: Ensure config dir exist, default configuration file nowadays is /etc/pgbackrest/pgbackrest.conf
+    ansible.builtin.file:
+      path: /etc/pgbackrest
+      state: directory
+      owner: postgres
+      group: postgres
+
+  - name: Generate pgbackrest conf file at /etc/pgbackrest/pgbackrest.conf
+    ansible.builtin.template:
+      src: pgbackrest.conf.j2
+      dest: /etc/pgbackrest/pgbackrest.conf
+      owner: postgres
+      group: postgres
+      mode: 0640
+
+  - name: Split cron schedules for backup.schedule_full
+    set_fact:
+      full_backup_splits: "{{ backup.schedule_full | d('0 0 5 31 2') | split }}"
+      diff_backup_splits: "{{ backup.schedule_diff | d('0 0 5 31 2') | split }}"
+
+  - name: Install full Cron
+    cron:
+      name: pgbackrest_s3_full
+      user: "postgres"
+      minute: "{{full_backup_splits[0]}}"
+      hour: "{{full_backup_splits[1]}}"
+      day: "{{full_backup_splits[2]}}"
+      month: "{{full_backup_splits[3]}}"
+      weekday: "{{full_backup_splits[4]}}"
+      job: "pgbackrest --stanza={{ stanza_name }} --repo=1 --type=full backup"
+      disabled: "{{ (backup.schedule_full is defined) | ternary('false', 'true') }}"
+
+  - name: Install diff Cron
+    cron:
+      name: pgbackrest_s3_diff
+      user: "postgres"
+      minute: "{{diff_backup_splits[0]}}"
+      hour: "{{diff_backup_splits[1]}}"
+      day: "{{diff_backup_splits[2]}}"
+      month: "{{diff_backup_splits[3]}}"
+      weekday: "{{diff_backup_splits[4]}}"
+      job: "pgbackrest --stanza={{ stanza_name }} --repo=1 --type=diff backup"
+      disabled: "{{ (backup.schedule_diff is defined) | ternary('false', 'true') }}"
+
+
+  - name: Check if bootstrap (stanza + at least one full backup) done
+    ansible.builtin.shell: "pgbackrest --stanza={{ stanza_name }} --output=json info | jq -r '.[0].status.message'"
+    register: stanza_info_result
+    changed_when: false
+
+  - name: stanza_info_result
+    debug:
+      var: stanza_info_result
+
+  - name: Create the stanza + take first backup when none exists
+    ansible.builtin.include_tasks: initial_bootstrap.yml
+    when: stanza_info_result.stdout == "missing stanza path"
+
+  when: backups.backup_type | d('none') == 'pgbackrest'

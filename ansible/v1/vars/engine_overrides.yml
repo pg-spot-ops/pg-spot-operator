@@ -1,0 +1,6 @@
+# The engine will place override variables here
+---
+# Internal ID assigned to instance_name. Required
+uuid: 70f76380-5107-45fb-a893-012a4e522088
+vm:
+  instance_type: t4g.small

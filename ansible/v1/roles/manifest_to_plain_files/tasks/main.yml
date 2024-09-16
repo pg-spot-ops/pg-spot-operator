@@ -1,0 +1,84 @@
+---
+- set_fact:
+    top_level_sections: "{{ top_level_sections | d([]) + [item] }}"
+  loop:
+    - { section_name: pg, section_data: "{{ pg | d({}) }}"}
+    - { section_name: access, section_data: "{{ access | d({}) }}"}
+    - { section_name: pg_config, section_data: "{{ pg_config | d({}) }}"}
+    - { section_name: vm, section_data: "{{ vm | d({}) }}"}
+    - { section_name: backup, section_data: "{{ backup | d({}) }}"}
+    - { section_name: aws, section_data: "{{ aws | d({}) }}"}
+    - { section_name: gcp, section_data: "{{ gcp | d({}) }}"}
+    - { section_name: azure, section_data: "{{ azure | d({}) }}"}
+
+- file:
+    path: input/{{ item.section_name }}
+    state: directory
+  loop: "{{ top_level_sections }}"
+
+- name: Dump top sections
+  include_tasks: dump_section.yml
+  vars:
+    section_name: "{{ item.section_name }}"
+    section_data: "{{ item.section_data }}"
+  loop: "{{ top_level_sections }}"
+
+- name: Subdict - backup.pgbackrest.global_settings
+  include_tasks: dump_dict.yml
+  vars:
+    dump_root: "{{ lookup('ansible.builtin.pipe', 'pwd') }}/input/backup/pgbackrest"
+    dict_to_dump_key: global_settings
+    dict_to_dump: "{{ backup.pgbackrest.global_settings }}"
+  when: backup.pgbackrest.global_settings | d({})
+
+- name: Subdict - backup.pgbackrest.archive_push_overrides
+  include_tasks: dump_dict.yml
+  vars:
+    dump_root: "{{ lookup('ansible.builtin.pipe', 'pwd') }}/input/backup/pgbackrest"
+    dict_to_dump_key: archive_push_overrides
+    dict_to_dump: "{{ backup.pgbackrest.archive_push_overrides }}"
+  when: backup.pgbackrest.archive_push_overrides | d({})
+
+- name: Subdict - backup.pgbackrest.backup_overrides
+  include_tasks: dump_dict.yml
+  vars:
+    dump_root: "{{ lookup('ansible.builtin.pipe', 'pwd') }}/input/backup/pgbackrest"
+    dict_to_dump_key: backup_overrides
+    dict_to_dump: "{{ backup.pgbackrest.backup_overrides }}"
+  when: backup.pgbackrest.backup_overrides | d({})
+
+
+- name: Subdict - backup.pgbackrest.restore_overrides
+  include_tasks: dump_dict.yml
+  vars:
+    dump_root: "{{ lookup('ansible.builtin.pipe', 'pwd') }}/input/backup/pgbackrest"
+    dict_to_dump_key: restore_overrides
+    dict_to_dump: "{{ backup.pgbackrest.restore_overrides }}"
+  when: backup.pgbackrest.restore_overrides | d({})
+
+- name: Top level dicts - user_tags
+  include_tasks: dump_dict.yml
+  vars:
+    dump_root: "{{ lookup('ansible.builtin.pipe', 'pwd') }}/input"
+    dict_to_dump_key: user_tags
+    dict_to_dump: "{{ user_tags }}"
+  when: user_tags | d({})
+
+- name: Top level plain keys
+  copy:
+    content: "{{ item.value }}"
+    dest: input/{{ item.key }}
+  when: item.value
+  loop:
+    - { key: uuid, value: "{{ uuid }}" }
+    - { key: api_version, value: "{{ api_version | d(None) }}" }
+    - { key: kind, value: "{{ kind | d(None) }}" }
+    - { key: cloud, value: "{{ cloud | d(None) }}" }
+    - { key: region, value: "{{ region | d(None) }}" }
+    - { key: availability_zone, value: "{{ availability_zone | d(None) }}" }
+    - { key: instance_name, value: "{{ instance_name | d(None) }}" }
+    - { key: destroy_target_time_utc, value: "{{ destroy_target_time_utc | d(None) }}" }
+    - { key: destroy_backups, value: "{{ destroy_backups | d(None) }}" }
+    - { key: description, value: "{{ description | d(None) }}" }
+    - { key: assign_public_ip_address, value: "{{ assign_public_ip_address | d(None) }}" }
+    - { key: is_paused, value: "{{ is_paused | d(None) }}" }

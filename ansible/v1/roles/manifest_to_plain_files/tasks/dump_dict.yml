@@ -1,0 +1,44 @@
+---
+- name: Dump dict to files
+  debug:
+    msg: "dump_root [{{ dump_root }}] {{ dict_to_dump }}"
+
+- name: Ensure dir {{ dump_root }}/{{ dict_to_dump_key }}
+  file:
+    path: "{{ dump_root }}/{{ dict_to_dump_key }}"
+    state: directory
+
+- copy:
+    content: "{{ sub_dict.value }}"
+    dest: "{{ dump_root }}/{{ dict_to_dump_key }}/{{ sub_dict.key }}"
+  when:
+    - sub_dict.value | type_debug not in ["list", "dict"]
+    - sub_dict.value
+  loop: "{{ dict_to_dump | d({}) | dict2items }}"
+  loop_control:
+    loop_var: sub_dict
+
+#- name: Dump lists if any
+#  debug:
+#    msg: "{{ dump_root }} - {{ dict_to_dump_key }} - {{ sub_dict.key }} - {{ sub_dict.value }}"
+#  when:
+#    - sub_dict.value | type_debug == "list"
+#  loop: "{{ dict_to_dump | d({}) | dict2items }}"
+#  loop_control:
+#    loop_var: sub_dict
+
+- set_fact:
+    sub_dump_root: "{{ dump_root }}/{{ dict_to_dump_key }}"
+
+- name: Dump lists if any
+  include_tasks: dump_list.yml
+  vars:
+    dump_root: "{{ sub_dump_root }}"
+    list_key: "{{ sub_dict.key }}"
+    list_values: "{{ sub_dict.value }}"
+  when:
+    - sub_dict.value | type_debug == "list"
+    - sub_dict.value
+  loop: "{{ dict_to_dump | d({}) | dict2items }}"
+  loop_control:
+    loop_var: sub_dict

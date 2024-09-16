@@ -1,0 +1,78 @@
+---
+# Stops Postgres and does a delta restore on the latest backup
+# Assumes Postgres and pgBackRest already installed / configured
+
+- name: Check last completed backup label if any
+  command: "cat {{ last_restored_backrest_label_file }}"
+  register: check_last_restored_label
+  ignore_errors: true
+
+- name: Check last completed backup label if any
+  set_fact:
+    last_restored_label: "{{ check_last_restored_label.stdout }}"
+  when: check_last_restored_label.stdout
+
+- name: Get backup label being restored
+  ansible.builtin.shell: "pgbackrest --stanza={{ stanza_name }} --output=json info | jq -r '.[0].backup[-1].label'"
+  register: restore_label
+  changed_when: false
+
+- block:
+  - name: Stop postgres
+    ansible.builtin.service: name=postgresql state=stopped
+
+  - name: Sleep 1
+    ansible.builtin.wait_for:
+      timeout: 1
+
+  #- name: Remove old pgdata
+  #  become: true
+  #  become_user: postgres
+  #  ansible.builtin.file:
+  #    state: absent
+  #    path: "/var/lib/postgresql/{{ pg.major_ver }}/{{ postgres_cluster_name}}"
+
+  - name: Set restore settings
+    become: true
+    become_user: postgres
+    ansible.builtin.lineinfile:
+      path: /etc/postgresql/{{ pg.major_ver }}/{{ postgres_cluster_name }}/postgresql.conf
+      line: "{{ item }}"
+    loop: "{{ postgres_restore_settings }}"
+
+  - name: Ensure don't mess with the archive after
+    become: true
+    become_user: postgres
+    ansible.builtin.lineinfile:
+      path: /etc/postgresql/{{ pg.major_ver }}/{{ postgres_cluster_name }}/postgresql.conf
+      line: "archive_command = '/bin/true' # For testing only"
+    when: disable_archiving is truthy
+
+  - name: Pull the backup
+    become: true
+    become_user: postgres
+    ansible.builtin.command: pgbackrest --stanza="{{stanza_name}}" --delta restore
+    async: 43200  # 12h timeout - if it takes longer than that then manual start is needed
+                  # In practice this should be enough time to restore a 10TB DB on a 4 vCPU instance
+    poll: 15
+    register: restore_result
+    until: restore_result is success
+    delay: 5
+    retries: 2
+
+  - name: Start postgres
+    ansible.builtin.service: name=postgresql state=started
+    when: restore_result.rc == 0
+    register: start_result
+    until: start_result is success
+    delay: 5
+    retries: 3
+
+  - name: Write a "completion" file to not restore the same snapshot again
+    become: true
+    become_user: postgres
+    copy:
+      content: "{{ restore_label.stdout }}"
+      dest: "{{ last_restored_backrest_label_file }}"
+    when: restore_result.rc == 0
+  when: last_restored_label|d('') != restore_label.stdout

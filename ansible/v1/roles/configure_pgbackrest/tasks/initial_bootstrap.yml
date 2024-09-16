@@ -1,0 +1,46 @@
+---
+- name: Verify postgres is running
+  become: true
+  become_user: postgres
+  ansible.builtin.command:
+    "psql -p {{  pg.port | d(5432) }} -c 'select 1;'"
+
+- name: Reload Postgres config
+  service: name=postgresql state=reloaded
+  changed_when: false
+
+- name: Check if Postgres restart required
+  become: true
+  become_user: postgres
+  ansible.builtin.command:
+    "psql -p {{  pg.port | d(5432) }} -XAtc \"select bool_or(pending_restart) from pg_settings;\""
+  register: pending_restart
+  changed_when: pending_restart.stdout == 't'
+
+- name: Restart postgres if necessary
+  service: name=postgresql state=restarted
+  when: pending_restart.stdout == 't'
+
+- name: Create stanza when not exists yet
+  become: true
+  become_user: postgres
+  ansible.builtin.command: "pgbackrest --stanza={{ stanza_name }} stanza-create"
+  changed_when: false
+
+- name: Check that stanza WAL achiving works
+  become: true
+  become_user: postgres
+  ansible.builtin.command: "pgbackrest --stanza={{ stanza_name }} check"
+  changed_when: false
+
+- name: Read existing full backups info
+  ansible.builtin.shell: "pgbackrest --stanza={{ stanza_name }} --type=full --output=json info | jq '.[0].backup[0].error'"
+  register: backup_info
+  changed_when: false
+
+- name: Take the first full backup if none yet, should be quick on an empty DB
+  become: true
+  become_user: postgres
+  ansible.builtin.command: "pgbackrest --stanza={{ stanza_name }} --type=full backup"
+  changed_when: false
+  when: backup_info.stdout != "false"

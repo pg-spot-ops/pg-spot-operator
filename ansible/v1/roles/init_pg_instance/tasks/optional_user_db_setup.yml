@@ -1,0 +1,36 @@
+---
+- block:
+  - name: Assert admin pass
+    ansible.builtin.assert:
+      that: pg.admin_user_password|d('') is truthy
+      quiet: true
+    when: pg.admin_user is truthy
+
+  - name: Ensure postgres started
+    ansible.builtin.service: name=postgresql state=started
+
+  - name: Create the "app" user if requested
+    become: yes
+    become_user: postgres
+    community.postgresql.postgresql_user:
+      state: present
+      name: "{{ pg.admin_user }}"
+      password: "{{ pg.admin_user_password }}"
+      role_attr_flags: "{{ pg.admin_is_real_superuser is truthy | ternary('SUPERUSER', 'CREATEDB,CREATEROLE') }}"
+      login_host: /var/run/postgresql
+      login_port: "{{ pg.port | d(5432) }}"
+    when: pg.admin_user | d('') | length > 0
+
+  when: pg.admin_user | d('')
+
+- name: Create the "app" DB if requested
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_db:
+    state: present
+    name: "{{ pg.ensure_app_dbname }}"
+    owner: "{{ pg.admin_user | default('') or 'postgres' }}"
+    template: template1
+    login_host: /var/run/postgresql
+    login_port: "{{ pg.port | d(5432) }}"
+  when: pg.ensure_app_dbname | d('') | length > 0

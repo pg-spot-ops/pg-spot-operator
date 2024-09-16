@@ -1,0 +1,63 @@
+---
+- name: Update cache
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: Install common utils
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: no
+  loop: "{{ packages_general }}"
+  register: result
+  until: result is success
+  delay: 30
+  retries: 3
+
+# Install as per official docs https://www.postgresql.org/download/linux/ubuntu/
+- name: Install postgresql-common
+  ansible.builtin.apt:
+    name: postgresql-common
+    state: present
+    update_cache: yes
+
+- name: PGDB repo setup
+  ansible.builtin.command: /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+  changed_when: false  # To silence Molecule idempotence
+
+- name: Disable cluster auto-create
+  ansible.builtin.lineinfile:
+    path: /etc/postgresql-common/createcluster.conf
+    insertafter: '^#create_main_cluster ='
+    line: 'create_main_cluster = false'
+
+- name: Install postgres
+  ansible.builtin.apt:
+    name: postgresql-{{ pg.major_ver }}
+    state: present
+  register: result
+  until: result is success
+  delay: 30
+  retries: 3
+
+- name: Install extension packages
+  ansible.builtin.apt:
+    name: "postgresql-{{ pg.major_ver }}-{{ item }}"
+    state: present
+  loop: "{{ extensions }}"
+  register: result
+  until: result is success
+  delay: 30
+  retries: 3
+  when: ( extensions is defined ) and ( extensions | type_debug == "list" )
+
+- name: Extra postgres / random packages not following the common naming schema
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ extra_os_packages }}"
+  register: result
+  until: result is success
+  delay: 30
+  retries: 3
+  when: ( extra_os_packages is defined ) and ( extra_os_packages | type_debug == "list" )

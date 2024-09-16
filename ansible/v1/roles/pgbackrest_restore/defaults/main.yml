@@ -1,0 +1,16 @@
+---
+# Manifest
+instance_name: spot
+pg:
+  major_ver: 16
+  port: 5432
+
+# Private
+postgres_cluster_name: "{{ instance_name | replace('-', '_') }}"  # Dashes don't work with pg_createcluster
+stanza_name: "{{ instance_name }}"
+postgres_restore_settings:
+  - "recovery_target_action = promote"
+  - "recovery_target_timeline = latest"
+  - "hot_standby = off"
+last_restored_backrest_label_file: /var/lib/postgresql/last_restored_backrest_label
+disable_archiving: false  # To leave the archive as-is after restore testing

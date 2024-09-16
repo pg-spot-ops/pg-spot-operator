@@ -1,0 +1,25 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+
+  vars:
+    instance_name: test123
+
+  pre_tasks:
+    - name: Install gpg-agent
+      ansible.builtin.apt:
+        name: gpg-agent
+        state: present
+        update_cache: yes
+
+
+  roles:
+    - role: init_pg_instance
+
+  post_tasks:
+    - name: Verify postgres is running.
+      command: "psql -c 'select 1'"
+      become: true
+      become_user: postgres
+      changed_when: false

@@ -1,0 +1,18 @@
+---
+pg.major_ver: 16
+packages_general:
+#  - python3-pip
+#  - curl
+#  - wget
+#  - jq
+  - vim
+  - acl
+  - python3-psycopg2  # Needed by the Ansible community.postgresql module
+  - gnupg
+  - locales-all
+  - tmux
+  - cron
+extensions:
+  - cron
+#  - pgaudit
+extra_os_packages: []  # If something doesn't follow the postgresql-{{ pg.major_ver }}-$extension naming

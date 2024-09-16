@@ -1,0 +1,6 @@
+---
+collections:
+- community.postgresql
+- community.general
+- community.aws
+- debops.debops

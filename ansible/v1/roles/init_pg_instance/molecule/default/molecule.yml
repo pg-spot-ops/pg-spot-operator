@@ -1,0 +1,14 @@
+---
+driver:
+  name: docker
+platforms:
+  - name: instance
+    image: geerlingguy/docker-ubuntu2204-ansible
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    cgroupns_mode: host
+    command: /usr/sbin/init
+    privileged: true
+    pre_build_image: true
+provisioner:
+  name: ansible

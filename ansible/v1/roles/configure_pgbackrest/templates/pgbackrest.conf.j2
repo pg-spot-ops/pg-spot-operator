@@ -1,0 +1,72 @@
+[{{ stanza_name }}]
+pg1-path=/var/lib/postgresql/{{ pg.major_ver }}/{{ postgres_cluster_name }}
+pg1-port={{  pg.port | d(5432) }}
+
+[global]
+{% if 'process-max' not in backup.pgbackrest.global_settings|default({}) %}
+# Use up to half of vCPUs for backups / archiving
+# Current vCPUs (ansible_processor_vcpus): {{ ansible_processor_vcpus }}
+process-max={{ (ansible_processor_vcpus // 2) if (ansible_processor_vcpus // 2) > 0 else 1 }}
+{% endif %}
+{% if 'start-fast' not in backup.pgbackrest.global_settings|default({}) %}
+start-fast=y
+{% endif %}
+{% if 'archive-async' not in backup.pgbackrest.global_settings|default({}) %}
+# With async archiving / restore the default spool dir /var/spool/pgbackrest will consume some MBs of space
+# but there are huge perf benefits for busy multi-core DBs
+archive-async=y
+{% endif %}
+{% if 'compress-type' not in backup.pgbackrest.global_settings|default({}) %}
+compress-type=zst
+{% endif %}
+{% if 'compress-level' not in backup.pgbackrest.global_settings|default({}) %}
+compress-level=3
+{% endif %}
+{% if 'repo1-type' not in backup.pgbackrest.global_settings|default({}) %}
+repo1-type=s3
+{% endif %}
+{% if backup.encryption %}
+repo1-cipher-pass={{ backup.cipher_password }}
+repo1-cipher-type=aes-256-cbc
+{% endif %}
+{% if 'repo1-path' not in backup.pgbackrest.global_settings|default({}) %}
+repo1-path=/{{stanza_name}}
+{% endif %}
+{% if 'repo1-block' not in backup.pgbackrest.global_settings|default({}) %}
+repo1-block=y
+{% endif %}
+{% if 'repo1-bundle' not in backup.pgbackrest.global_settings|default({}) %}
+repo1-bundle=y
+{% endif %}
+{% if 'repo1-s3-bucket' not in backup.pgbackrest.global_settings|default({}) %}
+repo1-s3-bucket={{ backup.s3_bucket | d('pgspotops-' + instance_name, true) }}
+{% endif %}
+{% if 'repo1-s3-key' not in backup.pgbackrest.global_settings|default({}) %}
+repo1-s3-key={{ backup.s3_key }}
+{% endif %}
+{% if 'repo1-s3-key-secret' not in backup.pgbackrest.global_settings|default({}) %}
+repo1-s3-key-secret={{ backup.s3_key_secret }}
+{% endif %}
+{% if 'repo1-retention-full-type' not in backup.pgbackrest.global_settings|default({}) %}
+repo1-retention-full-type=time
+{% endif %}
+{% if 'repo1-retention-full' not in backup.pgbackrest.global_settings|default({}) %}
+repo1-retention-full={{ backup.retention_days }}
+{% endif %}
+{% if 'repo1-retention-history' not in backup.pgbackrest.global_settings|default({}) %}
+repo1-retention-history=0
+{% endif %}
+
+# User provided global settings
+{% for key, val in (backup.pgbackrest.global_settings|default({})).items() %}
+{{key}}={{val}}
+{% endfor %}
+
+[global:archive-push]
+{% if 'compress-level' not in backup.pgbackrest.archive_push_overrides|default({}) %}
+# To reduce likelihood of WAL build-up on large DML operations
+compress-level=1
+{% endif %}
+{% for key, val in (backup.pgbackrest.archive_push_overrides|default({})).items() %}
+{{key}}={{val}}
+{% endfor %}

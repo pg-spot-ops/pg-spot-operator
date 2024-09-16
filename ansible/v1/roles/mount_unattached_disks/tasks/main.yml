@@ -1,0 +1,102 @@
+---
+#- name: Detect unmounted disks
+#  debug:
+#    var: item
+#  with_dict: "{{ ansible_devices}}"
+#  when:
+#    - not item.value.partitions
+#    - not 'loop' in item.key
+#    - not 'dm-' in item.key
+
+- name: Var to hold unmounted disks
+  set_fact:
+    devices_to_mount: []
+
+- name: Register unmounted disks if any
+  set_fact:
+    devices_to_mount: '{{ devices_to_mount + [ item.key|replace("", "/dev/", 1) ] }}'
+  with_dict: "{{ ansible_devices }}"
+  when:
+    - not item.value.partitions
+    - not item.key.startswith('sr')
+    - not item.key.startswith('dm')
+    - not item.key.startswith('loop')
+    - (vm.storage_type|d('network') == 'network' and 'EBS Controller' in item.value.host)
+        or (vm.storage_type|d('network') == 'local' and not 'EBS Controller' in item.value.host)
+
+- name: Disks to mount
+  debug:
+    var: devices_to_mount
+
+- name: Ensure Postgres home exists
+  ansible.builtin.file:
+    path: "{{ mount_point }}"
+    state: directory
+
+- block:
+  # Special case for Azure local resource disks instances with no network disks
+  - name: Find Azure resource disks if any
+    ansible.builtin.find:
+      paths: /dev/disk/cloud
+      patterns: azure_resource
+      file_type: any
+    register: azure_resource_disk
+
+#  - debug:
+#      var: azure_resource_disk.files is truthy
+
+  - name: Symlink from /mnt to PGHOME for Azure resource disks, don't mess with Azure mount config, has some magic
+    ansible.builtin.file:
+      src: /mnt
+      dest: "{{ mount_point }}"
+      state: link
+      force: yes
+    when: azure_resource_disk.files is truthy
+
+  when: not devices_to_mount
+
+- name: Update cache
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: Install disk utils
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: no
+  register: result
+  until: result is success
+  delay: 30
+  retries: 3
+  loop:
+    - fdisk
+    - lvm2
+
+- block:
+
+  - name: Ensure LVM PV and VG
+    community.general.lvg:
+       vg: pgdata-vg
+       pvs: "{{ devices_to_mount|join(',') }}"
+
+  - name: Logical LV with 100%
+    community.general.lvol:
+     vg: pgdata-vg
+     lv: pgdata-lv
+     size: "100%FREE"
+     shrink: false
+
+  - name: Format the volume
+    community.general.filesystem:
+     fstype: "{{ fs_type }}"
+     dev: /dev/pgdata-vg/pgdata-lv
+
+  - name: Mount the volume permanently
+    ansible.posix.mount:
+      path: "{{ mount_point }}"
+      src: /dev/pgdata-vg/pgdata-lv
+      opts: "{{ fs_mount_opts }}"
+      fstype: "{{ fs_type }}"
+      state: mounted
+
+  when: devices_to_mount | length > 0

@@ -1,0 +1,4 @@
+---
+vm:
+  unattended_security_upgrades: true
+  kernel_tuning: true

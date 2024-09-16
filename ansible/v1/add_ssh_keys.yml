@@ -1,0 +1,30 @@
+---
+- hosts: all
+  gather_facts: false
+
+  pre_tasks:
+    - name: Include instance manifest
+      ansible.builtin.include_vars:
+        file: "vars/instance_manifest.yml"
+        name: instance_manifest
+    - name: Include engine override vars if any
+      ansible.builtin.include_vars:
+        file: "vars/engine_overrides.yml"
+        name: engine_overrides
+
+#  tasks:
+#    - debug:
+#        msg: "Section {{ item.section_name }}: {{ item.section_data }}"
+#      loop:
+#        - { section_name: pg, section_data: "{{ pg | d({}) }}"}
+#        - { section_name: access, section_data: "{{ access | d({}) }}"}
+#        - { section_name: pg_config, section_data: "{{ pg_config | d({}) }}"}
+#        - { section_name: vm, section_data: "{{ vm | d({}) }}"}
+#        - { section_name: backup, section_data: "{{ backup | d({}) }}"}
+#        - { section_name: aws, section_data: "{{ aws | d({}) }}"}
+#        - { section_name: gcp, section_data: "{{ gcp | d({}) }}"}
+#        - { section_name: azure, section_data: "{{ azure | d({}) }}"}
+
+  roles:
+    - role: merge_vars
+    - role: add_ssh_keys

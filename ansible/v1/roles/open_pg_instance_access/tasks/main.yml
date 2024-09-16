@@ -1,0 +1,12 @@
+---
+- name: Set up pg_hba.conf
+  ansible.builtin.lineinfile:
+    path: "/etc/postgresql/{{ pg.major_ver }}/{{ postgres_cluster_name }}/pg_hba.conf"
+    line: "{{ item }}"
+  loop: "{{ access.pg_hba | d([]) }}"
+  register: changed
+
+- name: Reload Postgres config
+  ansible.builtin.service: "name=postgresql@{{ pg.major_ver }}-{{ postgres_cluster_name }} state=reloaded"
+  when: changed
+  changed_when: false

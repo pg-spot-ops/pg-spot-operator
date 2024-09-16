@@ -1,0 +1,39 @@
+---
+instance_name: "{{ instance_name | d('spot') }}"
+def_pg:
+  major_ver: 16
+  port: 5432
+  ensure_app_dbname: appdb # Leave empty when default "postgres" DB is enough or DBs created later from app / manually
+  admin_user: dev  # Leave empty to not create one
+  admin_user_password: dev
+  admin_is_real_superuser: false
+  initdb_opts:
+    - --data-checksums
+    - --locale-provider=icu
+    - --icu-locale=en
+    - --locale=en_US.utf8
+def_access:
+  pg_hba:
+    - "host all postgres 0.0.0.0/0 reject"
+    - "hostssl all all 0.0.0.0/0 scram-sha-256"
+def_pg_config:
+  extra_config_lines: []
+
+# Not exposed in the manifest currently
+postgres_cluster_name: "{{ instance_name | replace('-', '_') }}"  # Dashes don't work with pg_createcluster
+postgres_base_settings:
+  - "archive_mode = on"
+  - "archive_command = '/bin/true'"
+  - "listen_addresses = '*'"
+  - "logging_collector = on"
+  - "log_filename = 'postgresql-%a.log'"
+  - "log_truncate_on_rotation = on"
+add_dummy_data: true  # For dev testing restores
+default_initdb_opts:
+  - --data-checksums
+  - --locale-provider=icu
+  - --icu-locale=en
+  - --locale=en_US.utf8
+default_pg_hba:
+  - "host all postgres 0.0.0.0/0 reject"
+  - "hostssl all all 0.0.0.0/0 scram-sha-256"

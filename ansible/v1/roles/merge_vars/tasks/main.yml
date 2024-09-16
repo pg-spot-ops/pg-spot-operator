@@ -1,0 +1,65 @@
+- name: Top level instance manifest keys
+  set_fact:
+    uuid: "{{ instance_manifest.uuid | d('') }}"
+    api_version: "{{ instance_manifest.api_version }}"
+    kind: "{{ instance_manifest.kind }}"
+    instance_name: "{{ instance_manifest.instance_name }}"
+    description: "{{ instance_manifest.description | d('') }}"
+    cloud: "{{ instance_manifest.cloud }}"
+    region: "{{ instance_manifest.region }}"
+    allow_new_resources: "{{ instance_manifest.allow_new_resources | d(True) }}"
+    is_paused: "{{ instance_manifest.is_paused | d(False) }}"
+    user_tags: "{{ instance_manifest.user_tags | d({}) }}"
+
+- name: Instance manifest sections
+  set_fact:
+    pg: "{{ pg | d({}) | ansible.builtin.combine(instance_manifest.pg | d({}), recursive=true) }}"
+    backup: "{{ backup | d({}) | ansible.builtin.combine(instance_manifest.backup | d({}), recursive=true) }}"
+    access: "{{ access | d({}) | ansible.builtin.combine(instance_manifest.access | d({}), recursive=true) }}"
+    pg_config: "{{ pg_config | d({}) | ansible.builtin.combine(instance_manifest.pg_config | d({}), recursive=true) }}"
+    vm: "{{ vm | d({}) | ansible.builtin.combine(instance_manifest.vm | d({}), recursive=true) }}"
+    aws: "{{ aws | d({}) | ansible.builtin.combine(instance_manifest.aws | d({}), recursive=true) }}"
+    gcp: "{{ gcp | d({}) | ansible.builtin.combine(instance_manifest.gcp | d({}), recursive=true) }}"
+    azure: "{{ azure | d({}) | ansible.builtin.combine(instance_manifest.azure | d({}), recursive=true) }}"
+
+- name: Top level override manifest keys
+  set_fact:
+    uuid: "{{ engine_overrides.uuid }}"
+    allow_new_resources: "{{ engine_overrides.allow_new_resources | d(allow_new_resources) }}"
+    is_paused: "{{ engine_overrides.is_paused | d(is_paused) }}"
+    user_tags: "{{ user_tags | ansible.builtin.combine(engine_overrides.user_tags | d({})) }}"
+
+- name: Override manifest sections
+  set_fact:
+    pg: "{{ pg | ansible.builtin.combine(engine_overrides.pg | d({}), recursive=true) }}"
+    backup: "{{ backup | ansible.builtin.combine(engine_overrides.backup | d({}), recursive=true) }}"
+    access: "{{ access | ansible.builtin.combine(engine_overrides.access | d({}), recursive=true) }}"
+    pg_config: "{{ pg_config | ansible.builtin.combine(engine_overrides.pg_config | d({}), recursive=true) }}"
+    vm: "{{ vm | ansible.builtin.combine(engine_overrides.vm | d({}), recursive=true) }}"
+    aws: "{{ aws | ansible.builtin.combine(engine_overrides.aws | d({}), recursive=true) }}"
+    gcp: "{{ gcp | ansible.builtin.combine(engine_overrides.gcp | d({}), recursive=true) }}"
+    azure: "{{ azure | ansible.builtin.combine(engine_overrides.azure | d({}), recursive=true) }}"
+
+- name: Show merged vars - top lvl
+  debug:
+    msg: "{{ item.name }}: {{ item.value }}"
+  when: item.value
+  loop:
+    - { name: uuid, value: "{{ uuid | d('') }}"}
+    - { name: instance_name, value: "{{ instance_name | d('') }}"}
+    - { name: cloud, value: "{{ cloud | d('') }}"}
+    - { name: region, value: "{{ region | d('') }}"}
+    - { name: destroy_target_time_utc, value: "{{ destroy_target_time_utc | d('') }}"}
+
+- name: Show merged vars
+  debug:
+    msg: "Section {{ item.section_name }}: {{ item.section_data }}"
+  loop:
+    - { section_name: pg, section_data: "{{ pg | d({}) }}"}
+    - { section_name: access, section_data: "{{ access | d({}) }}"}
+    - { section_name: pg_config, section_data: "{{ pg_config | d({}) }}"}
+    - { section_name: vm, section_data: "{{ vm | d({}) }}"}
+    - { section_name: backup, section_data: "{{ backup | d({}) }}"}
+    - { section_name: aws, section_data: "{{ aws | d({}) }}"}
+    - { section_name: gcp, section_data: "{{ gcp | d({}) }}"}
+    - { section_name: azure, section_data: "{{ azure | d({}) }}"}

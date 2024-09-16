@@ -1,0 +1,28 @@
+---
+- hosts: all
+  become: yes
+  become_method: sudo
+  any_errors_fatal: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Include instance manifest
+      ansible.builtin.include_vars:
+        file: "vars/instance_manifest.yml"
+        name: instance_manifest
+    - name: Include engine override vars if any
+      ansible.builtin.include_vars:
+        file: "vars/engine_overrides.yml"
+        name: engine_overrides
+
+  roles:
+    - role: merge_vars
+    - role: mount_unattached_disks
+    - role: install_os_pg_prereqs
+    - role: os_setup
+    - role: init_pg_instance
+    - role: configure_pgbackrest
+      when: backup.type | d('none') == "pgbackrest"
+    - role: pgbackrest_restore
+      when: backup.type | d('none') == "pgbackrest"
+    - role: open_pg_instance_access

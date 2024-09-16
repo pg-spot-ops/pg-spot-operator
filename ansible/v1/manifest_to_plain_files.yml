@@ -1,0 +1,19 @@
+---
+- hosts: all
+  gather_facts: false
+  become: false
+  connection: local
+
+  pre_tasks:
+    - name: Include instance manifest
+      ansible.builtin.include_vars:
+        file: "vars/instance_manifest.yml"
+        name: instance_manifest
+    - name: Include engine override vars if any
+      ansible.builtin.include_vars:
+        file: "vars/engine_overrides.yml"
+        name: engine_overrides
+
+  roles:
+    - role: merge_vars
+    - role: manifest_to_plain_files
