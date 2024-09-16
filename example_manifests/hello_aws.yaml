@@ -1,0 +1,26 @@
+---
+api_version: v1
+kind: pg_spot_operator_instance
+cloud: aws
+region: eu-north-1
+availability_zone:
+instance_name: hello-aws
+#destroy_target_time_utc: now
+#destroy_backups: true
+vm:
+  assign_public_ip_address: true
+  floating_public_ip: true
+  cpu_min: 2
+  cpu_max: 8
+  ram_min: 4
+  allow_burstable: false
+#  instance_type: c6gd.large  # Cpu etc will be ignored then. Not recommended though as can get more costly
+  storage_min: 100  # Can't set both storage_min and volume_size_min
+  storage_type: local  # local | network. PS Using network volumes pins you to a specific AZ
+  storage_speed_class: ssd  # hdd | ssd | nvme. Not guaranteed to be honoured
+  volume_type:  # e.g. gp3
+  volume_iops:  # For provisioned / paid IOPS, EBS gp3 default is 3000
+  volume_throughput:  # MBs. For provisioned / paid throughput for gp3. gp3 default is 125
+  detailed_monitoring: false  # incurs extra costs
+user_tags:
+  app: backend
