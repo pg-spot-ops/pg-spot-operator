@@ -1,6 +1,3 @@
-import pytest
-from pydantic import ValidationError
-
 from pg_spot_operator import manifests
 
 
