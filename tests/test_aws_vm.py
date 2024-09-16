@@ -49,11 +49,14 @@ def test_get_ami_debian_arm():
 
 
 @unittest.SkipTest
-def test_ensure_spot_vm():
+def test_ensure_spot_vm_local_storage():
     m: manifests.InstanceManifest = manifests.load_manifest_from_string(
         TEST_MANIFEST
     )
     assert m
     assert m.cloud == "aws"
-    _, created = ensure_spot_vm(m)
+    vm, created = ensure_spot_vm(m)
+    print("vm", vm)
     assert created
+    assert vm.ip_public
+    assert not vm.volume_id
