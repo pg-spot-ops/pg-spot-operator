@@ -49,27 +49,27 @@ class SectionPg(BaseModel):
 
 
 class SectionVm(BaseModel):
-    architecture: str | None = None
-    allow_burstable: bool | None = None
-    assign_public_ip_address: bool | None = None
-    floating_public_ip: bool | None = None
-    detailed_monitoring: bool | None = None
-    cpu_min: int | None = None
-    cpu_max: int | None = None
-    ram_min: int | None = None
-    storage_min: int | None = None
-    storage_type: str | None = None  # local | network
-    storage_speed_class: str | None = None
-    instance_type: str | None = None  # Min CPU etc. will be ignored then
-    volume_type: str | None = None
-    volume_iops: int | None = None
-    volume_throughput: int | None = None
-    unattended_security_upgrades: bool | None = (
-        None  # Might result in nightly restarts
+    architecture: str = ""
+    allow_burstable: bool = True
+    assign_public_ip: bool = True
+    floating_public_ip: bool = (
+        True  # Has only relevance if assign_public_ip set
     )
-    kernel_tuning: bool | None = (
-        None  # Basic memory over-commit tuning only for now
+    detailed_monitoring: bool = False  # Has extra cost
+    cpu_min: int = 0
+    cpu_max: int = 0
+    ram_min: int = 0
+    storage_min: int = 0
+    storage_type: str = "network"
+    storage_speed_class: str = "ssd"
+    instance_type: str = ""  # Min CPU etc. will be ignored then
+    volume_type: str = "gp3"
+    volume_iops: int = 0
+    volume_throughput: int = 0
+    unattended_security_upgrades: bool = (
+        True  # Might result in nightly restarts
     )
+    kernel_tuning: bool = True  # Basic memory over-commit tuning only for now
 
 
 class SubSectionPgbackrest(BaseModel):
