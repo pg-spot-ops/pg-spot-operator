@@ -1,7 +1,22 @@
 import os.path
 import datetime
+import unittest
 
+from pg_spot_operator import manifests
 from pg_spot_operator.cloud_impl import aws_vm
+from pg_spot_operator.cloud_impl.aws_vm import ensure_spot_vm
+
+TEST_MANIFEST = """
+---
+api_version: v1
+kind: pg_spot_operator_instance
+cloud: aws
+region: eu-north-1
+instance_name: test123
+vm:
+  cpu_min: 2
+  storage_type: local
+"""
 
 
 def test_get_ami_debian_amd():
@@ -19,7 +34,7 @@ def test_get_ami_debian_amd():
     assert details["Architecture"] == "x86_64"
 
 
-def test_get_ami_debian_amd():
+def test_get_ami_debian_arm():
     """Assumes local AWS CLI setup"""
     if not os.path.exists(os.path.expanduser("~/.aws/config")):
         return
@@ -31,3 +46,14 @@ def test_get_ami_debian_amd():
     cd = datetime.datetime.fromisoformat(details["CreationDate"].rstrip("Z"))
     assert cd > datetime.datetime.now() - datetime.timedelta(days=365)
     assert details["Architecture"] == "arm64"
+
+
+@unittest.SkipTest
+def test_ensure_spot_vm():
+    m: manifests.InstanceManifest = manifests.load_manifest_from_string(
+        TEST_MANIFEST
+    )
+    assert m
+    assert m.cloud == "aws"
+    _, created = ensure_spot_vm(m)
+    assert created
