@@ -32,7 +32,7 @@ fmt:              ## Format code using black & isort.
 
 .PHONY: lint
 lint:             ## Run pep8, black, mypy linters.
-	$(ENV_PREFIX)flake8 pg_spot_operator/
+	$(ENV_PREFIX)flake8 --ignore=E501,W503 pg_spot_operator/
 	$(ENV_PREFIX)black -l 79 --check pg_spot_operator/
 	$(ENV_PREFIX)black -l 79 --check tests/
 	$(ENV_PREFIX)mypy --ignore-missing-imports pg_spot_operator/
