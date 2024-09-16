@@ -12,4 +12,10 @@ typed-argument-parser
 boto3
 requests
 types-requests
+deepdiff
+python-dateutil
+types-python-dateutil
+pydantic
+pyyaml
+types-PyYAML
 
