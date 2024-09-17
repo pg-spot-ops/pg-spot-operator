@@ -555,12 +555,24 @@ def do_main_loop(
             # Step 0 - load manifest from CLI args / full adhoc ENV manifest or manifest file
             m: InstanceManifest = None  # type: ignore
             if cli_env_manifest and cli_env_manifest.instance_name:
-                logger.info(
-                    "Processing manifest for instance %s set via ENV ...",
-                    cli_env_manifest.instance_name,
+                (
+                    logger.info(
+                        "Processing manifest for instance %s set via ENV ...",
+                        cli_env_manifest.instance_name,
+                    )
+                    if first_loop
+                    else None
                 )
                 m = cli_env_manifest
             else:
+                (
+                    logger.info(
+                        "Processing manifest from path %s...",
+                        cli_user_manifest_path,
+                    )
+                    if first_loop
+                    else None
+                )
                 if os.path.exists(os.path.expanduser(cli_user_manifest_path)):
                     with open(os.path.expanduser(cli_user_manifest_path)) as f:
                         m = manifests.try_load_manifest_from_string(f.read())  # type: ignore

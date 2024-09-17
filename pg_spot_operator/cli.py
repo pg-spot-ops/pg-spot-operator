@@ -141,6 +141,19 @@ def get_manifest_from_args_as_string(args: ArgumentParser) -> str:
     raise Exception("Could not find / compile a manifest string")
 
 
+def validate_cli_args(args: ArgumentParser):
+    if args.instance_name:
+        if not args.region:
+            logger.error("--region input expected for single args")
+            exit(1)
+        if not args.instance_name:
+            logger.error("--instance-name input expected for single args")
+            exit(1)
+        if not args.storage_min:
+            logger.error("--storage-min input expected for single args")
+            exit(1)
+
+
 def try_load_manifest(manifest_str: str) -> InstanceManifest | None:
     try:
         mf = manifests.load_manifest_from_string(manifest_str)
@@ -193,12 +206,7 @@ def main():  # pragma: no cover
 
     logger.debug("Args: %s", args.as_dict()) if args.verbose else None
 
-    cmdb.init_engine_and_check_connection(args.sqlite_path)
-
-    applied_count = schema_manager.do_ddl_rollout_if_needed(
-        (os.path.expanduser(args.sqlite_path))
-    )
-    logger.info("%s schema migration applied", applied_count)
+    validate_cli_args(args)
 
     env_manifest: InstanceManifest | None = None
     if args.manifest or args.instance_name:
@@ -210,6 +218,13 @@ def main():  # pragma: no cover
             exit(1)
         if args.teardown:  # Delete instance and any attached resources
             env_manifest.expires_on = "now"
+
+    cmdb.init_engine_and_check_connection(args.sqlite_path)
+
+    applied_count = schema_manager.do_ddl_rollout_if_needed(
+        (os.path.expanduser(args.sqlite_path))
+    )
+    logger.info("%s schema migration applied", applied_count)
 
     logger.info("Entering main loop")
 
