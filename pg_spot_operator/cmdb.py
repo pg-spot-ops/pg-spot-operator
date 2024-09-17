@@ -21,6 +21,7 @@ from sqlalchemy.engine.base import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from pg_spot_operator import manifests, util
+from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo, CloudVM
 from pg_spot_operator.cmdb_impl import sqlite
 from pg_spot_operator.manifests import InstanceManifest
 
@@ -465,10 +466,10 @@ def finalize_instance_setup(m: InstanceManifest):
         logger.info("*** Public connect string *** - '%s'", connstr_public)
 
 
-def finalize_ensure_vm(m: InstanceManifest, o_p: dict):
-    if "provider_id" not in o_p:
+def finalize_ensure_vm(m: InstanceManifest, i_info: ResolvedInstanceTypeInfo, vm: CloudVM):
+    if not (vm.provider_id and vm.instance_type and vm.login_user and vm.ip_private):
         raise Exception(
-            "provider_id expected as ensure_vm output"
+            "CloudVM required fields missing - provider_id, instance_type, login_user, ip_private"
         )  # TODO generalize for other non-nulls also
 
     with Session(engine) as session:
@@ -476,40 +477,40 @@ def finalize_ensure_vm(m: InstanceManifest, o_p: dict):
             select(Vm)
             .where(Vm.cloud == m.cloud)
             .where(Vm.instance_uuid == m.uuid)
-            .where(Vm.provider_id == o_p["provider_id"])
+            .where(Vm.provider_id == vm.provider_id)
             .limit(1)
         )
-        vm = session.scalars(stmt).first()
-        if vm:
-            logger.debug("Updating VM %s ... ", o_p["provider_id"])
+        cmdb_vm = session.scalars(stmt).first()
+        if cmdb_vm:
+            logger.debug("Updating VM %s ... ", vm.provider_id)
         else:
             logger.debug(
                 "Registering a new VM %s for %s",
-                o_p["provider_id"],
+                vm.provider_id,
                 m.instance_name,
             )
-            vm = Vm()
-            vm.provider_id = o_p["provider_id"]
+            cmdb_vm = Vm()
+            cmdb_vm.provider_id = vm.provider_id
 
         # Mandatory
-        vm.instance_uuid = m.uuid
-        vm.cloud = m.cloud
-        vm.region = m.region
-        vm.ip_private = o_p["ip_private"]
-        vm.sku = o_p["sku"]
-        vm.login_user = o_p["login_user"]
+        cmdb_vm.instance_uuid = m.uuid
+        cmdb_vm.cloud = m.cloud
+        cmdb_vm.region = m.region
+        cmdb_vm.ip_private = vm.ip_private
+        cmdb_vm.sku = vm.instance_type
+        cmdb_vm.login_user = vm.login_user
         # Optional
-        vm.provider_name = o_p.get("provider_name")
-        vm.availability_zone = o_p.get("availability_zone")
-        vm.cpu = o_p.get("cpu")
-        vm.ram = o_p.get("ram")
-        vm.instance_storage = o_p.get("instance_storage")
-        vm.ip_public = o_p.get("ip_public")
-        vm.user_tags = m.user_tags
-        vm.volume_id = o_p.get("volume_id")  # If using block storage
-        vm.price_spot = o_p.get("price_spot")
-        vm.price_ondemand = o_p.get("price_ondemand")
-        vm.last_modified_on = datetime.utcnow()
+        cmdb_vm.provider_name = vm.provider_name
+        cmdb_vm.availability_zone = vm.availability_zone
+        cmdb_vm.cpu = i_info.cpu
+        cmdb_vm.ram = i_info.ram
+        cmdb_vm.instance_storage = i_info.instance_storage
+        cmdb_vm.ip_public = vm.ip_public
+        cmdb_vm.user_tags = m.user_tags
+        cmdb_vm.volume_id = vm.volume_id  # If using block storage
+        cmdb_vm.price_spot = i_info.monthly_spot_price
+        cmdb_vm.price_ondemand = i_info.monthly_ondemand_price
+        cmdb_vm.last_modified_on = datetime.utcnow()
 
         session.add(vm)
 
@@ -517,11 +518,11 @@ def finalize_ensure_vm(m: InstanceManifest, o_p: dict):
         logger.info(
             "OK - %s VM with name %s (ip_public = %s , ip_private = %s) registered for instance %s. Provider ID: %s",
             m.cloud,
-            o_p.get("provider_name", "noname"),
+            vm.provider_name or 'NONAME',
             vm.ip_public,
             vm.ip_private,
             m.instance_name,
-            o_p["provider_id"],
+            vm.provider_id
         )
 
 

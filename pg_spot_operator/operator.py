@@ -12,6 +12,7 @@ import yaml
 
 from pg_spot_operator import cloud_api, cmdb, constants, manifests
 from pg_spot_operator.cloud_impl.aws_vm import ensure_spot_vm
+from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
 from pg_spot_operator.constants import CLOUD_VAGRANT_LIBVIRT
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.util import (
@@ -43,7 +44,7 @@ class UserExit(Exception):
 
 def preprocess_ensure_vm_action(
     m: InstanceManifest, m_over: InstanceManifest
-) -> InstanceManifest:
+) -> tuple[InstanceManifest, ResolvedInstanceTypeInfo]:
     """Fill in the "blanks" that are not set by the user but still needed, like the SKU"""
     if not m.vm.instance_type and m.cloud != CLOUD_VAGRANT_LIBVIRT:
         cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
@@ -110,7 +111,7 @@ def preprocess_ensure_vm_action(
         if m.vm.storage_speed_class is None:
             m_over.vm.storage_speed_class = "ssd"
 
-    return m_over
+    return m_over, sku
 
 
 class NoAliasDumper(yaml.SafeDumper):
@@ -254,9 +255,7 @@ def collect_output_params_from_handler_temp_dir(
 def register_results_in_cmdb(
     action: str, output_params_merged: dict, m: InstanceManifest
 ) -> None:
-    if action == constants.ACTION_ENSURE_VM:
-        cmdb.finalize_ensure_vm(m, output_params_merged)
-    elif action == constants.ACTION_DESTROY_INSTANCE:
+    if action == constants.ACTION_DESTROY_INSTANCE:
         cmdb.finalize_destroy_instance(m)
         cmdb.mark_manifest_snapshot_as_succeeded(m)
     elif action == constants.ACTION_INSTANCE_SETUP:
@@ -428,7 +427,7 @@ def apply_postgres_config_tuning_to_override_manifest(
             mo.pg_config.extra_config_lines = merged_config_lines
 
 
-def preprocess_action(action: str, m: InstanceManifest) -> InstanceManifest:
+def preprocess_action(action: str, m: InstanceManifest) -> tuple[InstanceManifest, ResolvedInstanceTypeInfo]:
     """Inject missing but required fields into an "override" manifest"""
     m_over: InstanceManifest = InstanceManifest(
         api_version=m.api_version,
@@ -440,7 +439,7 @@ def preprocess_action(action: str, m: InstanceManifest) -> InstanceManifest:
     )
     if action == constants.ACTION_ENSURE_VM:
         return preprocess_ensure_vm_action(m, m_over)
-    return m_over
+    return m_over, ResolvedInstanceTypeInfo(instance_type=m.vm.instance_type, arch=m.vm.cpu_architecture, cloud=m.cloud, region=m.region)
 
 
 def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
@@ -521,6 +520,8 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
     cloud_vm, created = ensure_spot_vm(m, dry_run=dry_run)
     if dry_run:
         return False, "dummy"
+
+    cmdb.finalize_ensure_vm(m,  cloud_vm)
 
     return True, cloud_vm.provider_id
 
