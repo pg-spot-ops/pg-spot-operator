@@ -56,7 +56,10 @@ class ArgumentParser(Tap):
     teardown: bool = to_bool(
         os.getenv("PGSO_TEARDOWN", "false")
     )  # Delete VM and other created resources
-    instance_name: str = os.getenv("PGSO_INSTANCE_NAME", "")  # Mandatory
+    instance_name: str = os.getenv(
+        "PGSO_INSTANCE_NAME", ""
+    )  # If set other below params become relevant
+    pg_major_version: str = os.getenv("PGSO_PG_MAJOR_VERSION", "16")
     instance_type: str = os.getenv("PGSO_INSTANCE_TYPE", "")
     cloud: str = os.getenv("PGSO_CLOUD", "aws")
     region: str = os.getenv("PGSO_REGION", "")
@@ -86,6 +89,10 @@ def validate_and_parse_args() -> ArgumentParser:
 
 
 def compile_manifest_from_cmdline_params(args: ArgumentParser) -> str:
+    if not (args.instance_name and args.region):
+        raise Exception(
+            "Can't compile a manifest - required params not set: --instance-name, --region"
+        )
     mfs = f"""
 ---
 api_version: v1
@@ -94,16 +101,14 @@ cloud: {args.cloud}
 region: {args.region}
 instance_name: {args.instance_name}
 """
-    if not (args.instance_name and args.region):
-        raise Exception(
-            "Could not compile a manifest - required params not set: --instance-name, --region"
-        )
     if args.zone:
         mfs += f"availability_zone: {args.zone}\n"
     if args.expires_on:
         mfs += f"expires_on: {args.expires_on}\n"
     if args.public_ip:
         mfs += f"assign_public_ip: {str(args.public_ip).lower()}\n"
+    if args.pg_major_version:
+        mfs += f"pg:\n  major_version: {args.pg_major_version}\n"
     mfs += "vm:\n"
     if args.cpu_architecture:
         mfs += f"  cpu_architecture: {args.cpu_architecture}\n"
