@@ -117,7 +117,7 @@ class InstanceManifest(BaseModel):
     # *Internal engine usage fields*
     original_manifest: str = ""
     manifest_snapshot_id: int = 0
-    uuid: str = ""
+    uuid: str | None = None
     session_invars: dict = field(default_factory=dict)
     session_outvars: dict = field(default_factory=dict)
     # *Top-level instance fields*

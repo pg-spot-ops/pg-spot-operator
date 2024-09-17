@@ -40,7 +40,9 @@ class Instance(Base):
     cloud: Mapped[str] = mapped_column(String, nullable=False)
     region: Mapped[Optional[str]] = mapped_column(String, nullable=False)
     instance_name: Mapped[str] = mapped_column(String, nullable=False)
-    postgres_version: Mapped[Optional[int]] = mapped_column(Integer, nullable=False)
+    postgres_version: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=False
+    )
     cpu_min: Mapped[Optional[int]]
     ram_min: Mapped[Optional[int]]
     storage_min: Mapped[Optional[int]]
@@ -225,7 +227,7 @@ def register_instance_or_get_uuid(
         i.cloud = m.cloud
         i.region = m.region
         i.instance_name = m.instance_name
-        i.postgres_version = m.pg.major_ver
+        i.postgres_version = m.postgres_version
         i.cpu_min = m.vm.cpu_min
         i.storage_min = m.vm.storage_min
         i.storage_type = m.vm.storage_type

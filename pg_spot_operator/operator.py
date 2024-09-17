@@ -5,18 +5,13 @@ import shutil
 import signal
 import stat
 import subprocess
-import threading
 import time
 from datetime import datetime
-from typing import Any
 
 import yaml
 
 from pg_spot_operator import cloud_api, cmdb, constants, manifests
-from pg_spot_operator.cloud_impl.azure_spot import (
-    extract_is_hyper_v_gen2_compatible,
-)
-from pg_spot_operator.constants import CLOUD_AZURE, CLOUD_VAGRANT_LIBVIRT
+from pg_spot_operator.constants import CLOUD_VAGRANT_LIBVIRT
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.util import (
     merge_action_output_params,
@@ -32,12 +27,8 @@ ANSIBLE_ROOT = "./ansible"
 
 logger = logging.getLogger(__name__)
 
-actions_in_progress: dict[str, subprocess.Popen] = (
-    {}
-)  # {action_request_uuid: thread}
-actions_in_progress_lock = threading.Lock()
-
-cli_args: Any = None
+default_vault_password_file: str = ""
+dry_run: bool = False
 operator_startup_time = time.time()
 
 
@@ -65,7 +56,7 @@ def preprocess_ensure_vm_action(
         m_over.session_outvars["price_spot"] = sku.monthly_spot_price
         logger.info(
             "Selected SKU %s (%s) in %s region %s for a monthly Spot price of $%s",
-            sku.sku,
+            sku.instance_type,
             sku.arch,
             sku.cloud,
             sku.region,
@@ -73,7 +64,7 @@ def preprocess_ensure_vm_action(
         )
         logger.info(
             "SKU %s main specs - vCPU: %s, RAM: %s, instance storage: %s",
-            sku.sku,
+            sku.instance_type,
             sku.cpu,
             sku.ram,
             sku.instance_storage,
@@ -85,7 +76,7 @@ def preprocess_ensure_vm_action(
         if not sku.monthly_ondemand_price:
             sku.monthly_ondemand_price = (
                 cloud_api.try_get_monthly_ondemand_price_for_sku(
-                    m.cloud, m.region, sku.sku
+                    m.cloud, m.region, sku.instance_type
                 )
             )
 
@@ -102,28 +93,21 @@ def preprocess_ensure_vm_action(
             )
             logger.info(
                 "Spot discount rate for SKU %s in region %s = %s%% (spot $%s vs on-demand $%s)",
-                sku.sku,
+                sku.instance_type,
                 m.region,
                 round(spot_discount, 1),
                 sku.monthly_spot_price,
                 sku.monthly_ondemand_price,
             )
-        m_over.vm.instance_type = sku.sku
-        if not m.vm.architecture:  # TODO move to manifest
-            m_over.vm.architecture = sku.arch
-        if m.vm.assign_public_ip_address is None:
+        m_over.vm.instance_type = sku.instance_type
+        if not m.vm.cpu_architecture:
+            m_over.vm.cpu_architecture = sku.arch
+        if m.assign_public_ip is None:
             m_over.vm.assign_public_ip_address = True
-        if m.vm.floating_public_ip is None:
+        if m.floating_public_ip is None:
             m_over.vm.floating_public_ip = True
         if m.vm.storage_speed_class is None:
             m_over.vm.storage_speed_class = "ssd"
-
-        if m.cloud == CLOUD_AZURE:
-            if "vm" not in m_over.session_outvars:
-                m_over.session_invars["vm"] = {}
-            m_over.session_invars["vm"]["is_hyper_v_gen2_compatible"] = (
-                extract_is_hyper_v_gen2_compatible(sku.provider_description)
-            )
 
     return m_over
 
@@ -345,10 +329,8 @@ def generate_ansible_run_script_for_action(
 ) -> str:
     """Currently invoking Ansible via Bash but might want to look at ansible-runner later"""
     extra_args = ""
-    if not m.vault_password_file and cli_args.default_vault_password_file:
-        m.vault_password_file = os.path.expanduser(
-            cli_args.default_vault_password_file
-        )
+    if not m.vault_password_file and default_vault_password_file:
+        m.vault_password_file = os.path.expanduser(default_vault_password_file)
     if m.vault_password_file:
         extra_args = "--vault-password-file " + m.vault_password_file
     run_template = f"""#!/bin/bash
@@ -393,7 +375,7 @@ def apply_tuning_profile(mf: InstanceManifest) -> list[str]:
         return []
     tuning_input: dict = mf.vm.dict()
     tuning_input["cloud"] = mf.cloud
-    tuning_input["major_ver"] = mf.pg.major_ver
+    tuning_input["major_ver"] = mf.postgres_version
     logger.debug("Config tuning input: %s", tuning_input)
 
     tuning_input_json_str = json.dumps(tuning_input)
@@ -490,7 +472,7 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
         action, temp_workdir, m
     )
 
-    if cli_args.dry_run:
+    if dry_run:
         logger.info(
             "Skipping action %s for instance %s as in --dry-run mode",
             action,
@@ -547,13 +529,22 @@ def destroy_instance(m: InstanceManifest):
         run_action(constants.ACTION_DESTROY_BACKUPS, m)
 
 
-def do_main_loop(args, env_mf: InstanceManifest):
-    global cli_args
-    cli_args = args  # type: ignore
+def do_main_loop(
+    cli_dry_run: bool = False,
+    cli_env_manifest: InstanceManifest | None = None,
+    cli_user_manifest_path: str = "",
+    cli_default_vault_password_file: str = "",
+    cli_teardown: bool = False,
+    cli_main_loop_interval_s: int = 60,
+):
+    global dry_run
+    dry_run = cli_dry_run
+    global default_vault_password_file
+    default_vault_password_file = cli_default_vault_password_file
+
     first_loop = True
     loops = 0
 
-    logger.info("Entering main loop")
     while True:
         loops += 1
         logger.debug("Starting main loop iteration %s ...", loops)
@@ -561,30 +552,23 @@ def do_main_loop(args, env_mf: InstanceManifest):
         try:
             # Step 0 - load manifest from CLI args / full adhoc ENV manifest or manifest file
             m: InstanceManifest = None  # type: ignore
-            if env_mf and env_mf.instance_name:
+            if cli_env_manifest and cli_env_manifest.instance_name:
                 logger.info(
                     "Processing manifest for instance %s set via ENV ...",
-                    env_mf.instance_name,
+                    cli_env_manifest.instance_name,
                 )
-                m = env_mf
-            elif not (m and m.instance_name) and args.manifest:
-                logger.info("Processing the explicitly set manifest ...")
-                m = manifests.try_load_manifest_from_string(args.manifest)  # type: ignore
+                m = cli_env_manifest
             else:
-                if os.path.exists(
-                    os.path.expanduser(cli_args.user_manifest_paths)
-                ):
-                    with open(
-                        os.path.expanduser(cli_args.user_manifest_paths)
-                    ) as f:
+                if os.path.exists(os.path.expanduser(cli_user_manifest_path)):
+                    with open(os.path.expanduser(cli_user_manifest_path)) as f:
                         m = manifests.try_load_manifest_from_string(f.read())  # type: ignore
 
             if not (m and m.instance_name):
                 logger.info("No valid manifest found - nothing to do ...")
                 raise NoOp()
 
-            if args.teardown:
-                m.destroy_target_time_utc = "now"
+            if cli_teardown:  # Delete instance and any attached resources
+                m.expires_on = "now"
 
             # Step 1 - register or update manifest in CMDB
 
@@ -651,9 +635,7 @@ def do_main_loop(args, env_mf: InstanceManifest):
                 )
                 time.sleep(30)
 
-            if (
-                args.dry_run
-            ):  # Bail as next actions depend on output of ensure_vm
+            if dry_run:  # Bail as next actions depend on output of ensure_vm
                 raise NoOp()
 
             diff = m.diff_manifests(
@@ -703,6 +685,6 @@ def do_main_loop(args, env_mf: InstanceManifest):
         first_loop = False
         logger.info(
             "Main loop finished. Sleeping for %s s ...",
-            args.main_loop_interval_s,
+            cli_main_loop_interval_s,
         )
-        time.sleep(args.main_loop_interval_s)
+        time.sleep(cli_main_loop_interval_s)

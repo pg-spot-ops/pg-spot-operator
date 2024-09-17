@@ -3,7 +3,7 @@ import os.path
 
 from tap import Tap
 
-from pg_spot_operator import cmdb, manifests
+from pg_spot_operator import cmdb, manifests, operator
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.manifests import InstanceManifest
 
@@ -197,4 +197,24 @@ def main():  # pragma: no cover
     )
     logger.info("%s schema migration applied", applied_count)
 
-    logger.info("CLI exit")
+    env_manifest: InstanceManifest | None = None
+    if args.manifest or args.instance_name:
+        manifest_str = get_manifest_from_args_as_string(args)
+        env_manifest = try_load_manifest(manifest_str)
+        if not env_manifest:
+            logger.exception("Failed to parse manifest from CLI args")
+            logger.error("Manifest: %s", manifest_str)
+            exit(1)
+
+    logger.info("Entering main loop")
+
+    operator.cli_args = args
+
+    operator.do_main_loop(
+        cli_env_manifest=env_manifest,
+        cli_dry_run=args.dry_run,
+        cli_default_vault_password_file=args.default_vault_password_file,
+        cli_user_manifest_path=args.manifest_path,
+        cli_main_loop_interval_s=args.main_loop_interval_s,
+        cli_teardown=args.teardown,
+    )
