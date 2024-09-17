@@ -274,7 +274,7 @@ def run_action_handler(
 
     try:
         # https://alexandra-zaharia.github.io/posts/kill-subprocess-and-its-children-on-timeout-python/ works ??
-        logging.debug("Starting handler at %s", executable_full_path)
+        # logging.debug("Starting handler at %s", executable_full_path)
         p = subprocess.Popen(
             [executable_full_path, str(ACTION_MAX_DURATION)],
             start_new_session=True,
@@ -480,14 +480,14 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
         )
         return True, {}
 
-    outputs = run_action_handler(action, temp_workdir, executable_full_path, m)
-
     logger.info(
-        "Started handler for action %s of instance %s, log at %s",
+        "Starting handler for action %s of instance %s, log at %s",
         action,
         m.instance_name,
         os.path.join(temp_workdir, "ansible.log"),
     )
+
+    outputs = run_action_handler(action, temp_workdir, executable_full_path, m)
 
     return True, outputs
 
@@ -518,6 +518,8 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
         cmdb.mark_any_active_vms_as_deleted(m)
 
     _, outputs = run_action(constants.ACTION_ENSURE_VM, m)
+    if dry_run:
+        return False, "dummy"
 
     return True, str(outputs["provider_id"])
 
@@ -534,7 +536,6 @@ def do_main_loop(
     cli_env_manifest: InstanceManifest | None = None,
     cli_user_manifest_path: str = "",
     cli_default_vault_password_file: str = "",
-    cli_teardown: bool = False,
     cli_main_loop_interval_s: int = 60,
 ):
     global dry_run
@@ -566,9 +567,6 @@ def do_main_loop(
             if not (m and m.instance_name):
                 logger.info("No valid manifest found - nothing to do ...")
                 raise NoOp()
-
-            if cli_teardown:  # Delete instance and any attached resources
-                m.expires_on = "now"
 
             # Step 1 - register or update manifest in CMDB
 

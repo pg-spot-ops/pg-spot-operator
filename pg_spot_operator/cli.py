@@ -123,6 +123,7 @@ instance_name: {args.instance_name}
         mfs += f"  storage_type: {args.storage_type}\n"
     if args.instance_type:
         mfs += f"  instance_type: {args.instance_type}\n"
+    # logger.debug("Compiled manifest: %s", mfs)
     return mfs
 
 
@@ -135,14 +136,16 @@ def get_manifest_from_args_as_string(args: ArgumentParser) -> str:
         with open(args.manifest_path) as f:
             return f.read()
     elif args.instance_name:
-        logger.info("Compiling a manifest from single args ...")
+        logger.info("Compiling a manifest from CLI args ...")
         return compile_manifest_from_cmdline_params(args)
     raise Exception("Could not find / compile a manifest string")
 
 
 def try_load_manifest(manifest_str: str) -> InstanceManifest | None:
     try:
-        return manifests.load_manifest_from_string(manifest_str)
+        mf = manifests.load_manifest_from_string(manifest_str)
+        mf.original_manifest = manifest_str
+        return mf
     except Exception as e:
         logger.error(
             "Failed to load manifest: %s",
@@ -205,6 +208,8 @@ def main():  # pragma: no cover
             logger.exception("Failed to parse manifest from CLI args")
             logger.error("Manifest: %s", manifest_str)
             exit(1)
+        if args.teardown:  # Delete instance and any attached resources
+            env_manifest.expires_on = "now"
 
     logger.info("Entering main loop")
 
@@ -216,5 +221,4 @@ def main():  # pragma: no cover
         cli_default_vault_password_file=args.default_vault_password_file,
         cli_user_manifest_path=args.manifest_path,
         cli_main_loop_interval_s=args.main_loop_interval_s,
-        cli_teardown=args.teardown,
     )
