@@ -12,3 +12,4 @@ types-python-dateutil
 pydantic
 pyyaml
 types-PyYAML
+sqlalchemy

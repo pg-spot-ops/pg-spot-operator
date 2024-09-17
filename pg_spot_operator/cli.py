@@ -3,7 +3,8 @@ import os.path
 
 from tap import Tap
 
-from pg_spot_operator import manifests
+from pg_spot_operator import cmdb, manifests
+from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.manifests import InstanceManifest
 
 logger = logging.getLogger(__name__)
@@ -139,19 +140,23 @@ def get_manifest_from_args_as_string(args: ArgumentParser) -> str:
     raise Exception("Could not find / compile a manifest string")
 
 
-def check_manifest_and_exit(args: ArgumentParser):
-    m: InstanceManifest
-    manifest_str = get_manifest_from_args_as_string(args)
-
+def try_load_manifest(manifest_str: str) -> InstanceManifest | None:
     try:
-        m = manifests.load_manifest_from_string(manifest_str)
+        return manifests.load_manifest_from_string(manifest_str)
     except Exception as e:
         logger.error(
             "Failed to load manifest: %s",
             e,
         )
-        logger.error("Manifest: %s", manifest_str)
-        raise
+        return None
+
+
+def check_manifest_and_exit(args: ArgumentParser):
+    manifest_str = get_manifest_from_args_as_string(args)
+    m = try_load_manifest(manifest_str)
+    if not m:
+        logger.error("Failed manifest: %s", manifest_str)
+        exit(1)
 
     logger.info(
         "Valid manifest provided for instance %s (%s)",
@@ -184,5 +189,12 @@ def main():  # pragma: no cover
         check_manifest_and_exit(args)
 
     logger.debug("Args: %s", args.as_dict()) if args.verbose else None
+
+    cmdb.init_engine_and_check_connection(args.sqlite_path)
+
+    applied_count = schema_manager.do_ddl_rollout_if_needed(
+        (os.path.expanduser(args.sqlite_path))
+    )
+    logger.info("%s schema migration applied", applied_count)
 
     logger.info("CLI exit")
