@@ -403,7 +403,7 @@ def ec2_launch_instance(m: InstanceManifest, user_data: str = "") -> dict:
         "DeviceIndex": 0,
         "DeleteOnTermination": False,
     }
-    if m.vm.floating_public_ip and m.vm.assign_public_ip:
+    if m.floating_public_ip and m.assign_public_ip:
         network_interface["AssociatePublicIpAddress"] = True
     if subnet_id:
         network_interface["SubnetId"] = subnet_id
@@ -726,7 +726,7 @@ def ensure_spot_vm(m: InstanceManifest) -> tuple[CloudVM, bool]:
     if m.vm.storage_type == STORAGE_TYPE_NETWORK:
         vol_desc = ensure_volume_attached(m, i_desc)
 
-    if m.vm.assign_public_ip and not m.vm.floating_public_ip:
+    if m.assign_public_ip and not m.floating_public_ip:
         pip = ensure_public_elastic_ip_attached(
             region, instance_name, i_desc["InstanceId"]
         )

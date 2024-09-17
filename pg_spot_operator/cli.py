@@ -102,9 +102,9 @@ instance_name: {args.instance_name}
         mfs += f"availability_zone: {args.zone}\n"
     if args.expires_on:
         mfs += f"expires_on: {args.expires_on}\n"
-    mfs += "vm:\n"
     if args.public_ip:
-        mfs += f"  assign_public_ip: {str(args.public_ip).lower()}\n"
+        mfs += f"assign_public_ip: {str(args.public_ip).lower()}\n"
+    mfs += "vm:\n"
     if args.cpu_architecture:
         mfs += f"  cpu_architecture: {args.cpu_architecture}\n"
     if args.cpu_min:
@@ -117,14 +117,6 @@ instance_name: {args.instance_name}
         mfs += f"  storage_type: {args.storage_type}\n"
     if args.instance_type:
         mfs += f"  instance_type: {args.instance_type}\n"
-    # vm:
-    #   assign_public_ip_address: {'true' if m.vm.assign_public_ip_address else 'false'}
-    #   cpu_min: {m.vm.cpu_min or ''}
-    #   ram_min: {m.vm.ram_min or ''}
-    #   storage_min: {m.vm.storage_min}
-    #   storage_type: {m.vm.storage_type or 'network'}
-    #   instance_type: {m.vm.instance_type or ''}
-    # """
     return mfs
 
 

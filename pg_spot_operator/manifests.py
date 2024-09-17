@@ -51,10 +51,6 @@ class SectionPg(BaseModel):
 class SectionVm(BaseModel):
     cpu_architecture: str = ""
     allow_burstable: bool = True
-    assign_public_ip: bool = True
-    floating_public_ip: bool = (
-        True  # Has only relevance if assign_public_ip set
-    )
     detailed_monitoring: bool = False  # Has extra cost
     cpu_min: int = 0
     cpu_max: int = 0
@@ -133,6 +129,10 @@ class InstanceManifest(BaseModel):
     region: str
     instance_name: str
     # Optional fields
+    assign_public_ip: bool = True
+    floating_public_ip: bool = (
+        True  # Has only relevance if assign_public_ip set
+    )
     description: str = ""
     availability_zone: str = ""
     user_tags: dict = field(default_factory=dict)
