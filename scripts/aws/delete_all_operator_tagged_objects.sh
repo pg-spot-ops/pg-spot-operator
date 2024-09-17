@@ -45,8 +45,8 @@ done  # reg
 echo -e "\nDone. VMs terminated: ${TERMINATED}"
 
 if [ "$TERMINATED" -gt 0 ]; then
-  echo "Sleeping 5min before deleting volumes ..."
-  sleep 300
+  echo "Sleeping 2min before deleting volumes ..."
+  sleep 120
 fi
 
 

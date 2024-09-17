@@ -21,7 +21,10 @@ from sqlalchemy.engine.base import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from pg_spot_operator import manifests, util
-from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo, CloudVM
+from pg_spot_operator.cloud_impl.cloud_structs import (
+    CloudVM,
+    ResolvedInstanceTypeInfo,
+)
 from pg_spot_operator.cmdb_impl import sqlite
 from pg_spot_operator.manifests import InstanceManifest
 
@@ -466,8 +469,12 @@ def finalize_instance_setup(m: InstanceManifest):
         logger.info("*** Public connect string *** - '%s'", connstr_public)
 
 
-def finalize_ensure_vm(m: InstanceManifest, i_info: ResolvedInstanceTypeInfo, vm: CloudVM):
-    if not (vm.provider_id and vm.instance_type and vm.login_user and vm.ip_private):
+def finalize_ensure_vm(
+    m: InstanceManifest, i_info: ResolvedInstanceTypeInfo, vm: CloudVM
+):
+    if not (
+        vm.provider_id and vm.instance_type and vm.login_user and vm.ip_private
+    ):
         raise Exception(
             "CloudVM required fields missing - provider_id, instance_type, login_user, ip_private"
         )  # TODO generalize for other non-nulls also
@@ -512,17 +519,17 @@ def finalize_ensure_vm(m: InstanceManifest, i_info: ResolvedInstanceTypeInfo, vm
         cmdb_vm.price_ondemand = i_info.monthly_ondemand_price
         cmdb_vm.last_modified_on = datetime.utcnow()
 
-        session.add(vm)
+        session.add(cmdb_vm)
 
         session.commit()
         logger.info(
             "OK - %s VM with name %s (ip_public = %s , ip_private = %s) registered for instance %s. Provider ID: %s",
             m.cloud,
-            vm.provider_name or 'NONAME',
+            vm.provider_name or "NONAME",
             vm.ip_public,
             vm.ip_private,
             m.instance_name,
-            vm.provider_id
+            vm.provider_id,
         )
 
 

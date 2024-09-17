@@ -11,9 +11,16 @@ from datetime import datetime
 import yaml
 
 from pg_spot_operator import cloud_api, cmdb, constants, manifests
+from pg_spot_operator.cloud_impl.aws_spot import (
+    describe_instance_type,
+    get_current_spot_price,
+)
 from pg_spot_operator.cloud_impl.aws_vm import ensure_spot_vm
 from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
-from pg_spot_operator.constants import CLOUD_VAGRANT_LIBVIRT
+from pg_spot_operator.cloud_impl.cloud_util import (
+    extract_cpu_arch_from_sku_desc,
+)
+from pg_spot_operator.constants import CLOUD_AWS
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.util import (
     merge_action_output_params,
@@ -43,10 +50,12 @@ class UserExit(Exception):
 
 
 def preprocess_ensure_vm_action(
-    m: InstanceManifest, m_over: InstanceManifest
-) -> tuple[InstanceManifest, ResolvedInstanceTypeInfo]:
+    m: InstanceManifest,
+) -> ResolvedInstanceTypeInfo:
     """Fill in the "blanks" that are not set by the user but still needed, like the SKU"""
-    if not m.vm.instance_type and m.cloud != CLOUD_VAGRANT_LIBVIRT:
+
+    sku: ResolvedInstanceTypeInfo
+    if not m.vm.instance_type:
         cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
             m
         )
@@ -54,64 +63,72 @@ def preprocess_ensure_vm_action(
             raise Exception(
                 f"No SKUs matching HW requirements found for instance {m.instance_name} in {m.cloud} region {m.region}"
             )
-        sku = cheapest_skus[0]
-        m_over.session_outvars["price_spot"] = sku.monthly_spot_price
+        sku = cheapest_skus[0]  # TODO implement multi-sku
+        m.vm.instance_type = sku.instance_type
+    else:
+        i_desc = describe_instance_type(m.vm.instance_type, m.region)
+        sku = ResolvedInstanceTypeInfo(
+            instance_type=m.vm.instance_type,
+            cloud=CLOUD_AWS,
+            region=m.region,
+            arch=extract_cpu_arch_from_sku_desc(CLOUD_AWS, i_desc),
+            provider_description=i_desc,
+            availability_zone=m.availability_zone,
+            cpu=i_desc.get("VCpuInfo", {}).get("DefaultVCpus", 0),
+            ram=int(i_desc.get("MemoryInfo", {}).get("SizeInMiB", 0) / 1024),
+            instance_storage=i_desc.get("InstanceStorageInfo", {}).get(
+                "TotalSizeInGB", 0
+            ),
+        )
+    m.vm.cpu_architecture = sku.arch
+
+    logger.info(
+        "Selected SKU %s (%s) in %s region %s for a monthly Spot price of $%s",
+        sku.instance_type,
+        sku.arch,
+        sku.cloud,
+        sku.region,
+        sku.monthly_spot_price,
+    )
+    logger.info(
+        "SKU %s main specs - vCPU: %s, RAM: %s, instance storage: %s",
+        sku.instance_type,
+        sku.cpu,
+        sku.ram,
+        sku.instance_storage,
+    )
+
+    if not sku.monthly_spot_price:
+        sku.monthly_spot_price = (
+            get_current_spot_price(
+                m.region, m.vm.instance_type, m.availability_zone
+            )
+            * 24
+            * 30
+        )
+    if not sku.monthly_ondemand_price:
+        sku.monthly_ondemand_price = (
+            cloud_api.try_get_monthly_ondemand_price_for_sku(
+                m.cloud, m.region, sku.instance_type
+            )
+        )
+
+    if sku.monthly_ondemand_price and sku.monthly_spot_price:
+        spot_discount = (
+            100.0
+            * (sku.monthly_spot_price - sku.monthly_ondemand_price)
+            / sku.monthly_ondemand_price
+        )
         logger.info(
-            "Selected SKU %s (%s) in %s region %s for a monthly Spot price of $%s",
+            "Spot discount rate for SKU %s in region %s = %s%% (spot $%s vs on-demand $%s)",
             sku.instance_type,
-            sku.arch,
-            sku.cloud,
-            sku.region,
+            m.region,
+            round(spot_discount, 1),
             sku.monthly_spot_price,
+            sku.monthly_ondemand_price,
         )
-        logger.info(
-            "SKU %s main specs - vCPU: %s, RAM: %s, instance storage: %s",
-            sku.instance_type,
-            sku.cpu,
-            sku.ram,
-            sku.instance_storage,
-        )
-        m_over.session_outvars["cpu"] = sku.cpu
-        m_over.session_outvars["ram"] = sku.ram
-        m_over.session_outvars["instance_storage"] = sku.instance_storage
 
-        if not sku.monthly_ondemand_price:
-            sku.monthly_ondemand_price = (
-                cloud_api.try_get_monthly_ondemand_price_for_sku(
-                    m.cloud, m.region, sku.instance_type
-                )
-            )
-
-        if sku.monthly_ondemand_price:
-            m_over.session_outvars["price_ondemand"] = (
-                sku.monthly_ondemand_price
-            )
-
-        if sku.monthly_ondemand_price and sku.monthly_spot_price:
-            spot_discount = (
-                100.0
-                * (sku.monthly_spot_price - sku.monthly_ondemand_price)
-                / sku.monthly_ondemand_price
-            )
-            logger.info(
-                "Spot discount rate for SKU %s in region %s = %s%% (spot $%s vs on-demand $%s)",
-                sku.instance_type,
-                m.region,
-                round(spot_discount, 1),
-                sku.monthly_spot_price,
-                sku.monthly_ondemand_price,
-            )
-        m_over.vm.instance_type = sku.instance_type
-        if not m.vm.cpu_architecture:
-            m_over.vm.cpu_architecture = sku.arch
-        if m.assign_public_ip is None:
-            m_over.vm.assign_public_ip_address = True
-        if m.floating_public_ip is None:
-            m_over.vm.floating_public_ip = True
-        if m.vm.storage_speed_class is None:
-            m_over.vm.storage_speed_class = "ssd"
-
-    return m_over, sku
+    return sku
 
 
 class NoAliasDumper(yaml.SafeDumper):
@@ -263,7 +280,7 @@ def register_results_in_cmdb(
         cmdb.mark_manifest_snapshot_as_succeeded(m)
 
 
-def run_action_handler(
+def run_ansible_handler(
     action: str,
     temp_workdir: str,
     executable_full_path: str,
@@ -427,21 +444,6 @@ def apply_postgres_config_tuning_to_override_manifest(
             mo.pg_config.extra_config_lines = merged_config_lines
 
 
-def preprocess_action(action: str, m: InstanceManifest) -> tuple[InstanceManifest, ResolvedInstanceTypeInfo]:
-    """Inject missing but required fields into an "override" manifest"""
-    m_over: InstanceManifest = InstanceManifest(
-        api_version=m.api_version,
-        kind=m.kind,
-        cloud=m.cloud,
-        region=m.region,
-        instance_name=m.instance_name,
-        uuid=m.uuid,
-    )
-    if action == constants.ACTION_ENSURE_VM:
-        return preprocess_ensure_vm_action(m, m_over)
-    return m_over, ResolvedInstanceTypeInfo(instance_type=m.vm.instance_type, arch=m.vm.cpu_architecture, cloud=m.cloud, region=m.region)
-
-
 def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
     """Returns: (OK, action outputs)
     Steps:
@@ -457,8 +459,16 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
         m.instance_name,
     )
 
-    # Resolve HW reqs etc into an override manifest
-    m_over = preprocess_action(action, m)
+    # Place tuning changes etc into an override manifest to have a clear separation
+    # between user and engine input
+    m_over: InstanceManifest = InstanceManifest(
+        api_version=m.api_version,
+        kind=m.kind,
+        cloud=m.cloud,
+        region=m.region,
+        instance_name=m.instance_name,
+        uuid=m.uuid,
+    )
 
     apply_postgres_config_tuning_to_override_manifest(action, m, m_over)
 
@@ -487,7 +497,9 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
         os.path.join(temp_workdir, "ansible.log"),
     )
 
-    outputs = run_action_handler(action, temp_workdir, executable_full_path, m)
+    outputs = run_ansible_handler(
+        action, temp_workdir, executable_full_path, m
+    )
 
     return True, outputs
 
@@ -517,11 +529,13 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
         )
         cmdb.mark_any_active_vms_as_deleted(m)
 
+    instance_info = preprocess_ensure_vm_action(m)
+
     cloud_vm, created = ensure_spot_vm(m, dry_run=dry_run)
     if dry_run:
         return False, "dummy"
 
-    cmdb.finalize_ensure_vm(m,  cloud_vm)
+    cmdb.finalize_ensure_vm(m, instance_info, cloud_vm)
 
     return True, cloud_vm.provider_id
 

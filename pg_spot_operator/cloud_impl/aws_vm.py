@@ -376,8 +376,8 @@ def ec2_launch_instance(
     region: str = m.region
     availability_zone: str = m.availability_zone
     user_tags: dict = m.user_tags
-    architecture: str = m.vm.cpu_architecture or "arm64"
-    instance_type: str = m.vm.instance_type or "t4g.micro"
+    architecture: str = m.vm.cpu_architecture
+    instance_type: str = m.vm.instance_type
     key_pair_name: str = m.aws.key_pair_name
     security_group_ids: list[str] = m.aws.security_group_ids
     subnet_id: str = m.aws.subnet_id
@@ -488,8 +488,13 @@ def ec2_launch_instance(
             **kwargs_run,
         )  # type: dict
     except botocore.exceptions.ClientError as e:
-        if "but DryRun flag is set" in str(e):
+        if dry_run and "but DryRun flag is set" in str(e):
             return {}
+        else:
+            raise
+
+    if dry_run:
+        return {}
 
     i_id = i["Instances"][0]["InstanceId"]
     i_az = i["Instances"][0]["Placement"]["AvailabilityZone"]
