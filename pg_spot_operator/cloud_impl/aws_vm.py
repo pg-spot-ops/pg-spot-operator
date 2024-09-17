@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any
 
 import boto3
+import botocore
 
 from pg_spot_operator.cloud_impl.cloud_structs import CloudVM
 from pg_spot_operator.constants import CLOUD_AWS
@@ -58,7 +59,7 @@ def get_latest_ami_for_region_arch(
         architecture = "amd64"
 
     ami_name_search_str = f"{OS_IMAGE_FAMILY}-{architecture}-*"
-    logger.debug("ami_name_search_str", ami_name_search_str)
+    logger.debug("ami_name_search_str: %s", ami_name_search_str)
 
     cur_year = datetime.now().year
     years = [cur_year, cur_year - 1]  # To cover beginning of year
@@ -131,7 +132,7 @@ def create_new_volume_for_instance(
         **kwargs,
     )
 
-    logger.debug("OK. New volume ID:", resp["VolumeId"])
+    logger.debug("OK. New volume ID: %s", resp["VolumeId"])
     return resp
 
 
@@ -224,10 +225,10 @@ def ensure_public_elastic_ip_attached(
     if desc_response and desc_response.get("Addresses"):
         pip = desc_response.get("Addresses")[0]["PublicIp"]
         allocation_id = desc_response.get("Addresses")[0]["AllocationId"]
-        logger.debug("An existing elastic IP found:", pip)
+        logger.debug("An existing elastic IP found: %s", pip)
 
     if not pip:
-        logger.debug("Assign a new elastic IP in region", region)
+        logger.debug("Assign a new elastic IP in region %s", region)
         response = client.allocate_address(
             TagSpecifications=[
                 {
@@ -345,14 +346,14 @@ def wait_until_nic_available(
             if resp and resp.get("NetworkInterfaces"):
                 if resp["NetworkInterfaces"][0]["Status"] == "available":
                     logger.debug(
-                        "OK",
+                        "OK %s %s",
                         resp["NetworkInterfaces"][0]["Status"],
                         datetime.now(),
                     )
                     time.sleep(1)
                     return
                 logger.debug(
-                    "Not OK",
+                    "Not OK %s %s",
                     resp["NetworkInterfaces"][0]["Status"],
                     datetime.now(),
                 )
@@ -365,7 +366,9 @@ def wait_until_nic_available(
     )
 
 
-def ec2_launch_instance(m: InstanceManifest, user_data: str = "") -> dict:
+def ec2_launch_instance(
+    m: InstanceManifest, user_data: str = "", dry_run: bool = False
+) -> dict:
     """https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2/client/run_instances.html
     Returns full instance description dict from the API
     """
@@ -396,7 +399,7 @@ def ec2_launch_instance(m: InstanceManifest, user_data: str = "") -> dict:
         )
         if vol_desc:
             placement["AvailabilityZone"] = vol_desc["AvailabilityZone"]
-    logger.debug("placement", placement)
+    logger.debug("placement %s", placement)
 
     network_interface: dict[str, Any] = {
         "AssociatePublicIpAddress": False,
@@ -409,7 +412,7 @@ def ec2_launch_instance(m: InstanceManifest, user_data: str = "") -> dict:
         network_interface["SubnetId"] = subnet_id
     if security_group_ids:
         network_interface["Groups"] = security_group_ids
-    logger.debug("network_interface", network_interface)
+    logger.debug("network_interface %s", network_interface)
 
     existing_nic_found = False
     nic_id = get_nic_id_if_any_by_id_tag(instance_name, region)
@@ -456,32 +459,37 @@ def ec2_launch_instance(m: InstanceManifest, user_data: str = "") -> dict:
     )
 
     client = get_client("ec2", region)
-    logger.debug("kwargs_run:", kwargs_run)
-    logger.debug("tag_spec", tag_spec)
+    logger.debug("kwargs_run: %s", kwargs_run)
+    logger.debug("tag_spec: %s", tag_spec)
 
-    i = client.run_instances(
-        BlockDeviceMappings=[
-            {
-                "DeviceName": "/dev/sda1",
-                "Ebs": {
-                    "DeleteOnTermination": True,
-                    "VolumeSize": 8,
-                    "VolumeType": "gp3",
-                    "Encrypted": True,
+    try:
+        i = client.run_instances(
+            BlockDeviceMappings=[
+                {
+                    "DeviceName": "/dev/sda1",
+                    "Ebs": {
+                        "DeleteOnTermination": True,
+                        "VolumeSize": 8,
+                        "VolumeType": "gp3",
+                        "Encrypted": True,
+                    },
                 },
-            },
-        ],
-        InstanceType=instance_type,
-        MinCount=1,
-        MaxCount=1,
-        ImageId=os_image_id,
-        InstanceMarketOptions={"MarketType": market_type},
-        Placement=placement,
-        NetworkInterfaces=[network_interface],
-        TagSpecifications=tag_spec,
-        Monitoring={"Enabled": m.vm.detailed_monitoring},
-        **kwargs_run,
-    )  # type: dict
+            ],
+            InstanceType=instance_type,
+            MinCount=1,
+            MaxCount=1,
+            ImageId=os_image_id,
+            InstanceMarketOptions={"MarketType": market_type},
+            Placement=placement,
+            NetworkInterfaces=[network_interface],
+            TagSpecifications=tag_spec,
+            Monitoring={"Enabled": m.vm.detailed_monitoring},
+            DryRun=dry_run,
+            **kwargs_run,
+        )  # type: dict
+    except botocore.exceptions.ClientError as e:
+        if "but DryRun flag is set" in str(e):
+            return {}
 
     i_id = i["Instances"][0]["InstanceId"]
     i_az = i["Instances"][0]["Placement"]["AvailabilityZone"]
@@ -508,24 +516,25 @@ def ec2_launch_instance(m: InstanceManifest, user_data: str = "") -> dict:
         logger.debug(
             f"Timed out waiting for instance {i_id} to become runnable"
         )
-        logger.debug("Last API response:", resp)
+        logger.debug("Last API response: %s", resp)
         return {}
-    logger.debug("OK - instance running. Desc:")
-    logger.debug(i_desc)
+    logger.debug("OK - instance running. Desc: %s", i_desc)
 
     return i_desc
 
 
 def read_ssh_key_from_path(key_path: str) -> str:
     key_path = os.path.expanduser(key_path)
-    logger.debug("Reading SSH key from path:", key_path)
+    if not key_path:
+        return ""
+    logger.debug("Reading SSH key from path: %s", key_path)
     if not os.path.exists(key_path):
         logger.debug(f"WARNING: SSH pubkey at {key_path} not found")
         return ""
     if not os.path.isfile(key_path):
         logger.debug(f"WARNING: SSH pubkey at {key_path} not a file")
         return ""
-    with open(os.path.expanduser(key_path)) as f:
+    with open(key_path) as f:
         return f.read().rstrip()
 
 
@@ -631,9 +640,9 @@ def wait_until_volume_available(
             resp = client.describe_volumes(VolumeIds=[volume_id])
             if resp and resp.get("Volumes"):
                 if resp["Volumes"][0]["State"] == "available":
-                    logger.debug("OK", resp["Volumes"][0]["State"])
+                    logger.debug("OK - %s", resp["Volumes"][0]["State"])
                     return None
-                logger.debug("Not OK", resp["Volumes"][0]["State"])
+                logger.debug("Not OK - %s", resp["Volumes"][0]["State"])
                 time.sleep(10)
         except Exception as e:
             logger.debug(e)
@@ -693,14 +702,16 @@ def ensure_volume_attached(m: InstanceManifest, instance_desc: dict) -> dict:
     return get_existing_data_volume_for_instance_if_any(region, instance_name)
 
 
-def ensure_spot_vm(m: InstanceManifest) -> tuple[CloudVM, bool]:
+def ensure_spot_vm(
+    m: InstanceManifest, dry_run: bool = False
+) -> tuple[CloudVM, bool]:
     """Returns [CloudVM, was_actually_created]"""
     instance_name = m.instance_name
     region = m.region
     logger.debug("Ensuring a Spot VM for instance %s ...", instance_name)
 
     if m.aws.profile_name:
-        logger.debug("Using AWS profile:", m.aws.profile_name)
+        logger.debug("Using AWS profile: %s", m.aws.profile_name)
         global AWS_PROFILE
         AWS_PROFILE = m.aws.profile_name
 
@@ -719,9 +730,24 @@ def ensure_spot_vm(m: InstanceManifest) -> tuple[CloudVM, bool]:
         inputs["user_data"] = get_cloud_init_ssh_user_setup(
             region, LOGIN_USER, "~/.ssh/id_rsa.pub", m.aws.key_pair_name
         )
-        i_desc = ec2_launch_instance(m)
-        new_vm_created = True
-        logger.debug("VM %s created", i_desc["InstanceId"])
+        i_desc = ec2_launch_instance(m, dry_run=dry_run)
+        if not dry_run:
+            new_vm_created = True
+            logger.debug("VM %s created", i_desc["InstanceId"])
+
+    if dry_run:
+        logger.info("Dry-run launch OK")
+        return (
+            CloudVM(
+                provider_id="dummy",
+                cloud=CLOUD_AWS,
+                region=region,
+                instance_type=m.vm.instance_type,
+                login_user=LOGIN_USER,
+                ip_private="dummy",
+            ),
+            False,
+        )
 
     if m.vm.storage_type == STORAGE_TYPE_NETWORK:
         vol_desc = ensure_volume_attached(m, i_desc)

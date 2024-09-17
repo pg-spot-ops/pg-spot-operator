@@ -5,6 +5,7 @@
 # You can also run `make switch-to-poetry` to use the poetry package manager.
 typed-argument-parser
 boto3
+botocore
 requests
 deepdiff
 python-dateutil

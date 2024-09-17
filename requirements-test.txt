@@ -10,6 +10,7 @@ gitchangelog
 mkdocs
 typed-argument-parser
 boto3
+botocore
 requests
 types-requests
 deepdiff

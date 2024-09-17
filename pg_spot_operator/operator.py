@@ -11,6 +11,7 @@ from datetime import datetime
 import yaml
 
 from pg_spot_operator import cloud_api, cmdb, constants, manifests
+from pg_spot_operator.cloud_impl.aws_vm import ensure_spot_vm
 from pg_spot_operator.constants import CLOUD_VAGRANT_LIBVIRT
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.util import (
@@ -517,11 +518,11 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
         )
         cmdb.mark_any_active_vms_as_deleted(m)
 
-    _, outputs = run_action(constants.ACTION_ENSURE_VM, m)
+    cloud_vm, created = ensure_spot_vm(m, dry_run=dry_run)
     if dry_run:
         return False, "dummy"
 
-    return True, str(outputs["provider_id"])
+    return True, cloud_vm.provider_id
 
 
 def destroy_instance(m: InstanceManifest):
