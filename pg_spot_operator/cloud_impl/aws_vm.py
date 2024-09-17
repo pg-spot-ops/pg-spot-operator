@@ -725,17 +725,16 @@ def ensure_spot_vm(
     )
     vol_desc = {}
     new_vm_created = False
-    inputs = {}
 
     if i_desc:
         logger.debug(
             f"Instance {i_desc['InstanceId']} already running for instance {instance_name}, skipping create"
         )
     else:
-        inputs["user_data"] = get_cloud_init_ssh_user_setup(
+        user_data = get_cloud_init_ssh_user_setup(
             region, LOGIN_USER, "~/.ssh/id_rsa.pub", m.aws.key_pair_name
         )
-        i_desc = ec2_launch_instance(m, dry_run=dry_run)
+        i_desc = ec2_launch_instance(m, dry_run=dry_run, user_data=user_data)
         if not dry_run:
             new_vm_created = True
             logger.debug("VM %s created", i_desc["InstanceId"])
