@@ -40,7 +40,7 @@ class Instance(Base):
     cloud: Mapped[str] = mapped_column(String, nullable=False)
     region: Mapped[Optional[str]] = mapped_column(String, nullable=False)
     instance_name: Mapped[str] = mapped_column(String, nullable=False)
-    major_ver: Mapped[Optional[int]] = mapped_column(Integer, nullable=False)
+    postgres_version: Mapped[Optional[int]] = mapped_column(Integer, nullable=False)
     cpu_min: Mapped[Optional[int]]
     ram_min: Mapped[Optional[int]]
     storage_min: Mapped[Optional[int]]
@@ -87,10 +87,6 @@ class VmDTO:
     created_on: datetime | None = None
     last_modified_on: datetime | None = None
     deleted_on: datetime | None = None
-    aws_profile: str | None = None
-    gcp_project_id: str | None = None
-    azure_subscription_id: str | None = None
-    azure_resource_group: str | None = None
 
     def __str__(self) -> str:
         return f"VmDTO(instance_uuid={self.instance_uuid}, provider_id={self.provider_id}, cloud={self.cloud}, ip_public={self.ip_public}, ip_private={self.ip_private})"
@@ -125,10 +121,6 @@ class Vm(Base):
     )
     last_modified_on: Mapped[Optional[datetime]]
     deleted_on: Mapped[Optional[datetime]]
-    aws_profile: Mapped[Optional[str]]
-    gcp_project_id: Mapped[Optional[str]]
-    azure_subscription_id: Mapped[Optional[str]]
-    azure_resource_group: Mapped[Optional[str]]
 
     def __str__(self) -> str:
         return f"VM(instance_uuid={self.instance_uuid}, provider_id={self.provider_id}, cloud={self.cloud}, ip_public={self.ip_public}, ip_private={self.ip_private})"
@@ -233,7 +225,7 @@ def register_instance_or_get_uuid(
         i.cloud = m.cloud
         i.region = m.region
         i.instance_name = m.instance_name
-        i.major_ver = m.pg.major_ver
+        i.postgres_version = m.pg.major_ver
         i.cpu_min = m.vm.cpu_min
         i.storage_min = m.vm.storage_min
         i.storage_type = m.vm.storage_type

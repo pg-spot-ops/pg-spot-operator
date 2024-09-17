@@ -5,11 +5,11 @@ cloud: aws
 region: eu-north-1
 availability_zone:
 instance_name: hello-aws
+public_ip_address: true
+floating_public_ip: true  # As Elastic IPs are very limited per account
 #destroy_target_time_utc: now
 #destroy_backups: true
 vm:
-  assign_public_ip_address: true
-  floating_public_ip: true
   cpu_min: 2
   cpu_max: 8
   ram_min: 4

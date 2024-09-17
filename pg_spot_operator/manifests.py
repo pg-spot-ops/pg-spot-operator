@@ -38,7 +38,6 @@ yaml.add_multi_constructor("!", ignore, Loader=yaml.SafeLoader)
 
 
 class SectionPg(BaseModel):
-    major_ver: int = DEFAULT_POSTGRES_MAJOR_VER
     initdb_opts: list[str] | None = field(default_factory=list)
     admin_user: str | None = None
     admin_user_password: str | None = None
@@ -129,6 +128,7 @@ class InstanceManifest(BaseModel):
     region: str
     instance_name: str
     # Optional fields
+    postgres_version: int = DEFAULT_POSTGRES_MAJOR_VER
     assign_public_ip: bool = True
     floating_public_ip: bool = (
         True  # Has only relevance if assign_public_ip set

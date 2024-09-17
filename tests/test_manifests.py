@@ -11,8 +11,8 @@ region: eu-west-1
 instance_name: hello
 #vault_password_file:
 expires_on: now
+postgres_version: 16
 pg:
-  major_ver: 16
   admin_user: dev
   admin_password: dev
   admin_is_real_superuser: true  # Assign all safe built-in roles + make DB owner

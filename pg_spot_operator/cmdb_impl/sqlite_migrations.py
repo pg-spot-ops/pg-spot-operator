@@ -18,7 +18,7 @@ CREATE TABLE instance (
   cloud text NOT NULL,
   region text NOT NULL,
   instance_name text NOT NULL,
-  major_ver int NOT NULL,
+  postgres_version int NOT NULL,
   cpu_min int,
   ram_min int,
   storage_min int,
