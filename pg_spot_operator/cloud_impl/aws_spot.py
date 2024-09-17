@@ -6,10 +6,10 @@ from statistics import mean
 import boto3
 import requests
 
+from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_cpu_arch_from_sku_desc,
 )
-from pg_spot_operator.cloud_impl.skuinfo import ResolvedSkuInfo
 from pg_spot_operator.constants import (
     CLOUD_AWS,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
@@ -272,7 +272,7 @@ def get_cheapest_sku_for_hw_reqs(
     allow_burstable: bool = False,
     storage_speed_class: str = "any",
     instance_types_to_avoid: list[str] | None = None,
-) -> list[ResolvedSkuInfo]:
+) -> list[ResolvedInstanceTypeInfo]:
     """Returns a price-sorted list"""
     all_instances_for_region = get_all_ec2_spot_instance_types(
         region,
@@ -343,8 +343,8 @@ def get_cheapest_sku_for_hw_reqs(
 
     # TODO respect max_skus
     return [
-        ResolvedSkuInfo(
-            sku=sku,
+        ResolvedInstanceTypeInfo(
+            instance_type=sku,
             cloud=CLOUD_AWS,
             region=region,
             arch=arch,

@@ -28,10 +28,10 @@ vm:
   storage_min: 100
   storage_type: local  # local | network
   storage_speed_class: ssd  # hdd | ssd | nvme. Not guaranteed to be honoured
-  volume_type:  # e.g. gp3
-  volume_size_min:  # 100
-  volume_iops:  # For provisioned / paid IOPS, EBS gp3 default is 3000
-  volume_throughput:  # MBs. For provisioned / paid throughput. EBS gp3 default is 125
+#  volume_type:  # e.g. gp3
+#  volume_size_min:  # 100
+#  volume_iops:  # For provisioned / paid IOPS, EBS gp3 default is 3000
+#  volume_throughput:  # MBs. For provisioned / paid throughput. EBS gp3 default is 125
 pg_config:
   tuning_profile: oltp  # builtins: oltp | warehouse | web | mixed
   extension_packages:
