@@ -10,7 +10,7 @@ region: eu-west-1
 #availability_zone:
 instance_name: hello
 #vault_password_file:
-destroy_target_time_utc: now
+expires_on: now
 pg:
   major_ver: 16
   admin_user: dev
@@ -61,5 +61,5 @@ def test_parse_manifest():
     assert m.instance_name == "hello"
     assert m.pg.admin_is_real_superuser
     assert m.is_expired()
-    m.destroy_target_time_utc = "2099-01-01"
+    m.expires_on = "2099-01-01"
     assert not m.is_expired()

@@ -69,6 +69,7 @@ class ArgumentParser(Tap):
         "PGSO_EXPIRES_ON", ""
     )  # Instance expiry / teardwon timestamp
     public_ip: bool = to_bool(os.getenv("PGSO_PUBLIC_IP", "true"))
+    cpu_architecture: str = os.getenv("PGSO_CPU_ARCHITECTURE", "")
 
 
 args: ArgumentParser | None = None
@@ -99,14 +100,13 @@ instance_name: {args.instance_name}
         )
     if args.zone:
         mfs += f"availability_zone: {args.zone}\n"
-    if (
-        args.cpu_min
-        or args.ram_min
-        or args.storage_min
-        or args.storage_type
-        or args.instance_type
-    ):
-        mfs += "vm:\n"
+    if args.expires_on:
+        mfs += f"expires_on: {args.expires_on}\n"
+    mfs += "vm:\n"
+    if args.public_ip:
+        mfs += f"  assign_public_ip: {str(args.public_ip).lower()}\n"
+    if args.cpu_architecture:
+        mfs += f"  cpu_architecture: {args.cpu_architecture}\n"
     if args.cpu_min:
         mfs += f"  cpu_min: {args.cpu_min}\n"
     if args.ram_min:

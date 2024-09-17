@@ -49,7 +49,7 @@ class SectionPg(BaseModel):
 
 
 class SectionVm(BaseModel):
-    architecture: str = ""
+    cpu_architecture: str = ""
     allow_burstable: bool = True
     assign_public_ip: bool = True
     floating_public_ip: bool = (
@@ -137,7 +137,7 @@ class InstanceManifest(BaseModel):
     availability_zone: str = ""
     user_tags: dict = field(default_factory=dict)
     vault_password_file: str = ""
-    destroy_target_time_utc: str = ""  # now | '2024-06-11 10:40'
+    expires_on: str = ""  # now | '2024-06-11 10:40'
     destroy_backups: bool = True
     # *Sections*
     pg: SectionPg = field(default_factory=SectionPg)
@@ -158,20 +158,20 @@ class InstanceManifest(BaseModel):
         }
 
     def is_expired(self) -> bool:
-        """Checks if passed destroy_target_time_utc"""
-        if not self.destroy_target_time_utc:
+        """Checks if passed expires_on"""
+        if not self.expires_on:
             return False
-        if self.destroy_target_time_utc.lower() == "now":
+        if self.expires_on.lower() == "now":
             return True
         try:
-            dtt = parse(self.destroy_target_time_utc)
+            dtt = parse(self.expires_on)
             if not dtt.tzinfo:
                 dtt = dtt.replace(tzinfo=tzutc())
             if dtt < datetime.datetime.utcnow():
                 return True
         except Exception:
             logger.exception(
-                f"Failed to parse destroy_target_time_utc attribute for manifest {self.uuid}"
+                f"Failed to parse expires_on attribute for manifest {self.uuid}"
             )
         return False
 
