@@ -30,7 +30,8 @@ pg_spot_operator --instance-name pg1 --region eu-north-1 --cpu-min 4 --storage-m
 ## Via Docker
 
 ```bash
-docker run --rm --name pg1 -e PGSO_CPU_MIN=4 -e PGSO_STORAGE_MIN=100 \
+docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-west-1 \
+  -e PGSO_STORAGE_MIN=100 -e PGSO_STORAGE_TYPE=local -e PGSO_CPU_MIN=4 \
   -v ~/.aws:/root/.aws:ro -v ~/.ssh:/root/.ssh:ro \
   pg-spot-ops/pg-spot-operator:latest
 ```
