@@ -20,11 +20,13 @@ Not a "real" K8s operator (yet) - but does the same basically.
 
 PS! Expects a working AWS CLI setup (~/.aws/credentials)
 
-## Via PyPI
+## Python local dev/test in a virtualenv
 
 ```bash
-pip install pg-spot-operator
-pg_spot_operator --instance-name pg1 --region eu-north-1 --cpu-min 4 --storage-min 100
+make virtualenv
+source .venv/bin/activate
+pip install -r requirements-test.txt
+python3 -m pg_spot_operator --verbose --instance-name pg1 --region eu-north-1 --cpu-min 4 --storage-min 100
 ```
  
 ## Via Docker
