@@ -4,9 +4,9 @@ import time
 from datetime import datetime
 from typing import Any
 
-import boto3
 import botocore
 
+from pg_spot_operator.cloud_impl.aws_client import get_client
 from pg_spot_operator.cloud_impl.cloud_structs import CloudVM
 from pg_spot_operator.constants import CLOUD_AWS
 from pg_spot_operator.manifests import InstanceManifest
@@ -18,9 +18,6 @@ MAX_WAIT_SECONDS: int = 300
 LOGIN_USER = "pgspotops"
 OS_IMAGE_FAMILY = "debian-12"
 
-AWS_PROFILE: str = ""
-AWS_ACCESS_KEY_ID: str = ""
-AWS_SECRET_ACCESS_KEY: str = ""
 
 logger = logging.getLogger(__name__)
 
@@ -31,23 +28,6 @@ def str_to_bool(in_str: str) -> bool:
     if in_str.lower() in ["t", "true", "on", "1"]:
         return True
     return False
-
-
-def get_client(service: str, region: str):
-    if AWS_PROFILE:
-        session = boto3.session.Session(
-            profile_name=AWS_PROFILE,
-            region_name=region,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        )
-    else:
-        session = boto3.session.Session(
-            region_name=region,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        )
-    return session.client(service)
 
 
 def get_latest_ami_for_region_arch(
@@ -721,11 +701,6 @@ def ensure_spot_vm(
     instance_name = m.instance_name
     region = m.region
     logger.debug("Ensuring a Spot VM for instance %s ...", instance_name)
-
-    if m.aws.profile_name:
-        logger.debug("Using AWS profile: %s", m.aws.profile_name)
-        global AWS_PROFILE
-        AWS_PROFILE = m.aws.profile_name
 
     i_desc = get_running_instance_by_tags(
         m.region, {SPOT_OPERATOR_ID_TAG: instance_name}

@@ -3,9 +3,9 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from statistics import mean
 
-import boto3
 import requests
 
+from pg_spot_operator.cloud_impl.aws_client import get_client
 from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_cpu_arch_from_sku_desc,
@@ -20,10 +20,6 @@ from pg_spot_operator.util import timed_cache
 MAX_SKUS_FOR_SPOT_PRICE_COMPARE = 10
 SPOT_HISTORY_LOOKBACK_DAYS = 1
 
-AWS_PROFILE: str = ""
-AWS_ACCESS_KEY_ID: str = ""
-AWS_SECRET_ACCESS_KEY: str = ""
-
 
 logger = logging.getLogger(__name__)
 # Reduce boto noisiness https://github.com/boto/boto3/issues/521#issuecomment-653060090
@@ -32,25 +28,6 @@ logging.getLogger("botocore").setLevel(logging.ERROR)
 logging.getLogger("nose").setLevel(logging.ERROR)
 logging.getLogger("s3transfer").setLevel(logging.ERROR)
 logging.getLogger("urllib3").setLevel(logging.ERROR)
-
-
-def get_client(
-    service: str, region: str
-):  # TODO reuse / cache sessions for a while
-    if AWS_PROFILE:
-        session = boto3.session.Session(
-            profile_name=AWS_PROFILE,
-            region_name=region,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        )
-    else:
-        session = boto3.session.Session(
-            region_name=region,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        )
-    return session.client(service)
 
 
 @timed_cache(seconds=3600)
