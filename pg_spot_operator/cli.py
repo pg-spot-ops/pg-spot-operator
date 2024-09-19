@@ -76,6 +76,8 @@ class ArgumentParser(Tap):
     cpu_architecture: str = os.getenv("PGSO_CPU_ARCHITECTURE", "")
     ssh_keys: str = os.getenv("PGSO_SSH_KEYS", "")  # Comma separated
     tuning_profile: str = os.getenv("PGSO_TUNING_PROFILE", "default")
+    aws_access_key_id: str = os.getenv("PGSO_AWS_ACCESS_KEY_ID", "")
+    aws_secret_access_key: str = os.getenv("PGSO_AWS_SECRET_ACCESS_KEY", "")
 
 
 args: ArgumentParser | None = None
@@ -132,6 +134,10 @@ instance_name: {args.instance_name}
             mfs += "    - " + key.strip() + "\n"
     if args.tuning_profile:
         mfs += f"pg_config:\n  tuning_profile: {args.tuning_profile}\n"
+    if args.aws_access_key_id and args.aws_secret_access_key:
+        mfs += "aws:\n"
+        mfs += f"  access_key_id: {args.aws_access_key_id}\n"
+        mfs += f"  secret_access_key: {args.aws_secret_access_key}\n"
     return mfs
 
 
@@ -235,8 +241,6 @@ def main():  # pragma: no cover
     logger.info("%s schema migration applied", applied_count)
 
     logger.info("Entering main loop")
-
-    operator.cli_args = args
 
     operator.do_main_loop(
         cli_env_manifest=env_manifest,

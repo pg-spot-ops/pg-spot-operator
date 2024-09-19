@@ -16,9 +16,11 @@ SPOT_OPERATOR_ID_TAG = "pg-spot-operator-instance"
 STORAGE_TYPE_NETWORK = "network"
 MAX_WAIT_SECONDS: int = 300
 LOGIN_USER = "pgspotops"
-AWS_PROFILE = "default"
 OS_IMAGE_FAMILY = "debian-12"
 
+AWS_PROFILE: str = ""
+AWS_ACCESS_KEY_ID: str = ""
+AWS_SECRET_ACCESS_KEY: str = ""
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +34,19 @@ def str_to_bool(in_str: str) -> bool:
 
 
 def get_client(service: str, region: str):
-    session = boto3.session.Session(
-        profile_name=AWS_PROFILE, region_name=region
-    )
+    if AWS_PROFILE:
+        session = boto3.session.Session(
+            profile_name=AWS_PROFILE,
+            region_name=region,
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        )
+    else:
+        session = boto3.session.Session(
+            region_name=region,
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        )
     return session.client(service)
 
 

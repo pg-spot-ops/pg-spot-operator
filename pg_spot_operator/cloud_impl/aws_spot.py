@@ -20,6 +20,11 @@ from pg_spot_operator.util import timed_cache
 MAX_SKUS_FOR_SPOT_PRICE_COMPARE = 10
 SPOT_HISTORY_LOOKBACK_DAYS = 1
 
+AWS_PROFILE: str = ""
+AWS_ACCESS_KEY_ID: str = ""
+AWS_SECRET_ACCESS_KEY: str = ""
+
+
 logger = logging.getLogger(__name__)
 # Reduce boto noisiness https://github.com/boto/boto3/issues/521#issuecomment-653060090
 logging.getLogger("boto3").setLevel(logging.ERROR)
@@ -29,10 +34,29 @@ logging.getLogger("s3transfer").setLevel(logging.ERROR)
 logging.getLogger("urllib3").setLevel(logging.ERROR)
 
 
+def get_client(
+    service: str, region: str
+):  # TODO reuse / cache sessions for a while
+    if AWS_PROFILE:
+        session = boto3.session.Session(
+            profile_name=AWS_PROFILE,
+            region_name=region,
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        )
+    else:
+        session = boto3.session.Session(
+            region_name=region,
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        )
+    return session.client(service)
+
+
 @timed_cache(seconds=3600)
 def describe_instance_type(instance_type: str, region: str) -> dict:
     try:
-        client = boto3.client("ec2", region)
+        client = get_client("ec2", region)
         resp = client.describe_instance_types(InstanceTypes=[instance_type])
         if resp:
             return resp["InstanceTypes"][0]
@@ -46,7 +70,7 @@ def describe_instance_type(instance_type: str, region: str) -> dict:
 def get_all_ec2_spot_instance_types(
     region: str, with_local_storage_only: bool = False
 ):
-    client = boto3.client("ec2", region)
+    client = get_client("ec2", region)
     instances = []
     filters = [
         {
@@ -216,7 +240,7 @@ def get_spot_pricing_data_for_skus_over_period(
     {'AvailabilityZone': 'eu-north-1c', 'InstanceType': 'm7gd.xlarge', 'ProductDescription': 'Linux/UNIX', 'SpotPrice': '0.048800', 'Timestamp': datetime.datetime(2024, 5, 8, 6, 1, 45, tzinfo=tzutc())}
     ]
     """
-    client = boto3.client("ec2", region)
+    client = get_client("ec2", region)
     filters = [
         {"Name": "instance-type", "Values": instance_types},
         {"Name": "product-description", "Values": ["Linux/UNIX"]},
@@ -367,7 +391,7 @@ def get_all_running_operator_instances_from_region(
     instances = []
 
     logger.debug("Fetching all instances from AWS region %s ...", region)
-    client = boto3.client("ec2", region)
+    client = get_client("ec2", region)
     filters = [
         {"Name": "instance-state-name", "Values": ["pending", "running"]},
         {"Name": "tag-key", "Values": [SPOT_OPERATOR_ID_TAG]},

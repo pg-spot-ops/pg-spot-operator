@@ -99,6 +99,8 @@ class SectionAccess(BaseModel):
 
 
 class SectionAws(BaseModel):
+    access_key_id: str = ""
+    secret_access_key: str = ""
     security_group_ids: list[str] = field(default_factory=list)
     subnet_id: str = ""
     profile_name: str = ""

@@ -11,6 +11,7 @@ from datetime import datetime
 import yaml
 
 from pg_spot_operator import cloud_api, cmdb, constants, manifests
+from pg_spot_operator.cloud_impl import aws_spot, aws_vm
 from pg_spot_operator.cloud_impl.aws_spot import (
     describe_instance_type,
     get_current_spot_price,
@@ -620,6 +621,17 @@ def do_main_loop(
                 raise NoOp()
 
             # Step 2 - detect if something needs to be done based on manifest
+
+            # Set AWS creds for non-manifest related API calls
+            if m.aws.access_key_id and m.aws.secret_access_key:
+                aws_spot.AWS_ACCESS_KEY_ID = aws_vm.AWS_ACCESS_KEY_ID = (
+                    m.aws.access_key_id
+                )
+                aws_spot.AWS_SECRET_ACCESS_KEY = (
+                    aws_vm.AWS_SECRET_ACCESS_KEY
+                ) = m.aws.secret_access_key
+            if m.aws.profile_name:
+                aws_spot.AWS_PROFILE = aws_vm.AWS_PROFILE = m.aws.profile_name
 
             logger.debug(
                 "Processing instance '%s' (%s) ...",
