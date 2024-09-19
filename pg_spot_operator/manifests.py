@@ -106,7 +106,7 @@ class SectionAws(BaseModel):
 
 
 class SectionPgConfig(BaseModel):
-    tuning_profile: str = ""
+    tuning_profile: str = "default"
     extensions: list[str] = field(default_factory=list)
     extra_os_packages: list[str] = field(default_factory=list)
     ensure_shared_preload_libraries: list[str] = field(default_factory=list)
