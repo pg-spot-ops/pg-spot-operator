@@ -74,6 +74,7 @@ class ArgumentParser(Tap):
     )  # Instance expiry / teardwon timestamp
     public_ip: bool = to_bool(os.getenv("PGSO_PUBLIC_IP", "true"))
     cpu_architecture: str = os.getenv("PGSO_CPU_ARCHITECTURE", "")
+    ssh_keys: str = os.getenv("PGSO_SSH_KEYS", "")  # Comma separated
 
 
 args: ArgumentParser | None = None
@@ -124,6 +125,10 @@ instance_name: {args.instance_name}
     if args.instance_type:
         mfs += f"  instance_type: {args.instance_type}\n"
     # logger.debug("Compiled manifest: %s", mfs)
+    if args.ssh_keys:
+        mfs += "access:\n  extra_ssh_pub_keys:\n"
+        for key in args.ssh_keys.split(","):
+            mfs += "    - " + key.strip() + "\n"
     return mfs
 
 

@@ -271,14 +271,15 @@ def get_key_pair_pubkey_if_any(region: str, ssh_key_pair_name: str) -> str:
     return ""
 
 
-def get_cloud_init_ssh_user_setup(
+def compile_cloud_init_user_data_config(
     region: str,
     login_user: str,
-    ssh_key_path: str,
+    default_ssh_key_path: str,
+    ssh_keys: list[str],
     ssh_key_pair_name: str = "",
 ) -> str:
-    ssh_key = read_ssh_key_from_path(ssh_key_path)
-    key_pair_key = get_key_pair_pubkey_if_any(region, ssh_key_pair_name)
+    default_ssh_key = read_ssh_key_from_path(default_ssh_key_path)
+    aws_key_pair_key = get_key_pair_pubkey_if_any(region, ssh_key_pair_name)
 
     cloud_init = f"""
 #cloud-config
@@ -290,22 +291,13 @@ users:
       - "ALL=(ALL) NOPASSWD:ALL"
     shell: /bin/bash
     ssh-authorized-keys:
-    - {ssh_key}
 """
-    if key_pair_key:
-        cloud_init = f"""
-#cloud-config
-cloud_final_modules:
-- [users-groups,always]
-users:
-  - name: {login_user}
-    sudo:
-      - "ALL=(ALL) NOPASSWD:ALL"
-    shell: /bin/bash
-    ssh-authorized-keys:
-    - {ssh_key}
-    - {key_pair_key}
-"""
+    if default_ssh_key:
+        cloud_init += f"    - {default_ssh_key}\n"
+    if aws_key_pair_key:
+        cloud_init += f"    - {aws_key_pair_key}\n"
+    for key in ssh_keys:
+        cloud_init += f"    - {key}\n"
     return cloud_init
 
 
@@ -530,15 +522,18 @@ def ec2_launch_instance(
 
 def read_ssh_key_from_path(key_path: str) -> str:
     key_path = os.path.expanduser(key_path)
-    if not key_path:
-        return ""
-    logger.debug("Reading SSH key from path: %s", key_path)
     if not os.path.exists(key_path):
-        logger.debug(f"WARNING: SSH pubkey at {key_path} not found")
+        logger.warning(
+            f"SSH pubkey at {key_path} not found, might not be able to access the VM later"
+        )
         return ""
     if not os.path.isfile(key_path):
-        logger.debug(f"WARNING: SSH pubkey at {key_path} not a file")
+        logger.warning(
+            f"SSH pubkey at {key_path} not a file, might not be able to access the VM later"
+        )
         return ""
+    logger.debug("Reading SSH key from path: %s", key_path)
+
     with open(key_path) as f:
         return f.read().rstrip()
 
@@ -731,8 +726,12 @@ def ensure_spot_vm(
             f"Instance {i_desc['InstanceId']} already running for instance {instance_name}, skipping create"
         )
     else:
-        user_data = get_cloud_init_ssh_user_setup(
-            region, LOGIN_USER, "~/.ssh/id_rsa.pub", m.aws.key_pair_name
+        user_data = compile_cloud_init_user_data_config(
+            region,
+            LOGIN_USER,
+            "~/.ssh/id_rsa.pub",
+            m.access.extra_ssh_pub_keys,
+            m.aws.key_pair_name,
         )
         i_desc = ec2_launch_instance(m, dry_run=dry_run, user_data=user_data)
         if not dry_run:

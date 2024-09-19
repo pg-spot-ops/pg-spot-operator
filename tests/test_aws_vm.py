@@ -2,9 +2,14 @@ import os.path
 import datetime
 import unittest
 
+import yaml
+
 from pg_spot_operator import manifests
 from pg_spot_operator.cloud_impl import aws_vm
-from pg_spot_operator.cloud_impl.aws_vm import ensure_spot_vm
+from pg_spot_operator.cloud_impl.aws_vm import (
+    ensure_spot_vm,
+    compile_cloud_init_user_data_config,
+)
 
 TEST_MANIFEST = """
 ---
@@ -60,3 +65,18 @@ def test_ensure_spot_vm_local_storage():
     assert created
     assert vm.ip_public
     assert not vm.volume_id
+
+
+def test_compile_cloud_init_user_data_config():
+    """https://cloudinit.readthedocs.io/en/22.2.2/topics/examples.html#yaml-examples"""
+    user_data = compile_cloud_init_user_data_config(
+        "reg",
+        "lu",
+        "~/.ssh/dummypath",
+        ["key1", "key2"],
+        "",
+    )
+    assert user_data
+    d = yaml.safe_load(user_data)
+    # print(d)
+    assert len(d["users"][0]["ssh-authorized-keys"]) == 2
