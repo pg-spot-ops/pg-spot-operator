@@ -4,6 +4,9 @@ import json
 import sys
 
 
+PROFILE = "oltp"
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: $profile.py json_str_input")
@@ -51,5 +54,6 @@ if __name__ == "__main__":
     o["jit_above_cost"] = "1000000"  # 10x from default
     o["track_wal_io_timing"] = "on"
 
+    print(f"# Applied tuning profile: {PROFILE}")
     for k, v in sorted(o.items()):
         print(f"{k} = {v}")

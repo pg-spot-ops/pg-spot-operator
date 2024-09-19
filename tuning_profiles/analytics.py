@@ -3,6 +3,8 @@
 import json
 import sys
 
+PROFILE = "analytics"
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -50,5 +52,6 @@ if __name__ == "__main__":
     o["jit"] = "on"
     o["track_wal_io_timing"] = "on"
 
+    print(f"# Applied tuning profile: {PROFILE}")
     for k, v in sorted(o.items()):
         print(f"{k} = {v}")
