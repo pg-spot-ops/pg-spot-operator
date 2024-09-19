@@ -84,14 +84,6 @@ def preprocess_ensure_vm_action(
     m.vm.cpu_architecture = sku.arch
 
     logger.info(
-        "Selected SKU %s (%s) in %s region %s for a monthly Spot price of $%s",
-        sku.instance_type,
-        sku.arch,
-        sku.cloud,
-        sku.region,
-        sku.monthly_spot_price,
-    )
-    logger.info(
         "SKU %s main specs - vCPU: %s, RAM: %s, instance storage: %s",
         sku.instance_type,
         sku.cpu,
@@ -107,6 +99,14 @@ def preprocess_ensure_vm_action(
             * 24
             * 30
         )
+    logger.info(
+        "Selected SKU %s (%s) in %s region %s for a monthly Spot price of $%s",
+        sku.instance_type,
+        sku.arch,
+        sku.cloud,
+        sku.region,
+        sku.monthly_spot_price,
+    )
     if not sku.monthly_ondemand_price:
         sku.monthly_ondemand_price = (
             cloud_api.try_get_monthly_ondemand_price_for_sku(
