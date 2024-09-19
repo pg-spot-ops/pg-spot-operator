@@ -75,6 +75,7 @@ class ArgumentParser(Tap):
     public_ip: bool = to_bool(os.getenv("PGSO_PUBLIC_IP", "true"))
     cpu_architecture: str = os.getenv("PGSO_CPU_ARCHITECTURE", "")
     ssh_keys: str = os.getenv("PGSO_SSH_KEYS", "")  # Comma separated
+    tuning_profile: str = os.getenv("PGSO_TUNING_PROFILE", "default")
 
 
 args: ArgumentParser | None = None
@@ -129,6 +130,8 @@ instance_name: {args.instance_name}
         mfs += "access:\n  extra_ssh_pub_keys:\n"
         for key in args.ssh_keys.split(","):
             mfs += "    - " + key.strip() + "\n"
+    if args.tuning_profile:
+        mfs += f"pg_config:\n  tuning_profile: {args.tuning_profile}\n"
     return mfs
 
 

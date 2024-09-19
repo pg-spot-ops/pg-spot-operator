@@ -373,7 +373,9 @@ echo "Done at `date`"
     return exec_full_path
 
 
-def apply_tuning_profile(mf: InstanceManifest) -> list[str]:
+def apply_tuning_profile(
+    mf: InstanceManifest, tuning_profiles_path: str = "./tuning_profiles"
+) -> list[str]:
     """Executes the tuning profile if exists and returns lines that would be added to pg_config.extra_config_lines"""
     if (
         not mf.pg_config.tuning_profile
@@ -381,18 +383,21 @@ def apply_tuning_profile(mf: InstanceManifest) -> list[str]:
     ):
         return []
     profile_path_to_run = os.path.join(
-        "./tuning_profiles", mf.pg_config.tuning_profile + ".py"
+        tuning_profiles_path,
+        mf.pg_config.tuning_profile.strip().lower() + ".py",
     )
     if not os.path.exists(profile_path_to_run):
         logger.warning(
-            "Tuning profile %s not found from ./tuning_profiles, skipping tuning for instance %s",
+            "Tuning profile %s not found from %s, skipping tuning for instance %s",
             mf.pg_config.tuning_profile,
-            mf.uuid,
+            profile_path_to_run,
+            mf.instance_name,
         )
         return []
-    tuning_input: dict = mf.vm.dict()
+    tuning_input: dict = mf.vm.model_dump()
     tuning_input["cloud"] = mf.cloud
-    tuning_input["major_ver"] = mf.postgres_version
+    tuning_input["postgres_version"] = mf.postgres_version
+    tuning_input["user_tags"] = mf.user_tags
     logger.debug("Config tuning input: %s", tuning_input)
 
     tuning_input_json_str = json.dumps(tuning_input)
@@ -417,13 +422,9 @@ def apply_postgres_config_tuning_to_override_manifest(
     if not mo:
         raise Exception("Existing override manifest object expected")
     if (
-        action
-        in [
-            constants.ACTION_INSTANCE_SETUP,
-            constants.ACTION_ENSURE_VM,
-        ]
+        action == constants.ACTION_INSTANCE_SETUP
         and m.pg_config.tuning_profile
-        and m.pg_config.tuning_profile != "none"
+        and m.pg_config.tuning_profile.strip().lower() != "none"
     ):
         logger.info(
             "Applying Postgres tuning profile %s to given hardware ...",
