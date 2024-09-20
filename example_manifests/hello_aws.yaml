@@ -3,10 +3,11 @@ api_version: v1
 kind: pg_spot_operator_instance
 cloud: aws
 region: eu-north-1
-availability_zone:
+# availability_zone:
 instance_name: hello-aws
 public_ip_address: true
 floating_public_ip: true  # As Elastic IPs are very limited per account
+postgres_version: 15
 #destroy_target_time_utc: now
 #destroy_backups: true
 vm:
@@ -18,9 +19,21 @@ vm:
   storage_min: 100  # Can't set both storage_min and volume_size_min
   storage_type: local  # local | network. PS Using network volumes pins you to a specific AZ
   storage_speed_class: ssd  # hdd | ssd | nvme. Not guaranteed to be honoured
-  volume_type:  # e.g. gp3
-  volume_iops:  # For provisioned / paid IOPS, EBS gp3 default is 3000
-  volume_throughput:  # MBs. For provisioned / paid throughput for gp3. gp3 default is 125
+#  volume_type:  # e.g. gp3
+#  volume_iops:  # For provisioned / paid IOPS, EBS gp3 default is 3000
+#  volume_throughput:  # MBs. For provisioned / paid throughput for gp3. gp3 default is 125
   detailed_monitoring: false  # incurs extra costs
 user_tags:
   app: backend
+pg:
+  admin_user: admin
+  admin_user_password: !vault |
+    $ANSIBLE_VAULT;1.1;AES256
+    30643364356334303739626534623937613733386535346661363166323138636537353666653262
+    3462353138393366393537643733666337353762363763620a333436343730373936343830646431
+    37363766353163666666613863363461656131646662653035336139383261643966323966633333
+    3532653838393935650a643666333361383465623463643563626337386235336166393966663733
+    3839
+access:
+  pg_hba:
+    - "hostssl all admin 0.0.0.0/0 scram-sha-256"

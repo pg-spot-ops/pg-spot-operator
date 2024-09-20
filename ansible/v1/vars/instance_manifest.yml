@@ -5,11 +5,11 @@ kind: pg_spot_operator_instance
 cloud: aws
 region: eu-north-1
 instance_name: hello-aws
+postgres_version: 16
 #destroy_target_time_utc: now
 pg:
   admin_user: admin
   admin_user_password: seitselehma
-  major_ver: 16
 backup:  # Only supported backup tool is pgBackRest currently
   type: none  # none | pgbackrest
   s3_bucket: pg-spot-ops-dev
