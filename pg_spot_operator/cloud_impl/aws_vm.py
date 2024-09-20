@@ -51,7 +51,6 @@ def get_latest_ami_for_region_arch(
         architecture = "amd64"
 
     ami_name_search_str = f"{OS_IMAGE_FAMILY}-{architecture}-*"
-    logger.debug("ami_name_search_str: %s", ami_name_search_str)
 
     cur_year = datetime.now().year
     years = [cur_year, cur_year - 1]  # To cover beginning of year
@@ -82,7 +81,7 @@ def get_latest_ami_for_region_arch(
         if response["Images"]:
             amis = response["Images"]
             amis.sort(key=lambda x: x["CreationDate"], reverse=True)
-            logger.debug("AMI found", amis[0])
+            logger.debug("Latest %s AMI found: %s", OS_IMAGE_FAMILY, amis[0])
             return amis[0]["ImageId"], amis[0]
     raise Exception(
         f"No default AMI found for region {region}, architecture {architecture}, os_family {OS_IMAGE_FAMILY}"
@@ -439,7 +438,7 @@ def ec2_launch_instance(
         )
 
     logger.debug(
-        f"Launching new {market_type} instance of type {instance_type} ..."
+        f"Launching new {market_type} instance of type {instance_type} in region {region}..."
     )
 
     client = get_client("ec2", region)

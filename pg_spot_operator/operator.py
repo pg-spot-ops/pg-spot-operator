@@ -510,9 +510,10 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
             return False, vm.provider_id
     if m.instance_name not in running_operator_vms_in_region:
         logger.warning(
-            "Detected a missing VM for instance %s (%s) - creating ...",
+            "Detected a missing VM for instance %s (%s) - %s ...",
             m.instance_name,
             m.cloud,
+            "NOT creating (--dry-run)" if dry_run else "creating",
         )
         cmdb.mark_any_active_vms_as_deleted(m)
 
