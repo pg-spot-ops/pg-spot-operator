@@ -157,7 +157,7 @@ def get_manifest_from_args_as_string(args: ArgumentParser) -> str:
     raise Exception("Could not find / compile a manifest string")
 
 
-def validate_cli_args(args: ArgumentParser):
+def check_cli_args_valid(args: ArgumentParser):
     if args.instance_name:
         if not args.region:
             logger.error("--region input expected for single args")
@@ -175,6 +175,11 @@ def validate_cli_args(args: ArgumentParser):
                 args.vault_password_file,
             )
             exit(1)
+    if len(args.region.split("-")) != 3:
+        logger.error(
+            """Unexpected --region format, run "PAGER= aws account list-regions --query 'Regions[*].[RegionName]' --output text" for a complete listing""",
+        )
+        exit(1)
 
 
 def try_load_manifest(manifest_str: str) -> InstanceManifest | None:
@@ -254,7 +259,7 @@ def main():  # pragma: no cover
         args.print_help()
         exit(0)
 
-    validate_cli_args(args)
+    check_cli_args_valid(args)
 
     if args.check_manifest:
         check_manifest_and_exit(args)
