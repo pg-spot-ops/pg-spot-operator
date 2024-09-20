@@ -18,7 +18,7 @@
       password: "{{ pg.admin_user_password }}"
       role_attr_flags: "{{ pg.admin_is_real_superuser is truthy | ternary('SUPERUSER', 'CREATEDB,CREATEROLE') }}"
       login_host: /var/run/postgresql
-      login_port: "{{ pg.port | d(5432) }}"
+      login_port: "5432"
     when: pg.admin_user | d('') | length > 0
 
   when: pg.admin_user | d('')
@@ -32,5 +32,5 @@
     owner: "{{ pg.admin_user | default('') or 'postgres' }}"
     template: template1
     login_host: /var/run/postgresql
-    login_port: "{{ pg.port | d(5432) }}"
+    login_port: "5432"
   when: pg.ensure_app_dbname | d('') | length > 0

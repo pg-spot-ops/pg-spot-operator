@@ -1,6 +1,6 @@
 [{{ stanza_name }}]
 pg1-path=/var/lib/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}
-pg1-port={{  pg.port | d(5432) }}
+pg1-port=5432
 
 [global]
 {% if 'process-max' not in backup.pgbackrest.global_settings|default({}) %}

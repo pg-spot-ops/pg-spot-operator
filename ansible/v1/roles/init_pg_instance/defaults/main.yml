@@ -1,8 +1,7 @@
 ---
 instance_name: "{{ instance_name | d('spot') }}"
+postgres_version: "{{ postgres_version | d('16') }}"
 def_pg:
-  major_ver: 16
-  port: 5432
   ensure_app_dbname: appdb # Leave empty when default "postgres" DB is enough or DBs created later from app / manually
   admin_user: dev  # Leave empty to not create one
   admin_user_password: dev

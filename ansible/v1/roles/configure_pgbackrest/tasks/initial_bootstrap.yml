@@ -3,7 +3,7 @@
   become: true
   become_user: postgres
   ansible.builtin.command:
-    "psql -p {{  pg.port | d(5432) }} -c 'select 1;'"
+    "psql -p 5432 -c 'select 1;'"
 
 - name: Reload Postgres config
   service: name=postgresql state=reloaded
@@ -13,7 +13,7 @@
   become: true
   become_user: postgres
   ansible.builtin.command:
-    "psql -p {{  pg.port | d(5432) }} -XAtc \"select bool_or(pending_restart) from pg_settings;\""
+    "psql -p 5432 -XAtc \"select bool_or(pending_restart) from pg_settings;\""
   register: pending_restart
   changed_when: pending_restart.stdout == 't'
 

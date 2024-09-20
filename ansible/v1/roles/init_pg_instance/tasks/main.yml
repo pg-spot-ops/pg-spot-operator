@@ -19,7 +19,7 @@
 - name: Create cluster - when nothing exists
   ansible.builtin.command: >
     pg_createcluster {{ postgres_version }} {{ postgres_cluster_name }}
-    -p {{ pg.port | d(5432) }} -- {% for opt in pg.initdb_opts | d(default_initdb_opts) %}{{ opt }} {% endfor %}
+    -p 5432 -- {% for opt in pg.initdb_opts | d(default_initdb_opts) %}{{ opt }} {% endfor %}
   when: not cluster_conf_exists.stat.exists and not cluster_datadir_exists.stat.exists
   notify:
     - "init_pg_instance : Restart postgres"
@@ -33,7 +33,7 @@
   - name: Create cluster in temp dir
     ansible.builtin.command: >
       pg_createcluster {{ postgres_version }} {{ postgres_cluster_name }} -d /tmp/pg_dummy_cluster
-      -p {{ pg.port | d(5432) }} -- {% for opt in pg.initdb_opts | d(default_initdb_opts) %}{{ opt }} {% endfor %}
+      -p 5432 -- {% for opt in pg.initdb_opts | d(default_initdb_opts) %}{{ opt }} {% endfor %}
 
   - name: Replace data_directory in config
     ansible.builtin.replace:
@@ -78,7 +78,7 @@
   become: true
   become_user: postgres
   ansible.builtin.command:
-    "psql -p {{ pg.port | d(5432) }} -XAtc \"select bool_or(pending_restart) from pg_settings;\""
+    "psql -p 5432 -XAtc \"select bool_or(pending_restart) from pg_settings;\""
   register: pending_restart
   changed_when: pending_restart.stdout == 't'
 
