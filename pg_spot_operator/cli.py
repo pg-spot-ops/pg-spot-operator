@@ -1,3 +1,4 @@
+import fcntl
 import logging
 import os.path
 
@@ -217,7 +218,26 @@ def check_manifest_and_exit(args: ArgumentParser):
     exit(0)
 
 
+def ensure_single_instance_running():
+    """https://stackoverflow.com/questions/380870/make-sure-only-a-single-instance-of-a-program-is-running"""
+
+    lock_file_pointer = os.open(
+        "/tmp/pg_spot_operator_instance.lock", os.O_WRONLY | os.O_CREAT
+    )
+
+    try:
+        fcntl.lockf(lock_file_pointer, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except IOError:
+        logger.error(
+            "Another instance already running? Delete /tmp/pg_spot_operator_instance.lock if not"
+        )
+        exit(1)
+
+
 def main():  # pragma: no cover
+
+    ensure_single_instance_running()
+
     global args
     args = validate_and_parse_args()
 
