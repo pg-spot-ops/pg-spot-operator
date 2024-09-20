@@ -67,7 +67,7 @@
 
   - name: Set archive_command
     ansible.builtin.lineinfile:
-      path: /etc/postgresql/{{ pg.major_ver }}/{{ postgres_cluster_name }}/postgresql.conf
+      path: /etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf
       line: "{{ item }}"
     loop: "{{ postgres_archiving_settings }}"
 

@@ -1,9 +1,7 @@
 ---
 ## Manifest
 #instance_name: spot
-#pg:
-#  major_ver: 16
-#  port: 5432
+#postgres_version: 16
 #backup:
 #  type: pgbackrest
 #  wal_archiving_max_interval: 1min   # Postgres archive_timeout i.e. a typical "data-loss window" on instance termination

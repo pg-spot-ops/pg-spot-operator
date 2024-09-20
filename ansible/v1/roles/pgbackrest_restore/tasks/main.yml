@@ -30,13 +30,13 @@
   #  become_user: postgres
   #  ansible.builtin.file:
   #    state: absent
-  #    path: "/var/lib/postgresql/{{ pg.major_ver }}/{{ postgres_cluster_name}}"
+  #    path: "/var/lib/postgresql/{{ postgres_version }}/{{ postgres_cluster_name}}"
 
   - name: Set restore settings
     become: true
     become_user: postgres
     ansible.builtin.lineinfile:
-      path: /etc/postgresql/{{ pg.major_ver }}/{{ postgres_cluster_name }}/postgresql.conf
+      path: /etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf
       line: "{{ item }}"
     loop: "{{ postgres_restore_settings }}"
 
@@ -44,7 +44,7 @@
     become: true
     become_user: postgres
     ansible.builtin.lineinfile:
-      path: /etc/postgresql/{{ pg.major_ver }}/{{ postgres_cluster_name }}/postgresql.conf
+      path: /etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf
       line: "archive_command = '/bin/true' # For testing only"
     when: disable_archiving is truthy
 

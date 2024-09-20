@@ -12,7 +12,7 @@ Role Variables
 
 Defaults are in `defaults/main.yml`. Following vars should normally be overridden in calling playbooks:
 
-- pg.major_ver
+- postgres_version
 
 
 Dependencies

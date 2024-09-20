@@ -1,5 +1,5 @@
 ---
-pg.major_ver: 16
+postgres_version: 16
 packages_general:
 #  - python3-pip
 #  - curl
@@ -15,4 +15,4 @@ packages_general:
 extensions:
   - cron
 #  - pgaudit
-extra_os_packages: []  # If something doesn't follow the postgresql-{{ pg.major_ver }}-$extension naming
+extra_os_packages: []  # If something doesn't follow the postgresql-{{ postgres_version }}-$extension naming

@@ -33,7 +33,7 @@
 
 - name: Install postgres
   ansible.builtin.apt:
-    name: postgresql-{{ pg.major_ver }}
+    name: postgresql-{{ postgres_version }}
     state: present
   register: result
   until: result is success
@@ -42,7 +42,7 @@
 
 - name: Install extension packages
   ansible.builtin.apt:
-    name: "postgresql-{{ pg.major_ver }}-{{ item }}"
+    name: "postgresql-{{ postgres_version }}-{{ item }}"
     state: present
   loop: "{{ extensions }}"
   register: result

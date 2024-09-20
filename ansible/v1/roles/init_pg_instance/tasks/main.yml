@@ -8,17 +8,17 @@
 
 - name: Check cluster conf initialized
   ansible.builtin.stat:
-    path: "/etc/postgresql/{{ pg.major_ver }}/{{ postgres_cluster_name }}/postgresql.conf"
+    path: "/etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf"
   register: cluster_conf_exists
 
 - name: Check cluster datadir initialized
   ansible.builtin.stat:
-    path: "/var/lib/postgresql/{{ pg.major_ver }}/{{ postgres_cluster_name }}/global/pg_control"
+    path: "/var/lib/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/global/pg_control"
   register: cluster_datadir_exists
 
 - name: Create cluster - when nothing exists
   ansible.builtin.command: >
-    pg_createcluster {{ pg.major_ver }} {{ postgres_cluster_name }}
+    pg_createcluster {{ postgres_version }} {{ postgres_cluster_name }}
     -p {{ pg.port | d(5432) }} -- {% for opt in pg.initdb_opts | d(default_initdb_opts) %}{{ opt }} {% endfor %}
   when: not cluster_conf_exists.stat.exists and not cluster_datadir_exists.stat.exists
   notify:
@@ -32,14 +32,14 @@
 
   - name: Create cluster in temp dir
     ansible.builtin.command: >
-      pg_createcluster {{ pg.major_ver }} {{ postgres_cluster_name }} -d /tmp/pg_dummy_cluster
+      pg_createcluster {{ postgres_version }} {{ postgres_cluster_name }} -d /tmp/pg_dummy_cluster
       -p {{ pg.port | d(5432) }} -- {% for opt in pg.initdb_opts | d(default_initdb_opts) %}{{ opt }} {% endfor %}
 
   - name: Replace data_directory in config
     ansible.builtin.replace:
-      path: /etc/postgresql/{{ pg.major_ver }}/{{ postgres_cluster_name }}/postgresql.conf
+      path: /etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf
       regexp: "^data_directory.*"
-      replace: "data_directory = '/var/lib/postgresql/{{ pg.major_ver }}/{{ postgres_cluster_name }}'"
+      replace: "data_directory = '/var/lib/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}'"
 
   - name: Clean cluster temp dir path if exist
     ansible.builtin.file:
@@ -48,13 +48,13 @@
 
   when: not cluster_conf_exists.stat.exists and cluster_datadir_exists.stat.exists
 
-- name: Ensure Postgres pg.major_ver owned by postgres user
-  file: dest="/var/lib/postgresql/{{pg.major_ver}}" owner=postgres group=postgres
+- name: Ensure Postgres postgres_version owned by postgres user
+  file: dest="/var/lib/postgresql/{{postgres_version}}" owner=postgres group=postgres
   when: not cluster_conf_exists.stat.exists
 
 - name: Set up postgresql.conf base settings
   ansible.builtin.lineinfile:
-    path: "/etc/postgresql/{{ pg.major_ver }}/{{ postgres_cluster_name }}/postgresql.conf"
+    path: "/etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf"
     line: "{{ item }}"
   loop: "{{ postgres_base_settings }}"
   notify:
@@ -62,7 +62,7 @@
 
 - name: Set up postgresql.conf user settings
   ansible.builtin.lineinfile:
-    path: "/etc/postgresql/{{ pg.major_ver }}/{{ postgres_cluster_name }}/postgresql.conf"
+    path: "/etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf"
     line: "{{ item }}"
   loop: "{{ pg_config.extra_config_lines | d([]) }}"
   notify:
@@ -72,7 +72,7 @@
   ansible.builtin.meta: flush_handlers
 
 - name: Ensure postgres started
-  ansible.builtin.service: "name=postgresql@{{ pg.major_ver }}-{{ postgres_cluster_name }} state=started"
+  ansible.builtin.service: "name=postgresql@{{ postgres_version }}-{{ postgres_cluster_name }} state=started"
 
 - name: Check if Postgres restart required
   become: true
