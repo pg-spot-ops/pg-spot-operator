@@ -1,12 +1,12 @@
 - name: Top level instance manifest keys
   set_fact:
     uuid: "{{ instance_manifest.uuid | d('') }}"
-    api_version: "{{ instance_manifest.api_version }}"
-    kind: "{{ instance_manifest.kind }}"
-    instance_name: "{{ instance_manifest.instance_name }}"
+    api_version: "{{ instance_manifest.api_version | d('v1') }}"
+    kind: "{{ instance_manifest.kind | d('pg_spot_operator_instance') }}"
+    instance_name: "{{ instance_manifest.instance_name | d('') }}"
     description: "{{ instance_manifest.description | d('') }}"
-    cloud: "{{ instance_manifest.cloud }}"
-    region: "{{ instance_manifest.region }}"
+    cloud: "{{ instance_manifest.cloud | d('vagrant-libvirt') }}"
+    region: "{{ instance_manifest.region | d('local') }}"
     allow_new_resources: "{{ instance_manifest.allow_new_resources | d(True) }}"
     is_paused: "{{ instance_manifest.is_paused | d(False) }}"
     user_tags: "{{ instance_manifest.user_tags | d({}) }}"
@@ -24,7 +24,7 @@
 
 - name: Top level override manifest keys
   set_fact:
-    uuid: "{{ engine_overrides.uuid }}"
+    uuid: "{{ engine_overrides.uuid | d(None) }}"
     allow_new_resources: "{{ engine_overrides.allow_new_resources | d(allow_new_resources) }}"
     is_paused: "{{ engine_overrides.is_paused | d(is_paused) }}"
     user_tags: "{{ user_tags | ansible.builtin.combine(engine_overrides.user_tags | d({})) }}"

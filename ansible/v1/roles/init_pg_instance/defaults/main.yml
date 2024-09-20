@@ -1,6 +1,7 @@
 ---
-instance_name: "{{ instance_name | d('spot') }}"
-postgres_version: "{{ postgres_version | d('16') }}"
+def:
+  instance_name: spot
+  postgres_version: 16
 def_pg:
   ensure_app_dbname: appdb # Leave empty when default "postgres" DB is enough or DBs created later from app / manually
   admin_user: dev  # Leave empty to not create one
@@ -19,7 +20,7 @@ def_pg_config:
   extra_config_lines: []
 
 # Not exposed in the manifest currently
-postgres_cluster_name: "{{ instance_name | replace('-', '_') }}"  # Dashes don't work with pg_createcluster
+postgres_cluster_name: "{{ instance_name | d('') | replace('-', '_') or def.instance_name }}"  # Dashes don't work with pg_createcluster
 postgres_base_settings:
   - "archive_mode = on"
   - "archive_command = '/bin/true'"

@@ -1,6 +1,8 @@
 ---
 - name: Set role testing defaults
   set_fact:
+    instance_name: spot
+    postgres_version: 16
     pg: "{{ def_pg }}"
     access: "{{ def_access }}"
     pg_config: "{{ def_pg_config }}"
