@@ -5,7 +5,7 @@ from datetime import timedelta, datetime
 from statistics import mean
 
 import boto3
-
+import requests
 
 PRICE_LOOKBACK_DAYS = 2
 
@@ -151,4 +151,11 @@ if __name__ == '__main__':
         sku = rb[1]
         az = rb[2]
         price = rb[3]
-        print(f"REGION: {reg} INSTANCE_TYPE: {sku} ZONE: {az} PRICE: {price}")
+        price_od = 0
+        try:
+            r = requests.get(f'https://ec2.shop?filter={sku}&region={reg}', headers={'Accept': 'application/json'})
+            if r and r.status_code == 200:
+                price_od = r.json()["Prices"][0]["MonthlyPrice"]
+        except:
+            pass
+        print(f"REGION: {reg} INSTANCE_TYPE: {sku} ZONE: {az} SPOT PRICE: {price} ONDEMAND PRICE: {price_od} DIFFERENCE {round(price_od / price, 1)}x")
