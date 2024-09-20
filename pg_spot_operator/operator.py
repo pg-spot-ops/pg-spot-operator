@@ -190,7 +190,6 @@ def generate_ansible_inventory_file_for_action(
 def populate_temp_workdir_for_action_exec(
     action: str,
     manifest: InstanceManifest,
-    override_manifest: InstanceManifest,
     temp_workdir_root: str,
 ) -> str:
     """Create a temp copy of the original handler folder as executions require input / produce output
@@ -234,15 +233,11 @@ def populate_temp_workdir_for_action_exec(
     ) as f:
         f.write(str(manifest.original_manifest))
 
-    omd = override_manifest.model_dump(
-        exclude_none=True, exclude_defaults=True
-    )
-    omd.update(manifest.session_outvars)
-    if omd:
+    if manifest.session_vars:
         with open(
             os.path.join(temp_workdir, "vars", "engine_overrides.yml"), "w"
         ) as f:
-            f.write(yaml.dump(omd))
+            f.write(yaml.dump(manifest.session_vars))
 
     return temp_workdir
 
@@ -334,7 +329,7 @@ def run_ansible_handler(
         temp_workdir, action
     )
     merged_output_params = merge_action_output_params(
-        output_params, m.session_outvars
+        output_params, m.session_vars
     )
 
     register_results_in_cmdb(action, merged_output_params, m)
@@ -417,11 +412,9 @@ def apply_tuning_profile(
     return [line for line in output.split("\n") if line]
 
 
-def apply_postgres_config_tuning_to_override_manifest(
-    action: str | None, m: InstanceManifest, mo: InstanceManifest | None
+def apply_postgres_config_tuning_to_manifest(
+    action: str | None, m: InstanceManifest
 ) -> None:
-    if not mo:
-        raise Exception("Existing override manifest object expected")
     if (
         action == constants.ACTION_INSTANCE_SETUP
         and m.pg_config.tuning_profile
@@ -443,7 +436,10 @@ def apply_postgres_config_tuning_to_override_manifest(
             )
         )
         if merged_config_lines:
-            mo.pg_config.extra_config_lines = merged_config_lines
+            m.session_vars["pg_config"] = {}
+            m.session_vars["pg_config"][
+                "extra_config_lines"
+            ] = merged_config_lines
 
 
 def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
@@ -461,21 +457,10 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
         m.instance_name,
     )
 
-    # Place tuning changes etc into an override manifest to have a clear separation
-    # between user and engine input
-    m_over: InstanceManifest = InstanceManifest(
-        api_version=m.api_version,
-        kind=m.kind,
-        cloud=m.cloud,
-        region=m.region,
-        instance_name=m.instance_name,
-        uuid=m.uuid,
-    )
-
-    apply_postgres_config_tuning_to_override_manifest(action, m, m_over)
+    apply_postgres_config_tuning_to_manifest(action, m)
 
     temp_workdir = populate_temp_workdir_for_action_exec(
-        action, m, m_over, ACTION_HANDLER_TEMP_SPACE_ROOT
+        action, m, ACTION_HANDLER_TEMP_SPACE_ROOT
     )
 
     generate_ansible_inventory_file_for_action(action, m, temp_workdir)
@@ -508,7 +493,7 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
 
 def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
     """Make sure we have a VM
-    Returns True if a VM was created / recreated
+    Returns True if a VM was created / recreated + Provider ID
     """
     logger.debug(
         "Ensuring instance %s (%s) %s has a backing VM ...",
