@@ -553,13 +553,13 @@ def do_main_loop(
     cli_dry_run: bool = False,
     cli_env_manifest: InstanceManifest | None = None,
     cli_user_manifest_path: str = "",
-    cli_default_vault_password_file: str = "",
+    cli_vault_password_file: str = "",
     cli_main_loop_interval_s: int = 60,
 ):
     global dry_run
     dry_run = cli_dry_run
     global default_vault_password_file
-    default_vault_password_file = cli_default_vault_password_file
+    default_vault_password_file = cli_vault_password_file
 
     first_loop = True
     loops = 0

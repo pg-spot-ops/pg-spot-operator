@@ -39,8 +39,8 @@ class ArgumentParser(Tap):
     config_dir: str = os.getenv(
         "PGSO_CONFIG_DIR", "~/.pg-spot-operator"
     )  # For internal state keeping
-    default_vault_password_file: str = os.getenv(
-        "PGSO_DEFAULT_VAULT_PASSWORD_FILE", ""
+    vault_password_file: str = os.getenv(
+        "PGSO_VAULT_PASSWORD_FILE", ""
     )  # Can also be set on instance level
     verbose: bool = to_bool(os.getenv("PGSO_VERBOSE", "false"))  # More chat
     check_manifest: bool = to_bool(
@@ -145,7 +145,9 @@ def get_manifest_from_args_as_string(args: ArgumentParser) -> str:
         logger.info("Using the provided --manifest arg ...")
         return args.manifest
     elif args.manifest_path:
-        logger.info("Using the provided --manifest-file arg ...")
+        logger.info(
+            "Using the provided --manifest-path at %s ...", args.manifest_path
+        )
         with open(args.manifest_path) as f:
             return f.read()
     elif args.instance_name:
@@ -164,6 +166,13 @@ def validate_cli_args(args: ArgumentParser):
             exit(1)
         if not args.storage_min:
             logger.error("--storage-min input expected for single args")
+            exit(1)
+    if args.vault_password_file:
+        if not os.path.exists(os.path.expanduser(args.vault_password_file)):
+            logger.error(
+                "--vault-password-file not found at %s",
+                args.vault_password_file,
+            )
             exit(1)
 
 
@@ -187,12 +196,23 @@ def check_manifest_and_exit(args: ArgumentParser):
         logger.error("Failed manifest: %s", manifest_str)
         exit(1)
 
+    if "$ANSIBLE_VAULT" in m.original_manifest:
+        if not m.vault_password_file and args.vault_password_file:
+            m.vault_password_file = args.vault_password_file
+        secrets_found, decrypted = m.decrypt_secrets_if_any()
+        if secrets_found != decrypted:
+            logger.error(
+                "Failed to decrypt secrets, is --vault-password-file %s correct?",
+                m.vault_password_file or args.vault_password_file,
+            )
+            exit(1)
+
     logger.info(
         "Valid manifest provided for instance %s (%s)",
         m.instance_name,
         m.cloud,
     )
-    logger.debug(manifest_str)
+    # logger.debug(manifest_str)
     logger.info("Exiting due to --check-manifests")
     exit(0)
 
@@ -214,12 +234,12 @@ def main():  # pragma: no cover
         args.print_help()
         exit(0)
 
+    validate_cli_args(args)
+
     if args.check_manifest:
         check_manifest_and_exit(args)
 
     logger.debug("Args: %s", args.as_dict()) if args.verbose else None
-
-    validate_cli_args(args)
 
     env_manifest: InstanceManifest | None = None
     if args.manifest or args.instance_name:
@@ -246,7 +266,7 @@ def main():  # pragma: no cover
     operator.do_main_loop(
         cli_env_manifest=env_manifest,
         cli_dry_run=args.dry_run,
-        cli_default_vault_password_file=args.default_vault_password_file,
+        cli_vault_password_file=args.vault_password_file,
         cli_user_manifest_path=args.manifest_path,
         cli_main_loop_interval_s=args.main_loop_interval_s,
     )

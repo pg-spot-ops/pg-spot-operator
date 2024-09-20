@@ -180,25 +180,35 @@ class InstanceManifest(BaseModel):
     def fill_in_defaults(self):
         self.user_tags[SPOT_OPERATOR_ID_TAG] = self.instance_name
 
-    def decrypt_secrets_if_any(self) -> None:
-        """Could also be made generic - a la loop over model_dump but need it only for the Postgres password for now"""
-        if not self.vault_password_file and not default_vault_password_file:
-            if (
-                self.pg.admin_user_password
-                and self.pg.admin_user_password.startswith("$ANSIBLE_VAULT")
-            ):
-                logger.warning(
-                    "Could not decrypt admin_user_password as no vault_password_file set"
-                )
-            return
+    def decrypt_secrets_if_any(self) -> tuple[int, int]:
+        """Could also be made generic somehow - a la loop over model_dump but need it only for the Postgres password for now
+        Returns number of secrets found / decrypted
+        """
+        secrets_found = decrypted = 0
         if (
             self.pg.admin_user_password
             and self.pg.admin_user_password.startswith("$ANSIBLE_VAULT")
         ):
-            self.pg.admin_user_password = decrypt_vault_secret(
-                self.pg.admin_user_password,
-                self.vault_password_file or default_vault_password_file,
-            )
+            secrets_found += 1
+            if (
+                not self.vault_password_file
+                and not default_vault_password_file
+            ):
+                logger.warning(
+                    "Could not decrypt admin_user_password as no vault_password_file set"
+                )
+                return secrets_found, decrypted
+            try:
+                decrypted_secret = decrypt_vault_secret(
+                    self.pg.admin_user_password,
+                    self.vault_password_file or default_vault_password_file,
+                )
+                if decrypted_secret:
+                    self.pg.admin_user_password = decrypted_secret
+                    decrypted += 1
+            except Exception:
+                logger.exception("Failed to decrypt pg.admin_user_password")
+        return secrets_found, decrypted
 
     def diff_manifests(
         self, prev_manifest, original_manifests_only: bool = False
