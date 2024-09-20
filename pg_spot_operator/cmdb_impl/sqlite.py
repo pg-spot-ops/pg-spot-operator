@@ -10,7 +10,7 @@ def set_connstr(cs: str):
     connstr = cs
 
 
-def sl_exec_sql_single(
+def exec_sql_single(
     sql: str, params: tuple | None = None, quiet: bool = False
 ) -> tuple[list[dict], Exception | None]:
     result = []
@@ -37,7 +37,7 @@ def sl_exec_sql_single(
     return result, None
 
 
-def sl_exec_sql_with_cursor(
+def exec_sql_with_cursor(
     cur: sqlite3.Cursor,
     sql: str,
     params: tuple | None = None,

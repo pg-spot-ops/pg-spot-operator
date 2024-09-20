@@ -7,6 +7,8 @@ from pg_spot_operator import cmdb, manifests, operator
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.manifests import InstanceManifest
 
+SQLITE_DBNAME = "pgso.db"
+
 logger = logging.getLogger(__name__)
 
 
@@ -37,9 +39,6 @@ class ArgumentParser(Tap):
     config_dir: str = os.getenv(
         "PGSO_CONFIG_DIR", "~/.pg-spot-operator"
     )  # For internal state keeping
-    sqlite_path: str = os.getenv(
-        "PGSO_SQLITE_PATH", "~/.pg-spot-operator/pgso.db"
-    )
     default_vault_password_file: str = os.getenv(
         "PGSO_DEFAULT_VAULT_PASSWORD_FILE", ""
     )  # Can also be set on instance level
@@ -233,10 +232,12 @@ def main():  # pragma: no cover
         if args.teardown:  # Delete instance and any attached resources
             env_manifest.expires_on = "now"
 
-    cmdb.init_engine_and_check_connection(args.sqlite_path)
+    cmdb.init_engine_and_check_connection(
+        os.path.join(args.config_dir, SQLITE_DBNAME)
+    )
 
     applied_count = schema_manager.do_ddl_rollout_if_needed(
-        (os.path.expanduser(args.sqlite_path))
+        os.path.join(args.config_dir, SQLITE_DBNAME)
     )
     logger.info("%s schema migration applied", applied_count)
 
