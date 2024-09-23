@@ -5,7 +5,7 @@ from typing import Any
 
 import deepdiff
 import yaml
-from dateutil.parser import isoparse, parse
+from dateutil.parser import isoparse
 from dateutil.tz import tzutc
 from pydantic import BaseModel, ValidationError, model_validator
 from typing_extensions import Self
@@ -165,10 +165,10 @@ class InstanceManifest(BaseModel):
         if self.expiration_date.lower() == "now":
             return True
         try:
-            dtt = parse(self.expiration_date)
+            dtt = isoparse(self.expiration_date)
             if not dtt.tzinfo:
                 dtt = dtt.replace(tzinfo=tzutc())
-            if dtt < datetime.datetime.utcnow():
+            if dtt < datetime.datetime.now(datetime.timezone.utc):
                 return True
         except Exception:
             logger.exception(
