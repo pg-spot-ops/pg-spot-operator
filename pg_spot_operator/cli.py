@@ -53,6 +53,9 @@ class ArgumentParser(Tap):
     no_recreate: bool = to_bool(
         os.getenv("PGSO_NO_RECREATE", "false")
     )  # Don't replace interrupted VMs
+    vm_only: bool = to_bool(
+        os.getenv("PGSO_VM_ONLY", "false")
+    )  # No Ansible / Postgres setup
     manifest: str = os.getenv("PGSO_MANIFEST", "")  # Manifest to process
     teardown: bool = to_bool(
         os.getenv("PGSO_TEARDOWN", "false")
@@ -281,6 +284,16 @@ def main():  # pragma: no cover
 
     logger.debug("Args: %s", args.as_dict()) if args.verbose else None
 
+    if args.teardown_region:
+        operator.teardown_region(
+            args.region,
+            args.aws_access_key_id,
+            args.aws_secret_access_key,
+            args.dry_run,
+        )
+        logger.info("Teardown complete")
+        exit(0)
+
     env_manifest: InstanceManifest | None = None
     if args.manifest or args.instance_name:
         manifest_str = get_manifest_from_args_as_string(args)
@@ -301,16 +314,6 @@ def main():  # pragma: no cover
     )
     logger.info("%s schema migration applied", applied_count)
 
-    if args.teardown_region:
-        operator.teardown_region(
-            args.region,
-            args.aws_access_key_id,
-            args.aws_secret_access_key,
-            args.dry_run,
-        )
-        logger.info("Teardown complete")
-        exit(0)
-
     logger.info("Entering main loop")
 
     operator.do_main_loop(
@@ -319,4 +322,5 @@ def main():  # pragma: no cover
         cli_vault_password_file=args.vault_password_file,
         cli_user_manifest_path=args.manifest_path,
         cli_main_loop_interval_s=args.main_loop_interval_s,
+        cli_vm_only=args.vm_only,
     )

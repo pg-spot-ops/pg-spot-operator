@@ -609,7 +609,7 @@ def teardown_region(
             if not dry_run and nic_ids:
                 for nic_id in nic_ids:
                     logger.info("Deleting NIC %s ...", nic_id)
-                    delete_network_interface(region, alloc_id)
+                    delete_network_interface(region, nic_id)
             logger.info("Cleanup loop completed")
             break
         except Exception:
@@ -624,6 +624,7 @@ def do_main_loop(
     cli_user_manifest_path: str = "",
     cli_vault_password_file: str = "",
     cli_main_loop_interval_s: int = 60,
+    cli_vm_only: bool = False,
 ):
     global dry_run
     dry_run = cli_dry_run
@@ -761,7 +762,10 @@ def do_main_loop(
                 if diff:
                     logging.info("Detected manifest changes: %s", diff)
 
-                run_action(constants.ACTION_INSTANCE_SETUP, m)
+                if cli_vm_only:
+                    logger.info("Skipping Postgres setup as --vm-only set")
+                else:
+                    run_action(constants.ACTION_INSTANCE_SETUP, m)
 
             else:
                 logger.info(
