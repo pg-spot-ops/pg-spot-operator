@@ -3,7 +3,7 @@
 echo "Starting at `date`"
 set -e
 
-REGIONS="eu-west-1 eu-north-1"
+REGIONS="eu-west-1 eu-north-1 eu-south-1 eu-south-2"
 WET_RUN=
 
 if [ -n "$1" ]; then
