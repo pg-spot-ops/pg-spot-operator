@@ -33,28 +33,6 @@
     path: "{{ mount_point }}"
     state: directory
 
-- block:
-  # Special case for Azure local resource disks instances with no network disks
-  - name: Find Azure resource disks if any
-    ansible.builtin.find:
-      paths: /dev/disk/cloud
-      patterns: azure_resource
-      file_type: any
-    register: azure_resource_disk
-
-#  - debug:
-#      var: azure_resource_disk.files is truthy
-
-  - name: Symlink from /mnt to PGHOME for Azure resource disks, don't mess with Azure mount config, has some magic
-    ansible.builtin.file:
-      src: /mnt
-      dest: "{{ mount_point }}"
-      state: link
-      force: yes
-    when: azure_resource_disk.files is truthy
-
-  when: not devices_to_mount
-
 - name: Update cache
   ansible.builtin.apt:
     update_cache: yes
@@ -90,6 +68,7 @@
     community.general.filesystem:
      fstype: "{{ fs_type }}"
      dev: /dev/pgdata-vg/pgdata-lv
+    ignore_errors: true  # will fail if already mounted
 
   - name: Mount the volume permanently
     ansible.posix.mount:

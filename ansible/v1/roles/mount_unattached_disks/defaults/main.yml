@@ -3,5 +3,3 @@ mount_point: /var/lib/postgresql
 fs_type: ext4
 fs_mount_opts: "defaults,noatime"
 mount_on_boot: true
-vm:
-  storage_type: local  # local | network
