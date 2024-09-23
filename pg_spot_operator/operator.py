@@ -609,6 +609,7 @@ def do_main_loop(
             # Step 2 - detect if something needs to be done based on manifest
 
             # Set AWS creds for non-manifest related API calls
+            m.decrypt_secrets_if_any()
             if m.aws.access_key_id and m.aws.secret_access_key:
                 aws_client.AWS_ACCESS_KEY_ID = m.aws.access_key_id
                 aws_client.AWS_SECRET_ACCESS_KEY = m.aws.secret_access_key
