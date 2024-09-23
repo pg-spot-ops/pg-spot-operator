@@ -28,9 +28,9 @@
   become_user: postgres
   community.postgresql.postgresql_db:
     state: present
-    name: "{{ pg.ensure_app_dbname }}"
+    name: "{{ pg.app_db_name }}"
     owner: "{{ pg.admin_user | default('') or 'postgres' }}"
     template: template1
     login_host: /var/run/postgresql
     login_port: "5432"
-  when: pg.ensure_app_dbname | d('') | length > 0
+  when: pg.app_db_name | d('') | length > 0

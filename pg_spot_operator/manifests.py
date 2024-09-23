@@ -42,10 +42,8 @@ class SectionPg(BaseModel):
     initdb_opts: list[str] | None = field(default_factory=list)
     admin_user: str | None = None
     admin_user_password: str | None = None
-    password_version: int | None = None
-    admin_user_password_file: str | None = None
     admin_is_real_superuser: bool | None = None
-    ensure_app_dbname: str | None = None
+    app_db_name: str | None = None
 
 
 class SectionVm(BaseModel):

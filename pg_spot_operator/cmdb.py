@@ -438,14 +438,14 @@ def update_instance_connect_info(m: InstanceManifest) -> tuple[str, str]:
                 vm.ip_private,
                 m.pg.admin_user,
                 m.pg.admin_user_password,
-                dbname=m.pg.ensure_app_dbname or "postgres",
+                dbname=m.pg.app_db_name or "postgres",
             )
             if vm.ip_public:
                 instance.connstr_public = util.compose_postgres_connstr_uri(
                     vm.ip_public,
                     m.pg.admin_user,
                     m.pg.admin_user_password,
-                    dbname=m.pg.ensure_app_dbname or "postgres",
+                    dbname=m.pg.app_db_name or "postgres",
                 )
         else:
             instance.connstr_private = util.get_local_postgres_connstr()
