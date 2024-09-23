@@ -51,6 +51,16 @@ user_tags:
   team: hackers
 """
 
+TEST_MANIFEST_EXPIRES_ON = """
+---
+api_version: v1
+kind: pg_spot_operator_instance
+cloud: aws
+region: eu-west-1
+instance_name: hello
+expires_on: "2025-02-08 09-0100"
+"""
+
 
 def test_parse_manifest():
     m: manifests.InstanceManifest = manifests.load_manifest_from_string(
@@ -63,3 +73,12 @@ def test_parse_manifest():
     assert m.is_expired()
     m.expires_on = "2099-01-01"
     assert not m.is_expired()
+
+
+def test_fill_in_defaults():
+    m: manifests.InstanceManifest = manifests.load_manifest_from_string(
+        TEST_MANIFEST_EXPIRES_ON
+    )
+    assert m
+    m.fill_in_defaults()
+    assert m.expires_on and " " not in m.expires_on

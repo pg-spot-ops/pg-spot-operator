@@ -5,7 +5,7 @@ from typing import Any
 
 import deepdiff
 import yaml
-from dateutil.parser import parse
+from dateutil.parser import isoparse, parse
 from dateutil.tz import tzutc
 from pydantic import BaseModel, ValidationError, model_validator
 from typing_extensions import Self
@@ -13,6 +13,7 @@ from typing_extensions import Self
 from pg_spot_operator.constants import (
     CLOUD_AWS,
     DEFAULT_POSTGRES_MAJOR_VER,
+    SPOT_OPERATOR_EXPIRES_TAG,
     SPOT_OPERATOR_ID_TAG,
 )
 from pg_spot_operator.util import decrypt_vault_secret
@@ -177,6 +178,9 @@ class InstanceManifest(BaseModel):
 
     def fill_in_defaults(self):
         self.user_tags[SPOT_OPERATOR_ID_TAG] = self.instance_name
+        if self.expires_on and self.expires_on.lower().strip() != "now":
+            self.expires_on = self.expires_on.replace(" ", "T")
+            self.user_tags[SPOT_OPERATOR_EXPIRES_TAG] = self.expires_on
 
     def decrypt_secrets_if_any(self) -> tuple[int, int]:
         """Could also be made generic somehow - a la loop over model_dump but need it only for the Postgres password for now
@@ -232,7 +236,18 @@ class InstanceManifest(BaseModel):
     @model_validator(mode="after")
     def check_aws(self) -> Self:
         if self.cloud != CLOUD_AWS:
-            return self
+            raise ValueError("Only aws cloud supported for now")
+        return self
+
+    @model_validator(mode="after")
+    def check_valid_expires_on(self) -> Self:
+        if self.expires_on and self.expires_on != "now":
+            try:
+                isoparse(self.expires_on)
+            except Exception:
+                raise ValueError(
+                    "Failed to parse expires_on, expecting an ISO-8601 datetime string, e.g. 2025-10-22T00:00+03"
+                )
         return self
 
 

@@ -218,7 +218,7 @@ def check_manifest_and_exit(args: ArgumentParser):
         m.instance_name,
         m.cloud,
     )
-    # logger.debug(manifest_str)
+    logger.debug("Manifest: %s", manifest_str)
     logger.info("Exiting due to --check-manifests")
     exit(0)
 

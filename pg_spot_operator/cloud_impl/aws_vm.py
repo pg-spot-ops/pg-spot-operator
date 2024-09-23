@@ -369,7 +369,8 @@ def ec2_launch_instance(
     if not region:
         raise Exception("Instance manifest 'region' input required!")
 
-    user_tags[SPOT_OPERATOR_ID_TAG] = instance_name
+    if SPOT_OPERATOR_ID_TAG not in user_tags:
+        user_tags[SPOT_OPERATOR_ID_TAG] = instance_name
     os_image_id, _ = get_latest_ami_for_region_arch(region, architecture)
 
     placement = {}
