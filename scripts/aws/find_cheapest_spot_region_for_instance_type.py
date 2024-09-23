@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 import argparse
 from collections import defaultdict
-from datetime import timedelta, datetime
+from datetime import timedelta
+import datetime
 from statistics import mean
 
 import boto3
@@ -48,7 +49,7 @@ def get_spot_pricing_data_for_skus_over_period(
     paginator = client.get_paginator("describe_spot_price_history")
     page_iterator = paginator.paginate(
         Filters=filters,
-        StartTime=(datetime.utcnow() - lookback_period),
+        StartTime=(datetime.datetime.now(datetime.UTC) - lookback_period),
         **kwargs,
     )
     pricing_data = []
