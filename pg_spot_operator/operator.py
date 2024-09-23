@@ -16,7 +16,17 @@ from pg_spot_operator.cloud_impl.aws_spot import (
     describe_instance_type,
     get_current_spot_price,
 )
-from pg_spot_operator.cloud_impl.aws_vm import ensure_spot_vm
+from pg_spot_operator.cloud_impl.aws_vm import (
+    delete_network_interface,
+    delete_volume_in_region,
+    ensure_spot_vm,
+    get_addresses,
+    get_all_active_operator_instances_in_region,
+    get_all_operator_volumes_in_region,
+    get_network_interfaces,
+    release_address_by_allocation_id_in_region,
+    terminate_instances_in_region,
+)
 from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_cpu_arch_from_sku_desc,
@@ -534,6 +544,78 @@ def destroy_instance(m: InstanceManifest):
 
     if m.destroy_backups:
         run_action(constants.ACTION_DESTROY_BACKUPS, m)
+
+
+def teardown_region(
+    region: str,
+    aws_access_key_id: str = "",
+    aws_secret_access_key: str = "",
+    dry_run: bool = False,
+) -> None:
+    logger.info(
+        "%s all operator tagged resources in region %s ...",
+        "DRY-RUN LISTING" if dry_run else "DESTROYING",
+        region,
+    )
+    if not dry_run:
+        logger.info("Sleep 5 ...")
+        time.sleep(5)
+
+    if aws_access_key_id and aws_secret_access_key:
+        aws_client.AWS_ACCESS_KEY_ID = aws_access_key_id
+        aws_client.AWS_SECRET_ACCESS_KEY = aws_secret_access_key
+
+    for i in range(1, 4):
+        logger.info("Try %s of max 3", i)
+        try:
+
+            logger.info("Looking for EC2 instances to delete ...")
+            ins_ids = get_all_active_operator_instances_in_region(region)
+            logger.info("Instances found: %s", ins_ids)
+            if not dry_run and ins_ids:
+                logger.info("Terminating instances %s ...", ins_ids)
+                terminate_instances_in_region(region, ins_ids)
+                if ins_ids:
+                    logger.info("Sleeping 30s before deleting volumes ...")
+                    time.sleep(30)
+
+            logger.info("Looking for EBS Volumes to delete ....")
+            vol_ids_and_sizes = get_all_operator_volumes_in_region(region)
+            logger.info("Volumes found: %s", vol_ids_and_sizes)
+            if not dry_run and vol_ids_and_sizes:
+                for vol_id, size in vol_ids_and_sizes:
+                    logger.info(
+                        "Deleting VolumeId %s (%s GB) ...", vol_id, size
+                    )
+                    delete_volume_in_region(region, vol_id)
+
+            logger.info("Looking for EIPs to delete ....")
+            elastic_address_alloc_ids = get_addresses(region)
+            logger.info(
+                "Elastic Addresses found: %s", elastic_address_alloc_ids
+            )
+            if not dry_run and elastic_address_alloc_ids:
+                for alloc_id in elastic_address_alloc_ids:
+                    logger.info(
+                        "Releasein Address wiht AllocationId %s ...", alloc_id
+                    )
+                    release_address_by_allocation_id_in_region(
+                        region, alloc_id
+                    )
+
+            logger.info("Looking for NICs to delete ....")
+            nic_ids = get_network_interfaces(region)
+            logger.info("NICs found: %s", nic_ids)
+            if not dry_run and nic_ids:
+                for nic_id in nic_ids:
+                    logger.info("Deleting NIC %s ...", nic_id)
+                    delete_network_interface(region, alloc_id)
+            logger.info("Cleanup loop completed")
+            break
+        except Exception:
+            logger.exception(f"Failed to complete cleanup loop {i}")
+            logger.info("Sleep 60")
+            time.sleep(60)
 
 
 def do_main_loop(

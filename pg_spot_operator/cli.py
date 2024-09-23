@@ -57,6 +57,9 @@ class ArgumentParser(Tap):
     teardown: bool = to_bool(
         os.getenv("PGSO_TEARDOWN", "false")
     )  # Delete VM and other created resources
+    teardown_region: bool = to_bool(
+        os.getenv("PGSO_TEARDOWN_REGION", "false")
+    )  # Delete all operator tagged resources in region
     instance_name: str = os.getenv(
         "PGSO_INSTANCE_NAME", ""
     )  # If set other below params become relevant
@@ -174,11 +177,17 @@ def check_cli_args_valid(args: ArgumentParser):
                 """Unexpected --region format, run "PAGER= aws account list-regions --query 'Regions[*].[RegionName]' --output text" for a complete listing""",
             )
             exit(1)
-        if args.zone and len(args.zone.split("-")) != 3:
+        if args.zone and len(args.zone.split("-")) not in (3, 5):
             logger.error(
-                """Unexpected --zone format, expecting smth like: eu-west-1b""",
+                """Unexpected --zone format, expecting smth like: eu-west-1b or us-west-2-lax-1a""",
             )
             exit(1)
+    if args.teardown_region and not args.region:
+        logger.error(
+            """Unexpected --teardown-region requires --region set""",
+        )
+        exit(1)
+
     if args.vault_password_file:
         if not os.path.exists(os.path.expanduser(args.vault_password_file)):
             logger.error(
@@ -291,6 +300,16 @@ def main():  # pragma: no cover
         os.path.join(args.config_dir, SQLITE_DBNAME)
     )
     logger.info("%s schema migration applied", applied_count)
+
+    if args.teardown_region:
+        operator.teardown_region(
+            args.region,
+            args.aws_access_key_id,
+            args.aws_secret_access_key,
+            args.dry_run,
+        )
+        logger.info("Teardown complete")
+        exit(0)
 
     logger.info("Entering main loop")
 

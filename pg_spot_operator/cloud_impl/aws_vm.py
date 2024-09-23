@@ -558,6 +558,90 @@ def get_running_instance_by_tags(region: str, tags: dict) -> dict:
     return {}
 
 
+def get_all_active_operator_instances_in_region(region: str) -> list[str]:
+    client = get_client("ec2", region)
+
+    filters = [
+        {
+            "Name": "instance-state-name",
+            "Values": [
+                "pending",
+                "running",
+                "shutting-down",
+                "stopping",
+                "stopped",
+            ],
+        },
+        {"Name": "tag-key", "Values": [SPOT_OPERATOR_ID_TAG]},
+    ]
+    resp = client.describe_instances(Filters=filters)
+    if resp and resp.get("Reservations"):
+        return [x["InstanceId"] for x in resp["Reservations"][0]["Instances"]]
+    return []
+
+
+def get_all_operator_volumes_in_region(region: str) -> list[tuple[str, int]]:
+    """Returns [(volId, size),...]"""
+    client = get_client("ec2", region)
+
+    filters = [
+        {"Name": "tag-key", "Values": [SPOT_OPERATOR_ID_TAG]},
+    ]
+    resp = client.describe_volumes(Filters=filters)
+    if resp and resp.get("Volumes"):
+        return [(x["VolumeId"], x["Size"]) for x in resp["Volumes"]]
+    return []
+
+
+def get_addresses(region: str) -> list[str]:
+    """Returns a list of AllocationId-s"""
+    client = get_client("ec2", region)
+
+    filters = [
+        {"Name": "tag-key", "Values": [SPOT_OPERATOR_ID_TAG]},
+    ]
+    resp = client.describe_addresses(Filters=filters)
+    if resp and resp.get("Addresses"):
+        return [x["AllocationId"] for x in resp["Addresses"]]
+    return []
+
+
+def get_network_interfaces(region: str) -> list[str]:
+    client = get_client("ec2", region)
+
+    filters = [
+        {"Name": "tag-key", "Values": [SPOT_OPERATOR_ID_TAG]},
+    ]
+    resp = client.describe_network_interfaces(Filters=filters)
+    if resp and resp.get("NetworkInterfaces"):
+        return [x["NetworkInterfaceId"] for x in resp["NetworkInterfaces"]]
+    return []
+
+
+def terminate_instances_in_region(
+    region: str, instance_ids: list[str]
+) -> None:
+    client = get_client("ec2", region)
+    client.terminate_instances(InstanceIds=instance_ids)
+
+
+def delete_volume_in_region(region: str, vol_id: str) -> None:
+    client = get_client("ec2", region)
+    client.delete_volume(VolumeId=vol_id)
+
+
+def release_address_by_allocation_id_in_region(
+    region: str, alloc_id: str
+) -> None:
+    client = get_client("ec2", region)
+    client.release_address(AllocationId=alloc_id)
+
+
+def delete_network_interface(region: str, nic_id: str) -> None:
+    client = get_client("ec2", region)
+    client.delete_network_interface(NetworkInterfaceId=nic_id)
+
+
 def get_existing_data_volume_for_instance_if_any(
     region: str, instance_name: str
 ) -> dict:
