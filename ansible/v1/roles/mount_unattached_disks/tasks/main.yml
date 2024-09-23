@@ -23,6 +23,7 @@
     - not item.key.startswith('loop')
     - (vm.storage_type|d('network') == 'network' and 'EBS Controller' in item.value.host)
         or (vm.storage_type|d('network') == 'local' and not 'EBS Controller' in item.value.host)
+    - not (vm.storage_type|d('network') == 'network' and 'nvme1' in item.key)
 
 - name: Disks to mount
   debug:
