@@ -168,6 +168,11 @@ def check_cli_args_valid(args: ArgumentParser):
         if not args.storage_min:
             logger.error("--storage-min input expected for single args")
             exit(1)
+        if len(args.region.split("-")) != 3:
+            logger.error(
+                """Unexpected --region format, run "PAGER= aws account list-regions --query 'Regions[*].[RegionName]' --output text" for a complete listing""",
+            )
+            exit(1)
     if args.vault_password_file:
         if not os.path.exists(os.path.expanduser(args.vault_password_file)):
             logger.error(
@@ -175,11 +180,6 @@ def check_cli_args_valid(args: ArgumentParser):
                 args.vault_password_file,
             )
             exit(1)
-    if len(args.region.split("-")) != 3:
-        logger.error(
-            """Unexpected --region format, run "PAGER= aws account list-regions --query 'Regions[*].[RegionName]' --output text" for a complete listing""",
-        )
-        exit(1)
 
 
 def try_load_manifest(manifest_str: str) -> InstanceManifest | None:
