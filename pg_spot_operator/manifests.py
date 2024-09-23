@@ -16,7 +16,7 @@ from pg_spot_operator.constants import (
     SPOT_OPERATOR_EXPIRES_TAG,
     SPOT_OPERATOR_ID_TAG,
 )
-from pg_spot_operator.util import decrypt_vault_secret
+from pg_spot_operator.util import decrypt_vault_secret, extract_region_from_az
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +125,7 @@ class InstanceManifest(BaseModel):
     api_version: str
     kind: str
     cloud: str
-    region: str
+    region: str = ""
     instance_name: str
     # Optional fields
     postgres_version: int = DEFAULT_POSTGRES_MAJOR_VER
@@ -182,6 +182,10 @@ class InstanceManifest(BaseModel):
         ):
             self.expiration_date = self.expiration_date.replace(" ", "T")
             self.user_tags[SPOT_OPERATOR_EXPIRES_TAG] = self.expiration_date
+        if self.availability_zone and not self.region:
+            self.region = self.session_vars["region"] = extract_region_from_az(
+                self.availability_zone
+            )
 
     def decrypt_secrets_if_any(self) -> tuple[int, int]:
         """Could also be made generic somehow - a la loop over model_dump but need it only for the Postgres password for now

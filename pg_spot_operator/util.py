@@ -157,3 +157,15 @@ def decrypt_vault_secret(
         logger.error("Secret: %s", encrypted_value)
         return ""
     return res.stdout
+
+
+def extract_region_from_az(az: str) -> str:
+    """Special case for "local zones" a la us-west-2-lax-1a
+    https://aws.amazon.com/about-aws/global-infrastructure/localzones/locations/
+    """
+    if len(az.split("-")) not in (3, 5):
+        raise Exception("Unexpected AZ format, expecting 3 or 5 dashes")
+    if len(az.split("-")) == 3:
+        return az.rstrip("abcdef")
+    splits = az.split("-")
+    return f"{splits[0]}-{splits[1]}-{splits[2]}"

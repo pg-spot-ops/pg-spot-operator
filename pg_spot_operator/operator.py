@@ -593,6 +593,7 @@ def do_main_loop(
                 m.uuid = cmdb.register_instance_or_get_uuid(m)
             else:
                 m.uuid = instance.uuid  # type: ignore
+            m.session_vars["uuid"] = m.uuid
 
             if not m.manifest_snapshot_id:
                 m.manifest_snapshot_id = (

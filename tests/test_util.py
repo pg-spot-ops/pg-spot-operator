@@ -1,8 +1,11 @@
 import tempfile
 
+import pytest
+
 from pg_spot_operator.util import (
     merge_action_output_params,
     decrypt_vault_secret,
+    extract_region_from_az,
 )
 
 
@@ -31,3 +34,10 @@ def test_decrypt_vault_secret():
 3532653838393935650a643666333361383465623463643563626337386235336166393966663733
 3839"""
         assert decrypt_vault_secret(encrypted, tmpfile.name)
+
+
+def test_extract_region_from_az():
+    assert extract_region_from_az("eu-north-1b") == "eu-north-1"
+    assert extract_region_from_az("us-west-2-lax-1a") == "us-west-2"
+    with pytest.raises(Exception):
+        extract_region_from_az("us-west-2-lax-1a-asdasda")

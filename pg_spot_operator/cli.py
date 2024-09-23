@@ -94,7 +94,7 @@ def validate_and_parse_args() -> ArgumentParser:
 
 
 def compile_manifest_from_cmdline_params(args: ArgumentParser) -> str:
-    if not (args.instance_name and args.region):
+    if not args.instance_name or not (args.region or args.zone):
         raise Exception(
             "Can't compile a manifest - required params not set: --instance-name, --region"
         )
@@ -103,9 +103,10 @@ def compile_manifest_from_cmdline_params(args: ArgumentParser) -> str:
 api_version: v1
 kind: pg_spot_operator_instance
 cloud: {args.cloud}
-region: {args.region}
 instance_name: {args.instance_name}
 """
+    if args.region:
+        mfs += f"region: {args.region}\n"
     if args.zone:
         mfs += f"availability_zone: {args.zone}\n"
     if args.expiration_date:
@@ -159,7 +160,7 @@ def get_manifest_from_args_as_string(args: ArgumentParser) -> str:
 
 def check_cli_args_valid(args: ArgumentParser):
     if args.instance_name:
-        if not args.region:
+        if not args.region and not args.zone:
             logger.error("--region input expected for single args")
             exit(1)
         if not args.instance_name:
@@ -168,9 +169,14 @@ def check_cli_args_valid(args: ArgumentParser):
         if not args.storage_min:
             logger.error("--storage-min input expected for single args")
             exit(1)
-        if len(args.region.split("-")) != 3:
+        if args.region and len(args.region.split("-")) != 3:
             logger.error(
                 """Unexpected --region format, run "PAGER= aws account list-regions --query 'Regions[*].[RegionName]' --output text" for a complete listing""",
+            )
+            exit(1)
+        if args.zone and len(args.zone.split("-")) != 3:
+            logger.error(
+                """Unexpected --zone format, expecting smth like: eu-west-1b""",
             )
             exit(1)
     if args.vault_password_file:
