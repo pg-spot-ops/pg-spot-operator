@@ -188,29 +188,45 @@ class InstanceManifest(BaseModel):
         Returns number of secrets found / decrypted
         """
         secrets_found = decrypted = 0
-        if (
-            self.pg.admin_user_password
-            and self.pg.admin_user_password.startswith("$ANSIBLE_VAULT")
-        ):
-            secrets_found += 1
-            if (
-                not self.vault_password_file
-                and not default_vault_password_file
+        # There are also some secret backup section fields also but they're touched only in Ansible
+        secret_fields = [
+            ("pg", "admin_user_password"),
+            ("aws", "access_key_id"),
+            ("aws", "secret_access_key"),
+        ]
+
+        for secret_section, secret_att in secret_fields:
+            if self.__dict__[secret_section].__dict__[
+                secret_att
+            ] and self.__dict__[secret_section].__dict__[
+                secret_att
+            ].startswith(
+                "$ANSIBLE_VAULT"
             ):
-                logger.warning(
-                    "Could not decrypt admin_user_password as no vault_password_file set"
-                )
-                return secrets_found, decrypted
-            try:
-                decrypted_secret = decrypt_vault_secret(
-                    self.pg.admin_user_password,
-                    self.vault_password_file or default_vault_password_file,
-                )
-                if decrypted_secret:
-                    self.pg.admin_user_password = decrypted_secret
-                    decrypted += 1
-            except Exception:
-                logger.exception("Failed to decrypt pg.admin_user_password")
+                secrets_found += 1
+                if (
+                    not self.vault_password_file
+                    and not default_vault_password_file
+                ):
+                    logger.warning(
+                        "Could not decrypt secrets - vault_password_file set"
+                    )
+                    return secrets_found, decrypted
+                try:
+                    decrypted_secret = decrypt_vault_secret(
+                        self.__dict__[secret_section].__dict__[secret_att],
+                        self.vault_password_file
+                        or default_vault_password_file,
+                    )
+                    if decrypted_secret:
+                        self.__dict__[secret_section].__dict__[
+                            secret_att
+                        ] = decrypted_secret
+                        decrypted += 1
+                except Exception:
+                    logger.exception(
+                        "Failed to decrypt %s.%s", secret_section, secret_att
+                    )
         return secrets_found, decrypted
 
     def diff_manifests(

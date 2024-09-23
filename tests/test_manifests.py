@@ -1,3 +1,5 @@
+import tempfile
+
 from pg_spot_operator import manifests
 
 
@@ -51,7 +53,7 @@ user_tags:
   team: hackers
 """
 
-TEST_MANIFEST_expiration_date = """
+TEST_MANIFEST_EXPIRATION_DATE = """
 ---
 api_version: v1
 kind: pg_spot_operator_instance
@@ -59,6 +61,23 @@ cloud: aws
 region: eu-west-1
 instance_name: hello
 expiration_date: "2025-02-08 09-0100"
+"""
+
+TEST_MANIFEST_VAULT_SECRETS = """
+---
+api_version: v1
+kind: pg_spot_operator_instance
+cloud: aws
+region: eu-west-1
+instance_name: hello
+pg:
+  admin_user_password: !vault |
+    $ANSIBLE_VAULT;1.1;AES256
+    30643364356334303739626534623937613733386535346661363166323138636537353666653262
+    3462353138393366393537643733666337353762363763620a333436343730373936343830646431
+    37363766353163666666613863363461656131646662653035336139383261643966323966633333
+    3532653838393935650a643666333361383465623463643563626337386235336166393966663733
+    3839
 """
 
 
@@ -77,8 +96,28 @@ def test_parse_manifest():
 
 def test_fill_in_defaults():
     m: manifests.InstanceManifest = manifests.load_manifest_from_string(
-        TEST_MANIFEST_expiration_date
+        TEST_MANIFEST_EXPIRATION_DATE
     )
     assert m
     m.fill_in_defaults()
     assert m.expiration_date and " " not in m.expiration_date
+
+
+def test_decrypt_vault_secrets():
+    """Encrypted manually with:
+    echo -n "pgspotops" > /tmp/vault-secret
+    ansible-vault encrypt_string --vault-password-file /tmp/vault-secret 'pgspotopsadmin'
+    """
+    secret = "pgspotops"
+    with tempfile.NamedTemporaryFile() as tmpfile:
+        tmpfile.write(secret.encode())
+        tmpfile.flush()
+        # print(tmpfile.name)
+        m: manifests.InstanceManifest = manifests.load_manifest_from_string(
+            TEST_MANIFEST_VAULT_SECRETS
+        )
+        assert m.pg.admin_user_password
+        assert m.pg.admin_user_password.startswith("$ANSIBLE_VAULT")
+        m.vault_password_file = tmpfile.name
+        secrets_found, decrypted = m.decrypt_secrets_if_any()
+        assert secrets_found > 0 and decrypted == 1
