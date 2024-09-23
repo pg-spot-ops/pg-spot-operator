@@ -10,7 +10,7 @@ region: eu-west-1
 #availability_zone:
 instance_name: hello
 #vault_password_file:
-expires_on: now
+expiration_date: now
 postgres_version: 16
 pg:
   admin_user: dev
@@ -51,14 +51,14 @@ user_tags:
   team: hackers
 """
 
-TEST_MANIFEST_EXPIRES_ON = """
+TEST_MANIFEST_expiration_date = """
 ---
 api_version: v1
 kind: pg_spot_operator_instance
 cloud: aws
 region: eu-west-1
 instance_name: hello
-expires_on: "2025-02-08 09-0100"
+expiration_date: "2025-02-08 09-0100"
 """
 
 
@@ -71,14 +71,14 @@ def test_parse_manifest():
     assert m.instance_name == "hello"
     assert m.pg.admin_is_real_superuser
     assert m.is_expired()
-    m.expires_on = "2099-01-01"
+    m.expiration_date = "2099-01-01"
     assert not m.is_expired()
 
 
 def test_fill_in_defaults():
     m: manifests.InstanceManifest = manifests.load_manifest_from_string(
-        TEST_MANIFEST_EXPIRES_ON
+        TEST_MANIFEST_expiration_date
     )
     assert m
     m.fill_in_defaults()
-    assert m.expires_on and " " not in m.expires_on
+    assert m.expiration_date and " " not in m.expiration_date

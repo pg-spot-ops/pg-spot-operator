@@ -139,7 +139,7 @@ class InstanceManifest(BaseModel):
     availability_zone: str = ""
     user_tags: dict = field(default_factory=dict)
     vault_password_file: str = ""
-    expires_on: str = ""  # now | '2024-06-11 10:40'
+    expiration_date: str = ""  # now | '2024-06-11 10:40'
     destroy_backups: bool = True
     # *Sections*
     pg: SectionPg = field(default_factory=SectionPg)
@@ -159,28 +159,31 @@ class InstanceManifest(BaseModel):
         }
 
     def is_expired(self) -> bool:
-        """Checks if passed expires_on"""
-        if not self.expires_on:
+        """Checks if passed expiration_date"""
+        if not self.expiration_date:
             return False
-        if self.expires_on.lower() == "now":
+        if self.expiration_date.lower() == "now":
             return True
         try:
-            dtt = parse(self.expires_on)
+            dtt = parse(self.expiration_date)
             if not dtt.tzinfo:
                 dtt = dtt.replace(tzinfo=tzutc())
             if dtt < datetime.datetime.utcnow():
                 return True
         except Exception:
             logger.exception(
-                f"Failed to parse expires_on attribute for manifest {self.uuid}"
+                f"Failed to parse expiration_date attribute for manifest {self.uuid}"
             )
         return False
 
     def fill_in_defaults(self):
         self.user_tags[SPOT_OPERATOR_ID_TAG] = self.instance_name
-        if self.expires_on and self.expires_on.lower().strip() != "now":
-            self.expires_on = self.expires_on.replace(" ", "T")
-            self.user_tags[SPOT_OPERATOR_EXPIRES_TAG] = self.expires_on
+        if (
+            self.expiration_date
+            and self.expiration_date.lower().strip() != "now"
+        ):
+            self.expiration_date = self.expiration_date.replace(" ", "T")
+            self.user_tags[SPOT_OPERATOR_EXPIRES_TAG] = self.expiration_date
 
     def decrypt_secrets_if_any(self) -> tuple[int, int]:
         """Could also be made generic somehow - a la loop over model_dump but need it only for the Postgres password for now
@@ -240,13 +243,13 @@ class InstanceManifest(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def check_valid_expires_on(self) -> Self:
-        if self.expires_on and self.expires_on != "now":
+    def check_valid_expiration_date(self) -> Self:
+        if self.expiration_date and self.expiration_date != "now":
             try:
-                isoparse(self.expires_on)
+                isoparse(self.expiration_date)
             except Exception:
                 raise ValueError(
-                    "Failed to parse expires_on, expecting an ISO-8601 datetime string, e.g. 2025-10-22T00:00+03"
+                    "Failed to parse expiration_date, expecting an ISO-8601 datetime string, e.g. 2025-10-22T00:00+03"
                 )
         return self
 

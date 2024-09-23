@@ -69,9 +69,9 @@ class ArgumentParser(Tap):
     ram_min: int = int(os.getenv("PGSO_RAM_MIN", "0"))
     storage_min: int = int(os.getenv("PGSO_STORAGE_MIN", "0"))
     storage_type: str = os.getenv("PGSO_STORAGE_TYPE", "network")
-    expires_on: str = os.getenv(
-        "PGSO_EXPIRES_ON", ""
-    )  # Instance expiry / teardwon timestamp
+    expiration_date: str = os.getenv(
+        "PGSO_EXPIRATION_DATE", ""
+    )  # ISO 8601 datetime
     public_ip: bool = to_bool(os.getenv("PGSO_PUBLIC_IP", "true"))
     cpu_architecture: str = os.getenv("PGSO_CPU_ARCHITECTURE", "")
     ssh_keys: str = os.getenv("PGSO_SSH_KEYS", "")  # Comma separated
@@ -108,8 +108,8 @@ instance_name: {args.instance_name}
 """
     if args.zone:
         mfs += f"availability_zone: {args.zone}\n"
-    if args.expires_on:
-        mfs += f"expires_on: {args.expires_on}\n"
+    if args.expiration_date:
+        mfs += f"expiration_date: {args.expiration_date}\n"
     if args.public_ip:
         mfs += f"assign_public_ip: {str(args.public_ip).lower()}\n"
     if args.pg_major_version:
@@ -275,7 +275,7 @@ def main():  # pragma: no cover
             logger.error("Manifest: %s", manifest_str)
             exit(1)
         if args.teardown:  # Delete instance and any attached resources
-            env_manifest.expires_on = "now"
+            env_manifest.expiration_date = "now"
 
     cmdb.init_engine_and_check_connection(
         os.path.join(args.config_dir, SQLITE_DBNAME)

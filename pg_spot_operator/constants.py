@@ -10,7 +10,7 @@ MANIFEST_TYPE_INSTANCE: str = "pg_spot_operator_instance"
 
 # Attached to all created cloud resources
 SPOT_OPERATOR_ID_TAG = "pg-spot-operator-instance"
-SPOT_OPERATOR_EXPIRES_TAG = "pg-spot-operator-expires-on"
+SPOT_OPERATOR_EXPIRES_TAG = "pg-spot-operator-expiration-date"
 
 ACTION_ENSURE_VM = "ensure_vm"
 ACTION_INSTANCE_SETUP = "single_instance_setup"

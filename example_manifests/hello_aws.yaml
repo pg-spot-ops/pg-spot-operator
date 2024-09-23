@@ -8,7 +8,7 @@ instance_name: hello-aws
 public_ip_address: true
 floating_public_ip: true  # As Elastic IPs are very limited per account
 postgres_version: 15
-expires_on: "2024-09-22 00:00+03"
+expiration_date: "2024-10-22 00:00+03"
 #destroy_backups: true
 vm:
   cpu_min: 2
