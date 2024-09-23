@@ -50,9 +50,6 @@ class ArgumentParser(Tap):
     dry_run: bool = to_bool(
         os.getenv("PGSO_DRY_RUN", "false")
     )  # Just resolve the VM instance type
-    no_recreate: bool = to_bool(
-        os.getenv("PGSO_NO_RECREATE", "false")
-    )  # Don't replace interrupted VMs
     vm_only: bool = to_bool(
         os.getenv("PGSO_VM_ONLY", "false")
     )  # No Ansible / Postgres setup
