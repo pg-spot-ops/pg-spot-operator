@@ -6,7 +6,7 @@ cloud: aws
 region: eu-north-1
 instance_name: hello-aws
 postgres_version: 16
-#destroy_target_time_utc: now
+#expiration_date: now
 pg:
   admin_user: admin
   admin_user_password: seitselehma

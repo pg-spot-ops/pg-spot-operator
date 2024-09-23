@@ -2,8 +2,8 @@
 api_version: v1
 kind: pg_spot_operator_instance
 cloud: aws
-region: eu-north-1
-# availability_zone:
+region: eu-south-2
+availability_zone: eu-south-2b
 instance_name: hello-aws
 public_ip_address: true
 floating_public_ip: true  # As Elastic IPs are very limited per account
@@ -15,9 +15,9 @@ vm:
   cpu_max: 8
 #  ram_min: 4
   allow_burstable: false
-#  instance_type: c6gd.large  # Cpu etc will be ignored then. Not recommended though as can get more costly
+  instance_type: m6gd.xlarge  # c6gd.large  # Cpu etc will be ignored then. Not recommended though as can get more costly
   storage_min: 100  # Can't set both storage_min and volume_size_min
-  storage_type: local  # local | network. PS Using network volumes pins you to a specific AZ
+  storage_type: network  # local | network. PS Using network volumes pins you to a specific AZ
   storage_speed_class: ssd  # hdd | ssd | nvme. Not guaranteed to be honoured
 #  volume_type:  # e.g. gp3
 #  volume_iops:  # For provisioned / paid IOPS, EBS gp3 default is 3000
@@ -27,7 +27,7 @@ user_tags:
   app: backend
 pg:
   admin_user: admin
-  admin_user_password: admin
+  admin_user_password: kah8aiThuXegh1neingee5go
 #  admin_user_password: !vault |
 #    $ANSIBLE_VAULT;1.1;AES256
 #    30643364356334303739626534623937613733386535346661363166323138636537353666653262

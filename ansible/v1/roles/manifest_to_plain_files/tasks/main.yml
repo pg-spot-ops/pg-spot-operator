@@ -77,7 +77,7 @@
     - { key: region, value: "{{ region | d(None) }}" }
     - { key: availability_zone, value: "{{ availability_zone | d(None) }}" }
     - { key: instance_name, value: "{{ instance_name | d(None) }}" }
-    - { key: destroy_target_time_utc, value: "{{ destroy_target_time_utc | d(None) }}" }
+    - { key: expiration_date, value: "{{ expiration_date | d(None) }}" }
     - { key: destroy_backups, value: "{{ destroy_backups | d(None) }}" }
     - { key: description, value: "{{ description | d(None) }}" }
     - { key: assign_public_ip_address, value: "{{ assign_public_ip_address | d(None) }}" }
