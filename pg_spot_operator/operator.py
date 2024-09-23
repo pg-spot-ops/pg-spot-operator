@@ -92,12 +92,13 @@ def preprocess_ensure_vm_action(
     )
 
     if not sku.monthly_spot_price:
-        sku.monthly_spot_price = (
+        sku.monthly_spot_price = round(
             get_current_spot_price(
                 m.region, m.vm.instance_type, m.availability_zone
             )
             * 24
-            * 30
+            * 30,
+            1,
         )
     logger.info(
         "Selected SKU %s (%s) in %s region %s for a monthly Spot price of $%s",
