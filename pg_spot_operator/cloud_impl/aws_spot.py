@@ -364,15 +364,18 @@ def get_cheapest_sku_for_hw_reqs(
 
 
 @timed_cache(seconds=30)
-def get_all_running_operator_instances_from_region(
+def get_all_active_operator_instances_from_region(
     region: str,
-) -> list[dict]:  # TODO profile
+) -> list[dict]:
     instances = []
 
     logger.debug("Fetching all instances from AWS region %s ...", region)
     client = get_client("ec2", region)
     filters = [
-        {"Name": "instance-state-name", "Values": ["pending", "running"]},
+        {
+            "Name": "instance-state-name",
+            "Values": ["pending", "running", "stopping", "stopped"],
+        },
         {"Name": "tag-key", "Values": [SPOT_OPERATOR_ID_TAG]},
     ]
 
@@ -386,3 +389,38 @@ def get_all_running_operator_instances_from_region(
                 instances.extend(r["Instances"])
     logger.debug("%s found", len(instances))
     return instances
+
+
+@timed_cache(seconds=10)
+def get_backing_vms_for_instances_if_any(
+    region: str, instance_name: str
+) -> list[str]:
+    instances = []
+    logger.debug(
+        "Fetching all non-terminated/terminating instances for instance %s in AWS region %s ...",
+        instance_name,
+        region,
+    )
+    client = get_client("ec2", region)
+    filters = [
+        {
+            "Name": "instance-state-name",
+            "Values": ["pending", "running", "stopping", "stopped"],
+        },
+        {
+            "Name": f"tag:{SPOT_OPERATOR_ID_TAG}",
+            "Values": [instance_name],
+        },
+    ]
+
+    paginator = client.get_paginator("describe_instances")
+
+    page_iterator = paginator.paginate(Filters=filters)
+
+    for page in page_iterator:
+        for r in page.get("Reservations", []):
+            if r.get("Instances"):
+                instances.extend(r["Instances"])
+    instance_ids = [x["InstanceId"] for x in instances]
+    logger.debug("Instances found: %s", instance_ids)
+    return instance_ids

@@ -40,7 +40,7 @@ def get_all_operator_vms_in_manifest_region(
 ) -> dict[str, dict]:
     vms_in_region: dict[str, dict] = {}
     if m.cloud == CLOUD_AWS:
-        aws_vms = aws_spot.get_all_running_operator_instances_from_region(
+        aws_vms = aws_spot.get_all_active_operator_instances_from_region(
             m.region
         )
         for vm in aws_vms:

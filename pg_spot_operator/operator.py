@@ -14,6 +14,7 @@ from pg_spot_operator import cloud_api, cmdb, constants, manifests
 from pg_spot_operator.cloud_impl import aws_client
 from pg_spot_operator.cloud_impl.aws_spot import (
     describe_instance_type,
+    get_backing_vms_for_instances_if_any,
     get_current_spot_price,
 )
 from pg_spot_operator.cloud_impl.aws_vm import (
@@ -31,7 +32,7 @@ from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_cpu_arch_from_sku_desc,
 )
-from pg_spot_operator.constants import CLOUD_AWS
+from pg_spot_operator.constants import CLOUD_AWS, MF_SEC_VM_STORAGE_TYPE_LOCAL
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.util import (
     merge_action_output_params,
@@ -621,6 +622,21 @@ def teardown_region(
             time.sleep(60)
 
 
+def have_main_hw_reqs_changed(
+    m: InstanceManifest, prev_m: InstanceManifest
+) -> bool:
+    if (
+        m.vm.cpu_min != prev_m.vm.cpu_min
+        or m.vm.ram_min != prev_m.vm.ram_min
+        or (
+            m.vm.storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
+            and m.vm.storage_min > prev_m.vm.storage_min
+        )
+    ):
+        return True
+    return False
+
+
 def do_main_loop(
     cli_dry_run: bool = False,
     cli_env_manifest: InstanceManifest | None = None,
@@ -738,6 +754,34 @@ def do_main_loop(
             if m.is_expired() and not prev_success_manifest.is_expired():  # type: ignore
                 destroy_instance(m)
                 raise NoOp()
+
+            if prev_success_manifest:
+                main_hw_reqs_changed = have_main_hw_reqs_changed(
+                    m, prev_success_manifest
+                )
+                if main_hw_reqs_changed:
+                    backing_ins_ids = get_backing_vms_for_instances_if_any(
+                        m.region, m.instance_name
+                    )
+                    if backing_ins_ids:
+                        if dry_run:
+                            logger.warning(
+                                "Would terminate current VMs %s as HW reqs have changed!",
+                                backing_ins_ids,
+                            )
+                        else:
+                            logger.warning(
+                                "Terminating current VMs (%s) as HW reqs have changed ...",
+                                backing_ins_ids,
+                            )
+                            terminate_instances_in_region(
+                                m.region, backing_ins_ids
+                            )
+                            logger.info("OK - terminated")
+                    else:
+                        logger.debug(
+                            "HW reqs change detected but no backing VM found"
+                        )
 
             vm_created_recreated = False
             if cli_vm_user and cli_vm_address:
