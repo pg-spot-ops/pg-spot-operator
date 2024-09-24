@@ -416,9 +416,8 @@ def load_manifest_by_snapshot_id(
 def update_instance_connect_info(m: InstanceManifest) -> tuple[str, str]:
     """Returns [connstr_private, connstr_public]"""
     logger.debug(
-        "Updating instance %s UUID %s connect info in CMDB",
+        "Updating instance %s connect info in CMDB ...",
         m.instance_name,
-        m.uuid,
     )
     vm = get_latest_vm_by_uuid(m.uuid)
     if not vm:
@@ -431,7 +430,7 @@ def update_instance_connect_info(m: InstanceManifest) -> tuple[str, str]:
         instance = session.scalars(stmt).first()
         if not instance:
             raise Exception(
-                f"Expected instance with UUID {m.uuid} to be registered in CMDB"
+                f"Expected instance {m.instance_name} to be registered in CMDB"
             )
         if m.pg.admin_user and m.pg.admin_user_password:
             instance.connstr_private = util.compose_postgres_connstr_uri(

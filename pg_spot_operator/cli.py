@@ -80,6 +80,8 @@ class ArgumentParser(Tap):
     ssh_keys: str = os.getenv("PGSO_SSH_KEYS", "")  # Comma separated
     tuning_profile: str = os.getenv("PGSO_TUNING_PROFILE", "default")
     user_tags: str = os.getenv("PGSO_USER_TAGS", "")  # key=val,key2=val2
+    admin_user: str = os.getenv("PGSO_ADMIN_USER", "")
+    admin_user_password: str = os.getenv("PGSO_ADMIN_USER_PASSWORD", "")
     aws_access_key_id: str = os.getenv("PGSO_AWS_ACCESS_KEY_ID", "")
     aws_secret_access_key: str = os.getenv("PGSO_AWS_SECRET_ACCESS_KEY", "")
     vm_address: str = os.getenv(
@@ -154,6 +156,10 @@ instance_name: {args.instance_name}
         for tag_set in args.user_tags.split(","):
             key_val = tag_set.split("=")
             mfs += f"  {key_val[0]}: {key_val[1]}\n"
+    if args.admin_user and args.admin_user_password:
+        mfs += "pg:\n"
+        mfs += f"  admin_user: {args.admin_user}\n"
+        mfs += f"  admin_user_password: {args.admin_user_password}\n"
     return mfs
 
 
@@ -222,6 +228,12 @@ def check_cli_args_valid(args: ArgumentParser):
                     args.user_tags,
                 )
                 exit(1)
+    if args.admin_user or args.admin_user_password:
+        if not (args.admin_user and args.admin_user_password):
+            logger.error(
+                "Both --admin-user / --admin-user-password need to be provided",
+            )
+            exit(1)
 
 
 def try_load_manifest(manifest_str: str) -> InstanceManifest | None:
