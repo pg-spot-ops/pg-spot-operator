@@ -1,6 +1,0 @@
-ssh_user: "{{ ansible_user }}"
-#access:
-#  extra_ssh_pub_keys: []
-##  - "ssh-rsa ..."
-#  extra_ssh_pub_key_paths: []
-##  - ~/.ssh/google_compute_engine.pub
