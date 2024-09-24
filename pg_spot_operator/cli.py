@@ -79,6 +79,7 @@ class ArgumentParser(Tap):
     cpu_architecture: str = os.getenv("PGSO_CPU_ARCHITECTURE", "")
     ssh_keys: str = os.getenv("PGSO_SSH_KEYS", "")  # Comma separated
     tuning_profile: str = os.getenv("PGSO_TUNING_PROFILE", "default")
+    user_tags: str = os.getenv("PGSO_USER_TAGS", "")  # key=val,key2=val2
     aws_access_key_id: str = os.getenv("PGSO_AWS_ACCESS_KEY_ID", "")
     aws_secret_access_key: str = os.getenv("PGSO_AWS_SECRET_ACCESS_KEY", "")
     vm_address: str = os.getenv(
@@ -148,6 +149,16 @@ instance_name: {args.instance_name}
         mfs += "aws:\n"
         mfs += f"  access_key_id: {args.aws_access_key_id}\n"
         mfs += f"  secret_access_key: {args.aws_secret_access_key}\n"
+    if args.user_tags:
+        mfs += "user_tags:\n"
+        for tag_set in args.user_tags.split(","):
+            key_val = tag_set.split("=")
+            if len(key_val) != 2:
+                logger.warning(
+                    "Invalid tag spec, expecting key=val, got %s", key_val
+                )
+                continue
+            mfs += f"  {key_val[0]}: {key_val[1]}\n"
     return mfs
 
 
