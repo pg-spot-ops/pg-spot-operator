@@ -813,4 +813,6 @@ def do_main_loop(
             "Main loop finished. Sleeping for %s s ...",
             cli_main_loop_interval_s,
         )
+        if cli_dry_run:
+            exit(0)
         time.sleep(cli_main_loop_interval_s)
