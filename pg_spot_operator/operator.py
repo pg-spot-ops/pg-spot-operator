@@ -184,7 +184,10 @@ def generate_ansible_inventory_file_for_action(
     action: str, m: InstanceManifest, temp_workdir: str
 ):
     """Places an inventory file into temp_workdir"""
-    inventory = get_ansible_inventory_file_str_for_action(action, m.uuid, m.instance_name)  # type: ignore
+    if m.vm.address and m.vm.username:
+        inventory = f"{m.vm.address} ansible_user={m.vm.username}"
+    else:
+        inventory = get_ansible_inventory_file_str_for_action(action, m.uuid, m.instance_name)  # type: ignore
     if not inventory:
         raise Exception(
             f"Could not compile inventory for action {action} of instance {m.instance_name}"
@@ -625,6 +628,8 @@ def do_main_loop(
     cli_vault_password_file: str = "",
     cli_main_loop_interval_s: int = 60,
     cli_vm_only: bool = False,
+    cli_vm_address: str = "",
+    cli_vm_user: str = "",
 ):
     global dry_run
     dry_run = cli_dry_run
@@ -734,16 +739,28 @@ def do_main_loop(
                 destroy_instance(m)
                 raise NoOp()
 
-            vm_created_recreated, vm_provider_id = ensure_vm(m)
-            if vm_created_recreated:
+            vm_created_recreated = False
+            if cli_vm_user and cli_vm_address:
                 logger.info(
-                    "Sleeping 30s as VM %s created, give time to boot",
-                    vm_provider_id,
+                    "Using user provided VM address / user for Ansible setup: %s@%s",
+                    cli_vm_user,
+                    cli_vm_address,
                 )
-                time.sleep(30)
+                m.vm.address = cli_vm_address
+                m.vm.username = cli_vm_user
+            else:
+                vm_created_recreated, vm_provider_id = ensure_vm(m)
+                if vm_created_recreated:
+                    logger.info(
+                        "Sleeping 30s as VM %s created, give time to boot",
+                        vm_provider_id,
+                    )
+                    time.sleep(30)
 
-            if dry_run:  # Bail as next actions depend on output of ensure_vm
-                raise NoOp()
+                if (
+                    dry_run
+                ):  # Bail as next actions depend on output of ensure_vm
+                    raise NoOp()
 
             diff = m.diff_manifests(
                 prev_success_manifest, original_manifests_only=True
@@ -769,10 +786,9 @@ def do_main_loop(
 
             else:
                 logger.info(
-                    "No state changes detected for instance %s (%s), VM %s",
+                    "No state changes detected for instance %s (%s)",
                     m.instance_name,
                     m.cloud,
-                    vm_provider_id,
                 )
                 raise NoOp()
 

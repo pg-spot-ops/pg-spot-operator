@@ -81,6 +81,12 @@ class ArgumentParser(Tap):
     tuning_profile: str = os.getenv("PGSO_TUNING_PROFILE", "default")
     aws_access_key_id: str = os.getenv("PGSO_AWS_ACCESS_KEY_ID", "")
     aws_secret_access_key: str = os.getenv("PGSO_AWS_SECRET_ACCESS_KEY", "")
+    vm_address: str = os.getenv(
+        "PGSO_VM_ADDRESS", ""
+    )  # Skip creation and use the provided IP
+    vm_user: str = os.getenv(
+        "PGSO_VM_USER", ""
+    )  # Default SSH key will be used
 
 
 args: ArgumentParser | None = None
@@ -193,6 +199,12 @@ def check_cli_args_valid(args: ArgumentParser):
             logger.error(
                 "--vault-password-file not found at %s",
                 args.vault_password_file,
+            )
+            exit(1)
+    if args.vm_address or args.vm_user:
+        if not (args.vm_address and args.vm_user):
+            logger.error(
+                "Both --vm-address / --vm-user need to be provided",
             )
             exit(1)
 
@@ -319,5 +331,6 @@ def main():  # pragma: no cover
         cli_vault_password_file=args.vault_password_file,
         cli_user_manifest_path=args.manifest_path,
         cli_main_loop_interval_s=args.main_loop_interval_s,
-        cli_vm_only=args.vm_only,
+        cli_vm_address=args.vm_address,
+        cli_vm_user=args.vm_user,
     )

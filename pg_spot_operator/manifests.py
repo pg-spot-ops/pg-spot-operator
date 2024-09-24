@@ -64,6 +64,8 @@ class SectionVm(BaseModel):
         True  # Might result in nightly restarts
     )
     kernel_tuning: bool = True  # Basic memory over-commit tuning only for now
+    address: str = ""
+    username: str = ""
 
 
 class SubSectionPgbackrest(BaseModel):
