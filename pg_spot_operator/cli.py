@@ -153,11 +153,6 @@ instance_name: {args.instance_name}
         mfs += "user_tags:\n"
         for tag_set in args.user_tags.split(","):
             key_val = tag_set.split("=")
-            if len(key_val) != 2:
-                logger.warning(
-                    "Invalid tag spec, expecting key=val, got %s", key_val
-                )
-                continue
             mfs += f"  {key_val[0]}: {key_val[1]}\n"
     return mfs
 
@@ -218,6 +213,15 @@ def check_cli_args_valid(args: ArgumentParser):
                 "Both --vm-address / --vm-user need to be provided",
             )
             exit(1)
+    if args.user_tags:
+        for tag_set in args.user_tags.split(","):
+            key_val = tag_set.split("=")
+            if len(key_val) != 2:
+                logger.error(
+                    "Invalid tag item, expecting 'key=val,key2=val2', got %s",
+                    args.user_tags,
+                )
+                exit(1)
 
 
 def try_load_manifest(manifest_str: str) -> InstanceManifest | None:
