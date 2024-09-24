@@ -129,7 +129,8 @@ def filter_instance_types_by_hw_req(
     ram_min: int | None = 0,
     architecture: str | None = "any",
     storage_min: int | None = 0,
-    allow_burstable: bool | None = True,
+    storage_type: str = "network",
+    allow_burstable: bool = True,
     storage_speed_class: str | None = "any",
     instance_types_to_avoid: list[str] | None = None,
 ) -> list[dict]:
@@ -149,11 +150,7 @@ def filter_instance_types_by_hw_req(
                 # On AWS architectures are named x86_64 and arm64
                 continue
 
-        if (
-            allow_burstable is not None
-            and not allow_burstable
-            and i["BurstablePerformanceSupported"]
-        ):
+        if allow_burstable is False and i["BurstablePerformanceSupported"]:
             continue
 
         if cpu_min:
@@ -170,10 +167,11 @@ def filter_instance_types_by_hw_req(
             ram_mb = i["MemoryInfo"]["SizeInMiB"]
             if ram_mb < ram_min * 1000:
                 continue
-
-        if storage_min:
-            if not i.get("InstanceStorageSupported"):
-                continue
+        if storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL and not i.get(
+            "InstanceStorageSupported"
+        ):
+            continue
+        if storage_min and storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL:
             if i["InstanceStorageInfo"]["TotalSizeInGB"] < storage_min:
                 continue
             instance_storage_speed_class = i["InstanceStorageInfo"]["Disks"][
@@ -185,11 +183,11 @@ def filter_instance_types_by_hw_req(
             ):  # Consider SSD to be equal with NVME for AWS
                 continue
         ret.append(i)
-    if storage_min:  # Prefer SKUs with bigger local disks
+    if storage_min and storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL:
         ret.sort(
             key=lambda x: (
                 x["VCpuInfo"]["DefaultVCpus"],
-                -1 * x["InstanceStorageInfo"]["TotalSizeInGB"],
+                x["InstanceStorageInfo"]["TotalSizeInGB"],
             )
         )
     else:
@@ -270,7 +268,7 @@ def get_cheapest_sku_for_hw_reqs(
     architecture: str = "any",
     storage_type: str = "network",
     storage_min: int = 0,
-    allow_burstable: bool = False,
+    allow_burstable: bool = True,
     storage_speed_class: str = "any",
     instance_types_to_avoid: list[str] | None = None,
 ) -> list[ResolvedInstanceTypeInfo]:
@@ -291,6 +289,7 @@ def get_cheapest_sku_for_hw_reqs(
         ram_min=ram_min,
         architecture=architecture,
         storage_min=storage_min,
+        storage_type=storage_type,
         allow_burstable=allow_burstable,
         storage_speed_class=storage_speed_class,
         instance_types_to_avoid=instance_types_to_avoid,
@@ -339,6 +338,9 @@ def get_cheapest_sku_for_hw_reqs(
         arch,
         az,
         round(price * 24 * 30, 1),
+    )
+    logger.debug(
+        "Instance types in selection: %s", {x[0] for x in avg_by_sku_az}
     )
     logger.debug("Prices in selection: %s", avg_by_sku_az)
 

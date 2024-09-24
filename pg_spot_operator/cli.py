@@ -63,7 +63,7 @@ class ArgumentParser(Tap):
     instance_name: str = os.getenv(
         "PGSO_INSTANCE_NAME", ""
     )  # If set other below params become relevant
-    pg_major_version: str = os.getenv("PGSO_PG_MAJOR_VERSION", "16")
+    postgres_version: str = os.getenv("PGSO_PG_MAJOR_VERSION", "16")
     instance_type: str = os.getenv("PGSO_INSTANCE_TYPE", "")
     cloud: str = os.getenv("PGSO_CLOUD", "aws")
     region: str = os.getenv("PGSO_REGION", "")
@@ -122,8 +122,8 @@ instance_name: {args.instance_name}
         mfs += f"expiration_date: {args.expiration_date}\n"
     if args.public_ip:
         mfs += f"assign_public_ip: {str(args.public_ip).lower()}\n"
-    if args.pg_major_version:
-        mfs += f"pg:\n  major_version: {args.pg_major_version}\n"
+    if args.postgres_version:
+        mfs += f"postgres_version: {args.postgres_version}\n"
     mfs += "vm:\n"
     if args.cpu_architecture:
         mfs += f"  cpu_architecture: {args.cpu_architecture}\n"
