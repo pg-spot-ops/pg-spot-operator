@@ -4,7 +4,6 @@
     instance_name: spot
     postgres_version: 16
     pg: "{{ def_pg }}"
-    access: "{{ def_access }}"
     pg_config: "{{ def_pg_config }}"
   when: not uuid|d(None)
 

@@ -1,11 +1,10 @@
 ---
 # Available in manifests
-instance_name: spot
-pg:
-  major_ver: 16
-access:
-  pg_hba:
-    - "host all postgres 0.0.0.0/0 reject"
-    - "hostssl all all 0.0.0.0/0 scram-sha-256"
+instance_name: "{{ instance_name | d('spot') }}"
+postgres_version: "{{ postgres_version | d(16) }}"
 
+# Internal
 postgres_cluster_name: "{{ instance_name | replace('-', '_') }}"  # Dashes don't work with pg_createcluster
+def_pg_hba:
+  - "host all postgres 0.0.0.0/0 reject"
+  - "hostssl all all 0.0.0.0/0 scram-sha-256"

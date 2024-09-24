@@ -3,7 +3,7 @@
   ansible.builtin.lineinfile:
     path: "/etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/pg_hba.conf"
     line: "{{ item }}"
-  loop: "{{ access.pg_hba | d([]) }}"
+  loop: "{{ access.pg_hba | d([]) or def_pg_hba }}"
   register: changed
 
 - name: Reload Postgres config

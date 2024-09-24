@@ -12,10 +12,6 @@ def_pg:
     - --locale-provider=icu
     - --icu-locale=en
     - --locale=en_US.utf8
-def_access:
-  pg_hba:
-    - "host all postgres 0.0.0.0/0 reject"
-    - "hostssl all all 0.0.0.0/0 scram-sha-256"
 def_pg_config:
   extra_config_lines: []
 
@@ -34,6 +30,3 @@ default_initdb_opts:
   - --locale-provider=icu
   - --icu-locale=en
   - --locale=en_US.utf8
-default_pg_hba:
-  - "host all postgres 0.0.0.0/0 reject"
-  - "hostssl all all 0.0.0.0/0 scram-sha-256"
