@@ -80,6 +80,10 @@ def get_cheapest_instance_type_from_selection(
             )
             logger.debug("%s at $ %s", ins_type, price)
             if price < cheapest_price:
+                cheapest_price = price
                 cheapest_instance = ins_type
+        logger.debug(
+            "Cheapest instance: %s at $ %s", cheapest_instance, cheapest_price
+        )
         return cheapest_instance
     raise NotImplementedError

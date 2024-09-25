@@ -100,7 +100,7 @@ def preprocess_ensure_vm_action(
             provider_description=i_desc,
             availability_zone=m.availability_zone,
             cpu=i_desc.get("VCpuInfo", {}).get("DefaultVCpus", 0),
-            ram=int(i_desc.get("MemoryInfo", {}).get("SizeInMiB", 0) / 1024),
+            ram_mb=i_desc.get("MemoryInfo", {}).get("SizeInMiB", 0),
             instance_storage=i_desc.get("InstanceStorageInfo", {}).get(
                 "TotalSizeInGB", 0
             ),
@@ -125,10 +125,11 @@ def preprocess_ensure_vm_action(
         sku.monthly_spot_price,
     )
     logger.info(
-        "SKU %s main specs - vCPU: %s, RAM: %s, instance storage: %s",
+        "SKU %s main specs - vCPU: %s, RAM: %s %s, instance storage: %s",
         sku.instance_type,
         sku.cpu,
-        sku.ram,
+        sku.ram_mb if sku.ram_mb < 1024 else int(sku.ram_mb / 1024),
+        "MiB" if sku.ram_mb < 1024 else "GB",
         sku.instance_storage,
     )
     if not sku.monthly_ondemand_price:

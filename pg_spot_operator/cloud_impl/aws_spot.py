@@ -357,7 +357,7 @@ def get_cheapest_sku_for_hw_reqs(
             monthly_spot_price=monthly_price,
             availability_zone=az,
             cpu=i_desc.get("VCpuInfo", {}).get("DefaultVCpus", 0),
-            ram=int(i_desc.get("MemoryInfo", {}).get("SizeInMiB", 0) / 1024),
+            ram_mb=i_desc.get("MemoryInfo", {}).get("SizeInMiB", 0),
             instance_storage=i_desc.get("InstanceStorageInfo", {}).get(
                 "TotalSizeInGB", 0
             ),

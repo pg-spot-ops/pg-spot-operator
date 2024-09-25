@@ -509,7 +509,7 @@ def finalize_ensure_vm(
         cmdb_vm.provider_name = vm.provider_name
         cmdb_vm.availability_zone = vm.availability_zone
         cmdb_vm.cpu = i_info.cpu
-        cmdb_vm.ram = i_info.ram
+        cmdb_vm.ram = i_info.ram_mb
         cmdb_vm.instance_storage = i_info.instance_storage
         cmdb_vm.ip_public = vm.ip_public
         cmdb_vm.user_tags = m.user_tags
