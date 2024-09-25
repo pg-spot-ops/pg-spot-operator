@@ -16,7 +16,7 @@
       state: present
       name: "{{ pg.admin_user }}"
       password: "{{ pg.admin_user_password }}"
-      role_attr_flags: "{{ pg.admin_is_real_superuser is truthy | ternary('SUPERUSER', 'CREATEDB,CREATEROLE') }}"
+      role_attr_flags: "{{ pg.admin_is_real_superuser | d(True) | ternary('SUPERUSER', 'CREATEDB,CREATEROLE') }}"
       login_host: /var/run/postgresql
       login_port: "5432"
     when: pg.admin_user | d('') | length > 0

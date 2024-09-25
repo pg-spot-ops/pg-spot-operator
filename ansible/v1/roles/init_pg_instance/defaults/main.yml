@@ -6,7 +6,7 @@ def_pg:
   app_db_name: appdb # Leave empty when default "postgres" DB is enough or DBs created later from app / manually
   admin_user: dev  # Leave empty to not create one
   admin_user_password: dev
-  admin_is_real_superuser: false
+  admin_is_real_superuser: true
   initdb_opts:
     - --data-checksums
     - --locale-provider=icu

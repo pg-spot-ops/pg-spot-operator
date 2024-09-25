@@ -97,5 +97,3 @@
 
 - name: Extra setup - users / DBs. Not needed when restoring from a backup
   ansible.builtin.include_tasks: optional_user_db_setup.yml
-  when:
-    - not cluster_datadir_exists.stat.exists
