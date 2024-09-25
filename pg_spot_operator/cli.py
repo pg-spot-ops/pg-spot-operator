@@ -295,8 +295,6 @@ def ensure_single_instance_running():
 
 def main():  # pragma: no cover
 
-    ensure_single_instance_running()
-
     global args
     args = validate_and_parse_args()
 
@@ -319,6 +317,9 @@ def main():  # pragma: no cover
         check_manifest_and_exit(args)
 
     logger.debug("Args: %s", args.as_dict()) if args.verbose else None
+
+    if not args.dry_run:
+        ensure_single_instance_running()
 
     if args.teardown_region:
         operator.teardown_region(
