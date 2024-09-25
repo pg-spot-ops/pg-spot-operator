@@ -20,3 +20,5 @@ backup:  # Only supported backup tool is pgBackRest currently
 access:
   extra_ssh_pub_key_paths:
     - ~/.ssh/google_compute_engine.pub
+user_tags:
+  app: shop

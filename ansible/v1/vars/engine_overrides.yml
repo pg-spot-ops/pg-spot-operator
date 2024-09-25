@@ -2,3 +2,5 @@
 ---
 # Internal ID assigned to instance_name. If set means manifest comes from the engine
 uuid: 70f76380-5107-45fb-a893-012a4e522088
+#callback_full_path: /tmp/callback.sh
+#connstr_private: xxx
