@@ -8,6 +8,7 @@ from pg_spot_operator.cloud_impl.aws_spot import (
     get_current_hourly_ondemand_price,
     filter_instance_types_by_hw_req,
 )
+from pg_spot_operator.constants import MF_SEC_VM_STORAGE_TYPE_LOCAL
 
 INSTANCE_LISTING = [
     {
@@ -418,7 +419,9 @@ PRICING_DATA = [
 def test_filter_instances():
     assert len(INSTANCE_LISTING) == 4
     filtered = filter_instance_types_by_hw_req(
-        INSTANCE_LISTING, storage_min=10
+        INSTANCE_LISTING,
+        storage_min=10,
+        storage_type=MF_SEC_VM_STORAGE_TYPE_LOCAL,
     )
     assert len(filtered) == 2
 
