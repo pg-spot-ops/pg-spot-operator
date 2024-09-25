@@ -11,3 +11,4 @@
       - "{{ connstr_public }}"
       - "{{ user_tags }}"
   when: callback_full_path|d('')
+  retries: 2
