@@ -10,6 +10,7 @@ floating_public_ip: true  # As Elastic IPs are very limited per account
 postgres_version: 15
 expiration_date: "2024-10-22 00:00+03"
 #destroy_backups: true
+is_paused: true
 vm:
   cpu_min: 2
   cpu_max: 8

@@ -701,6 +701,11 @@ def do_main_loop(
             if not (m and m.instance_name):
                 logger.info("No valid manifest found - nothing to do ...")
                 raise NoOp()
+            if m.is_paused:
+                logger.info(
+                    "Skipping instance %s as is_paused set", m.instance_name
+                )
+                raise NoOp()
 
             # Step 1 - register or update manifest in CMDB
 

@@ -145,6 +145,7 @@ class InstanceManifest(BaseModel):
     vault_password_file: str = ""
     expiration_date: str = ""  # now | '2024-06-11 10:40'
     destroy_backups: bool = True
+    is_paused: bool = False
     # *Sections*
     pg: SectionPg = field(default_factory=SectionPg)
     vm: SectionVm = field(default_factory=SectionVm)
