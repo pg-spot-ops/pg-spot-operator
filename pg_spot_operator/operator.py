@@ -15,7 +15,7 @@ from pg_spot_operator.cloud_impl import aws_client
 from pg_spot_operator.cloud_impl.aws_spot import (
     describe_instance_type,
     get_backing_vms_for_instances_if_any,
-    get_current_spot_price,
+    get_current_hourly_spot_price,
 )
 from pg_spot_operator.cloud_impl.aws_vm import (
     delete_network_interface,
@@ -67,7 +67,10 @@ def preprocess_ensure_vm_action(
     """Fill in the "blanks" that are not set by the user but still needed, like the SKU"""
 
     sku: ResolvedInstanceTypeInfo
-    if not m.vm.instance_type:
+    selected_instance_type = (
+        m.vm.instance_types[0] if len(m.vm.instance_types) == 1 else ""
+    )
+    if not m.vm.instance_types:
         cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
             m
         )
@@ -75,12 +78,22 @@ def preprocess_ensure_vm_action(
             raise Exception(
                 f"No SKUs matching HW requirements found for instance {m.instance_name} in {m.cloud} region {m.region}"
             )
-        sku = cheapest_skus[0]  # TODO implement multi-sku
-        m.vm.instance_type = sku.instance_type
+        sku = cheapest_skus[
+            0
+        ]  # TODO implement multi-sku, to retry if first type booked out
+        m.vm.instance_types.append(sku.instance_type)
+        selected_instance_type = sku.instance_type
     else:
-        i_desc = describe_instance_type(m.vm.instance_type, m.region)
+        if len(m.vm.instance_types) > 1:
+            selected_instance_type = (
+                cloud_api.get_cheapest_instance_type_from_selection(
+                    m.cloud, m.vm.instance_types, m.region, m.availability_zone
+                )
+            )
+
+        i_desc = describe_instance_type(selected_instance_type, m.region)
         sku = ResolvedInstanceTypeInfo(
-            instance_type=m.vm.instance_type,
+            instance_type=selected_instance_type,
             cloud=CLOUD_AWS,
             region=m.region,
             arch=extract_cpu_arch_from_sku_desc(CLOUD_AWS, i_desc),
@@ -94,18 +107,10 @@ def preprocess_ensure_vm_action(
         )
     m.vm.cpu_architecture = sku.arch
 
-    logger.info(
-        "SKU %s main specs - vCPU: %s, RAM: %s, instance storage: %s",
-        sku.instance_type,
-        sku.cpu,
-        sku.ram,
-        sku.instance_storage,
-    )
-
     if not sku.monthly_spot_price:
         sku.monthly_spot_price = round(
-            get_current_spot_price(
-                m.region, m.vm.instance_type, m.availability_zone
+            get_current_hourly_spot_price(
+                m.region, selected_instance_type, m.availability_zone
             )
             * 24
             * 30,
@@ -118,6 +123,13 @@ def preprocess_ensure_vm_action(
         sku.cloud,
         sku.region,
         sku.monthly_spot_price,
+    )
+    logger.info(
+        "SKU %s main specs - vCPU: %s, RAM: %s, instance storage: %s",
+        sku.instance_type,
+        sku.cpu,
+        sku.ram,
+        sku.instance_storage,
     )
     if not sku.monthly_ondemand_price:
         sku.monthly_ondemand_price = (

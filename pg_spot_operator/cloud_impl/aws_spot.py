@@ -44,6 +44,7 @@ def describe_instance_type(instance_type: str, region: str) -> dict:
     return {}
 
 
+@timed_cache(seconds=3600)
 def get_all_ec2_spot_instance_types(
     region: str, with_local_storage_only: bool = False
 ):
@@ -77,7 +78,8 @@ def get_all_ec2_spot_instance_types(
     return instances
 
 
-def get_current_spot_price(
+# TODO some caching
+def get_current_hourly_spot_price(
     region: str,
     instance_type: str,
     az: str = "",

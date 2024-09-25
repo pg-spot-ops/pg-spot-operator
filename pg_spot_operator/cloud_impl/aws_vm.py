@@ -360,7 +360,7 @@ def ec2_launch_instance(
     availability_zone: str = m.availability_zone
     user_tags: dict = m.user_tags
     architecture: str = m.vm.cpu_architecture
-    instance_type: str = m.vm.instance_type
+    instance_type: str = m.vm.instance_types[0]
     key_pair_name: str = m.aws.key_pair_name
     security_group_ids: list[str] = m.aws.security_group_ids
     subnet_id: str = m.aws.subnet_id
@@ -816,7 +816,7 @@ def ensure_spot_vm(
                 provider_id="dummy",
                 cloud=CLOUD_AWS,
                 region=region,
-                instance_type=m.vm.instance_type,
+                instance_type=m.vm.instance_types[0],
                 login_user=LOGIN_USER,
                 ip_private="dummy",
             ),

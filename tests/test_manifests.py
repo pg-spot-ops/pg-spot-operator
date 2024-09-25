@@ -81,6 +81,21 @@ pg:
 """
 
 
+TEST_MANIFEST_INSTANCE_TYPES = """
+---
+api_version: v1
+kind: pg_spot_operator_instance
+cloud: aws
+region: eu-west-1
+instance_name: hello
+expiration_date: "2025-02-08 09-0100"
+vm:
+  instance_types:
+    - i3.large
+    - i3.xlarge
+"""
+
+
 def test_parse_manifest():
     m: manifests.InstanceManifest = manifests.load_manifest_from_string(
         TEST_MANIFEST
@@ -121,3 +136,11 @@ def test_decrypt_vault_secrets():
         m.vault_password_file = tmpfile.name
         secrets_found, decrypted = m.decrypt_secrets_if_any()
         assert secrets_found > 0 and decrypted == 1
+
+
+def test_multi_instance():
+    m: manifests.InstanceManifest = manifests.load_manifest_from_string(
+        TEST_MANIFEST_INSTANCE_TYPES
+    )
+    assert m
+    assert len(m.vm.instance_types) == 2

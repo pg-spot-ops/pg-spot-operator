@@ -56,7 +56,9 @@ class SectionVm(BaseModel):
     storage_min: int = 0
     storage_type: str = "network"
     storage_speed_class: str = "ssd"
-    instance_type: str = ""  # Min CPU etc. will be ignored then
+    instance_types: list[str] = field(
+        default_factory=list
+    )  # Min CPU etc. will be ignored then
     volume_type: str = "gp3"
     volume_iops: int = 0
     volume_throughput: int = 0
@@ -64,8 +66,10 @@ class SectionVm(BaseModel):
         True  # Might result in nightly restarts
     )
     kernel_tuning: bool = True  # Basic memory over-commit tuning only for now
-    address: str = ""
-    username: str = ""
+    address: str = ""  # Skip VM creation, use provided host for Postgres setup
+    username: str = (
+        ""  # Skip VM creation, use provided login user for Postgres setup
+    )
 
 
 class SubSectionPgbackrest(BaseModel):

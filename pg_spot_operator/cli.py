@@ -64,7 +64,9 @@ class ArgumentParser(Tap):
         "PGSO_INSTANCE_NAME", ""
     )  # If set other below params become relevant
     postgres_version: str = os.getenv("PGSO_PG_MAJOR_VERSION", "16")
-    instance_type: str = os.getenv("PGSO_INSTANCE_TYPE", "")
+    instance_types: str = os.getenv(
+        "PGSO_INSTANCE_TYPES", ""
+    )  # i3.xlarge,i3.2xlarge
     cloud: str = os.getenv("PGSO_CLOUD", "aws")
     region: str = os.getenv("PGSO_REGION", "")
     zone: str = os.getenv("PGSO_ZONE", "")
@@ -138,8 +140,10 @@ instance_name: {args.instance_name}
         mfs += f"  storage_min: {args.storage_min}\n"
     if args.storage_type:
         mfs += f"  storage_type: {args.storage_type}\n"
-    if args.instance_type:
-        mfs += f"  instance_type: {args.instance_type}\n"
+    if args.instance_types:
+        mfs += "  instance_types:\n"
+        for ins_type in args.instance_types.split(","):
+            mfs += f"    - {ins_type}\n"
     # logger.debug("Compiled manifest: %s", mfs)
     if args.ssh_keys:
         mfs += "access:\n  extra_ssh_pub_keys:\n"
@@ -234,6 +238,13 @@ def check_cli_args_valid(args: ArgumentParser):
                 "Both --admin-user / --admin-user-password need to be provided",
             )
             exit(1)
+    if args.instance_types and "." not in args.instance_types:
+        for ins in args.instance_types.split(","):
+            if "." not in ins:
+                logger.error(
+                    "--instance-types expected input format: iX.large,iX.xlarge"
+                )
+                exit(1)
 
 
 def try_load_manifest(manifest_str: str) -> InstanceManifest | None:

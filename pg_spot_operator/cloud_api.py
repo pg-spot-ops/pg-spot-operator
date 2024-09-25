@@ -1,6 +1,7 @@
 import logging
 
 from pg_spot_operator.cloud_impl import aws_spot
+from pg_spot_operator.cloud_impl.aws_spot import get_current_hourly_spot_price
 from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
 from pg_spot_operator.constants import CLOUD_AWS, SPOT_OPERATOR_ID_TAG
 from pg_spot_operator.manifests import InstanceManifest
@@ -60,3 +61,25 @@ def try_get_monthly_ondemand_price_for_sku(
         return round(hourly * 24 * 30, 1)
     except Exception:
         return 0
+
+
+def get_cheapest_instance_type_from_selection(
+    cloud: str,
+    instance_types: list[str],
+    region: str,
+    availability_zone: str = "",
+) -> str:
+    logger.debug("Spot price comparing instance types: %s ...", instance_types)
+    cheapest_instance = ""
+    cheapest_price = 1e6
+
+    if cloud == CLOUD_AWS:
+        for ins_type in instance_types:
+            price = get_current_hourly_spot_price(
+                region, ins_type, availability_zone
+            )
+            logger.debug("%s at $ %s", ins_type, price)
+            if price < cheapest_price:
+                cheapest_instance = ins_type
+        return cheapest_instance
+    raise NotImplementedError
