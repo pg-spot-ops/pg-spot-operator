@@ -92,6 +92,9 @@ class ArgumentParser(Tap):
     vm_user: str = os.getenv(
         "PGSO_VM_USER", ""
     )  # Default SSH key will be used
+    destroy_file_base_path: str = os.getenv(
+        "PGSO_DESTROY_FILE_BASE_PATH", "/tmp/destroy-"
+    )  # If a file named base+instance detected, the instance is expired and the program exits
 
 
 args: ArgumentParser | None = None
@@ -372,4 +375,6 @@ def main():  # pragma: no cover
         cli_main_loop_interval_s=args.main_loop_interval_s,
         cli_vm_address=args.vm_address,
         cli_vm_user=args.vm_user,
+        cli_vm_only=args.vm_only,
+        cli_destroy_file_base_path=args.destroy_file_base_path,
     )

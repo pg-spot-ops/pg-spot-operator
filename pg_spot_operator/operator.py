@@ -38,6 +38,7 @@ from pg_spot_operator.util import (
     merge_action_output_params,
     merge_user_and_tuned_non_conflicting_config_params,
     run_process_with_output,
+    try_rm_file_if_exists,
 )
 
 MAX_PARALLEL_ACTIONS = 2
@@ -556,11 +557,13 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
     return True, cloud_vm.provider_id
 
 
-def destroy_instance(m: InstanceManifest):
+def destroy_instance(m: InstanceManifest) -> bool:
     run_action(constants.ACTION_DESTROY_INSTANCE, m)
 
     if m.destroy_backups:
         run_action(constants.ACTION_DESTROY_BACKUPS, m)
+
+    return True
 
 
 def teardown_region(
@@ -659,6 +662,7 @@ def do_main_loop(
     cli_vm_only: bool = False,
     cli_vm_address: str = "",
     cli_vm_user: str = "",
+    cli_destroy_file_base_path: str = "",
 ):
     global dry_run
     dry_run = cli_dry_run
@@ -713,6 +717,14 @@ def do_main_loop(
             m.fill_in_defaults()
             if not instance:
                 m.uuid = cmdb.register_instance_or_get_uuid(m)
+                if not m.is_expired():
+                    try_rm_file_if_exists(
+                        cli_destroy_file_base_path + m.instance_name
+                    )
+                logger.info(
+                    "Instance destroy file path: %s",
+                    cli_destroy_file_base_path + m.instance_name,
+                )
             else:
                 m.uuid = instance.uuid  # type: ignore
             m.session_vars["uuid"] = m.uuid
@@ -759,19 +771,30 @@ def do_main_loop(
                 else False
             )
 
+            shut_down_after_destroy = False
+            destroyed = False
+            if os.path.exists(cli_destroy_file_base_path + m.instance_name):
+                m.expiration_date = "now"
+                shut_down_after_destroy = True
             if not instance and m.is_expired():
                 if first_loop and not current_manifest_applied_successfully:
-                    destroy_instance(m)
+                    destroyed = destroy_instance(m)
                 else:
                     logger.debug(
                         "Instance '%s' expired, NoOp",
                         m.instance_name,
                     )
-                raise NoOp()
 
-            if m.is_expired() and not prev_success_manifest.is_expired():  # type: ignore
-                destroy_instance(m)
-                raise NoOp()
+            if m.is_expired() and (not prev_success_manifest or not prev_success_manifest.is_expired()):  # type: ignore
+                destroyed = destroy_instance(m)
+            if destroyed and shut_down_after_destroy:
+                logger.info(
+                    "Shutting down after successful destroy as destroy file found"
+                )
+                try_rm_file_if_exists(
+                    cli_destroy_file_base_path + m.instance_name
+                )
+                exit(0)
 
             if prev_success_manifest:
                 main_hw_reqs_changed = have_main_hw_reqs_changed(

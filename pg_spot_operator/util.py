@@ -169,3 +169,11 @@ def extract_region_from_az(az: str) -> str:
         return az.rstrip("abcdef")
     splits = az.split("-")
     return f"{splits[0]}-{splits[1]}-{splits[2]}"
+
+
+def try_rm_file_if_exists(file_path: str) -> None:
+    try:
+        if os.path.exists(os.path.expanduser(file_path)):
+            os.unlink(os.path.expanduser(file_path))
+    except Exception:
+        logger.exception(f"Failed to remove file at {file_path}")
