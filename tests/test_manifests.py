@@ -103,7 +103,7 @@ def test_parse_manifest():
     assert m
     assert m.cloud == "aws"
     assert m.instance_name == "hello"
-    assert m.pg.admin_is_real_superuser
+    assert m.pg.admin_is_superuser
     assert m.is_expired()
     m.expiration_date = "2099-01-01"
     assert not m.is_expired()

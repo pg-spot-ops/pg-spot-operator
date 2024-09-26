@@ -240,7 +240,7 @@ def register_instance_or_get_uuid(
         i.user_tags = m.user_tags
         i.admin_user = m.pg.admin_user
         i.admin_password = m.pg.admin_user_password
-        i.admin_is_real_superuser = m.pg.admin_is_real_superuser
+        i.admin_is_real_superuser = m.pg.admin_is_superuser
 
         session.add(i)
         session.commit()
