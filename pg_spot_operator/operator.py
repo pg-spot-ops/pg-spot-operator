@@ -23,8 +23,8 @@ from pg_spot_operator.cloud_impl.aws_vm import (
     ensure_spot_vm,
     get_addresses,
     get_all_active_operator_instances_in_region,
-    get_all_operator_volumes_in_region,
     get_network_interfaces,
+    get_operator_volumes_in_region,
     release_address_by_allocation_id_in_region,
     terminate_instances_in_region,
 )
@@ -557,11 +557,56 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
     return True, cloud_vm.provider_id
 
 
-def destroy_instance(m: InstanceManifest) -> bool:
-    run_action(constants.ACTION_DESTROY_INSTANCE, m)
+def destroy_instance(
+    m: InstanceManifest,
+) -> bool:  # TODO some duplication with --teardown-region
+    logger.info(
+        "Destroying cloud resources if any for instance %s ...",
+        m.instance_name,
+    )
+
+    backing_ins_ids = get_backing_vms_for_instances_if_any(
+        m.region, m.instance_name
+    )
+    logger.info("Instances found: %s", backing_ins_ids)
+    if backing_ins_ids and not dry_run:
+        logger.info("Terminating instances %s ...", backing_ins_ids)
+        terminate_instances_in_region(m.region, backing_ins_ids)
+        logger.info("OK. Sleeping 60s before deleting volumes ...")
+        time.sleep(60)
+
+    vol_ids_and_sizes = get_operator_volumes_in_region(
+        m.region, m.instance_name
+    )
+    logger.info("Volumes found: %s", vol_ids_and_sizes)
+    if not dry_run and vol_ids_and_sizes:
+        for vol_id, size in vol_ids_and_sizes:
+            logger.info("Deleting VolumeId %s (%s GB) ...", vol_id, size)
+            delete_volume_in_region(m.region, vol_id)
+
+    logger.info("Looking for Elastic IPs to delete ....")
+    eip_alloc_ids = get_addresses(m.region)
+    logger.info("Elastic IP Addresses found: %s", eip_alloc_ids)
+    if not dry_run and eip_alloc_ids:
+        for alloc_id in eip_alloc_ids:
+            logger.info("Releasing Address with AllocationId %s ...", alloc_id)
+            release_address_by_allocation_id_in_region(m.region, alloc_id)
+
+    logger.info("Looking for NICs to delete ....")
+    nic_ids = get_network_interfaces(m.region, m.instance_name)
+    logger.info("NICs found: %s", nic_ids)
+    if not dry_run and nic_ids:
+        for nic_id in nic_ids:
+            logger.info("Deleting NIC %s ...", nic_id)
+            delete_network_interface(m.region, nic_id)
+
+    logger.info("OK - cloud resources for instance %s cleaned-up", m.instance_name)
 
     if m.destroy_backups:
-        run_action(constants.ACTION_DESTROY_BACKUPS, m)
+        pass  # TODO
+
+    cmdb.finalize_destroy_instance(m)
+    cmdb.mark_manifest_snapshot_as_succeeded(m)
 
     return True
 
@@ -600,7 +645,7 @@ def teardown_region(
                     time.sleep(30)
 
             logger.info("Looking for EBS Volumes to delete ....")
-            vol_ids_and_sizes = get_all_operator_volumes_in_region(region)
+            vol_ids_and_sizes = get_operator_volumes_in_region(region)
             logger.info("Volumes found: %s", vol_ids_and_sizes)
             if not dry_run and vol_ids_and_sizes:
                 for vol_id, size in vol_ids_and_sizes:

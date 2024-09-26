@@ -580,33 +580,45 @@ def get_all_active_operator_instances_in_region(region: str) -> list[str]:
     return []
 
 
-def get_all_operator_volumes_in_region(region: str) -> list[tuple[str, int]]:
+def get_operator_volumes_in_region(
+    region: str, instance_name: str = ""
+) -> list[tuple[str, int]]:
     """Returns [(volId, size),...]"""
     client = get_client("ec2", region)
 
-    filters = [
-        {"Name": "tag-key", "Values": [SPOT_OPERATOR_ID_TAG]},
-    ]
+    if instance_name:
+        filters = [
+            {"Name": f"tag:{SPOT_OPERATOR_ID_TAG}", "Values": [instance_name]},
+        ]
+    else:
+        filters = [
+            {"Name": "tag-key", "Values": [SPOT_OPERATOR_ID_TAG]},
+        ]
     resp = client.describe_volumes(Filters=filters)
     if resp and resp.get("Volumes"):
         return [(x["VolumeId"], x["Size"]) for x in resp["Volumes"]]
     return []
 
 
-def get_addresses(region: str) -> list[str]:
+def get_addresses(region: str, instance_name: str = "") -> list[str]:
     """Returns a list of AllocationId-s"""
     client = get_client("ec2", region)
 
-    filters = [
-        {"Name": "tag-key", "Values": [SPOT_OPERATOR_ID_TAG]},
-    ]
+    if instance_name:
+        filters = [
+            {"Name": f"tag:{SPOT_OPERATOR_ID_TAG}", "Values": [instance_name]},
+        ]
+    else:
+        filters = [
+            {"Name": "tag-key", "Values": [SPOT_OPERATOR_ID_TAG]},
+        ]
     resp = client.describe_addresses(Filters=filters)
     if resp and resp.get("Addresses"):
         return [x["AllocationId"] for x in resp["Addresses"]]
     return []
 
 
-def get_network_interfaces(region: str) -> list[str]:
+def get_network_interfaces(region: str, instance_name: str = "") -> list[str]:
     client = get_client("ec2", region)
 
     filters = [
