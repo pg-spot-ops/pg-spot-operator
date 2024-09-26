@@ -621,9 +621,14 @@ def get_addresses(region: str, instance_name: str = "") -> list[str]:
 def get_network_interfaces(region: str, instance_name: str = "") -> list[str]:
     client = get_client("ec2", region)
 
-    filters = [
-        {"Name": "tag-key", "Values": [SPOT_OPERATOR_ID_TAG]},
-    ]
+    if instance_name:
+        filters = [
+            {"Name": f"tag:{SPOT_OPERATOR_ID_TAG}", "Values": [instance_name]},
+        ]
+    else:
+        filters = [
+            {"Name": "tag-key", "Values": [SPOT_OPERATOR_ID_TAG]},
+        ]
     resp = client.describe_network_interfaces(Filters=filters)
     if resp and resp.get("NetworkInterfaces"):
         return [x["NetworkInterfaceId"] for x in resp["NetworkInterfaces"]]

@@ -371,7 +371,9 @@ def get_all_active_operator_instances_from_region(
 ) -> list[dict]:
     instances = []
 
-    logger.debug("Fetching all instances from AWS region %s ...", region)
+    logger.debug(
+        "Fetching all operator instances from AWS region %s ...", region
+    )
     client = get_client("ec2", region)
     filters = [
         {
