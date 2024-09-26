@@ -127,7 +127,10 @@ instance_name: {args.instance_name}
     if args.zone:
         mfs += f"availability_zone: {args.zone}\n"
     if args.expiration_date:
-        mfs += f"expiration_date: {args.expiration_date}\n"
+        if args.expiration_date[0] in ('"', "'"):
+            mfs += f"expiration_date: {args.expiration_date}\n"
+        else:
+            mfs += f'expiration_date: "{args.expiration_date}"\n'
     if args.public_ip:
         mfs += f"assign_public_ip: {str(args.public_ip).lower()}\n"
     if args.postgres_version:

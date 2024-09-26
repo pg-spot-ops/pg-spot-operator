@@ -600,7 +600,9 @@ def destroy_instance(
             logger.info("Deleting NIC %s ...", nic_id)
             delete_network_interface(m.region, nic_id)
 
-    logger.info("OK - cloud resources for instance %s cleaned-up", m.instance_name)
+    logger.info(
+        "OK - cloud resources for instance %s cleaned-up", m.instance_name
+    )
 
     if m.destroy_backups:
         pass  # TODO
