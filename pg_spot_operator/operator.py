@@ -871,6 +871,10 @@ def do_main_loop(
                             "HW reqs change detected but no backing VM found"
                         )
 
+            if m.is_expired():
+                logger.debug("Instance expired, skipping")
+                raise NoOp()
+
             vm_created_recreated = False
             if cli_vm_user and cli_vm_address:
                 logger.info(
