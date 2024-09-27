@@ -16,4 +16,6 @@ ADD pg_spot_operator pg_spot_operator
 
 ADD ansible ansible
 
+ADD tuning_profiles tuning_profiles
+
 CMD ["python", "-m", "pg_spot_operator"]
