@@ -167,7 +167,7 @@ def init_engine_and_check_connection(sqlite_connstr: str):
     c = engine.connect()
     sqlite.set_connstr(sqlite_path)
     c.close()
-    logger.info("OK - engine initialized")
+    logger.debug("OK - engine initialized")
 
 
 def get_instance_by_name_if_alive(m: InstanceManifest) -> Instance | None:
@@ -244,7 +244,7 @@ def register_instance_or_get_uuid(
 
         session.add(i)
         session.commit()
-        logger.info(
+        logger.debug(
             "OK, instance '%s' stored with UUID %s",
             m.instance_name,
             i.uuid,
@@ -568,7 +568,7 @@ def mark_manifest_snapshot_as_succeeded(m: InstanceManifest) -> None:
         )
         session.execute(stmt_upd_snapshot)
 
-        logger.info(
+        logger.debug(
             "Manifest snapshot ID %s for %s marked as completed",
             m.manifest_snapshot_id,
             m.instance_name,

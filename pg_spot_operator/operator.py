@@ -66,7 +66,10 @@ def preprocess_ensure_vm_action(
     m: InstanceManifest,
 ) -> ResolvedInstanceTypeInfo:
     """Fill in the "blanks" that are not set by the user but still needed, like the SKU"""
-
+    logger.info(
+        "Looking for the cheapest SKU in region %s for given HW requirements ...",
+        m.region,
+    )
     sku: ResolvedInstanceTypeInfo
     selected_instance_type = (
         m.vm.instance_types[0] if len(m.vm.instance_types) == 1 else ""
@@ -350,7 +353,7 @@ def run_ansible_handler(
         )
         return {}
 
-    logging.info(
+    logging.debug(
         "Handler %s finished - retcode: %s", executable_full_path, p.returncode
     )
 

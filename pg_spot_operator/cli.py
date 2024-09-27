@@ -366,7 +366,7 @@ def main():  # pragma: no cover
     applied_count = schema_manager.do_ddl_rollout_if_needed(
         os.path.join(args.config_dir, SQLITE_DBNAME)
     )
-    logger.info("%s schema migration applied", applied_count)
+    logger.debug("%s schema migration applied", applied_count)
 
     logger.info("Entering main loop")
 
