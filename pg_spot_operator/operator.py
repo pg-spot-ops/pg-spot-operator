@@ -126,7 +126,7 @@ def preprocess_ensure_vm_action(
         )
     logger.info(
         "%s SKU %s (%s) in %s region %s for a monthly Spot price of $%s",
-        "Found backing" if existing_instance_info else "Selected new",
+        "Found existing" if existing_instance_info else "Selected new",
         sku.instance_type,
         sku.arch,
         sku.cloud,
@@ -549,6 +549,9 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
         vm = cmdb.get_latest_vm_by_uuid(m.uuid)
         if vm:  # Already registered in CMDB
             return False, vm.provider_id
+        logger.info(
+            "Backing instance found: %s", backing_instances[0]["InstanceId"]
+        )
     else:
         logger.warning(
             "Detected a missing VM for instance %s (%s) - %s ...",
@@ -568,7 +571,7 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
 
     cmdb.finalize_ensure_vm(m, instance_info, cloud_vm)
 
-    return True, cloud_vm.provider_id
+    return True if not backing_instances else False, cloud_vm.provider_id
 
 
 def destroy_instance(
