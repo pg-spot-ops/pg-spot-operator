@@ -44,6 +44,6 @@ def do_ddl_rollout_if_needed(sqlite_connstr: str) -> int:
             exec_sql_with_cursor(cur, SQL_SCHEMA_MARK_ROLLED_OUT, (ev_id,))
             migrations_applied += 1
 
-        logging.info("CMDB schema updated to latest")
+        logging.debug("CMDB schema updated to latest")
         conn.commit()
     return migrations_applied

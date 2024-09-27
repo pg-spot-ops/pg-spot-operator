@@ -289,7 +289,7 @@ def store_manifest_snapshot_if_changed(m: InstanceManifest) -> int:
         snap.instance_uuid = m.uuid  # type: ignore
         session.add(snap)
         session.commit()
-        logger.info("OK - inserted snapshot with ID %s", snap.id)
+        logger.debug("OK - inserted snapshot with ID %s", snap.id)
         return snap.id
 
 

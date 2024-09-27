@@ -210,7 +210,7 @@ def generate_ansible_inventory_file_for_action(
 
     with open(os.path.join(temp_workdir, "inventory"), "w") as f:
         f.write(inventory)
-    logging.info(
+    logging.debug(
         "Wrote Ansible inventory to: %s",
         os.path.join(temp_workdir, "inventory"),
     )
@@ -241,7 +241,7 @@ def populate_temp_workdir_for_action_exec(
     if not os.path.exists(handler_dir_to_fork):
         raise Exception(f"Ansible folder at {handler_dir_to_fork} not found")
     # Copy the whole Ansible dir for now into temp dir
-    logging.info(
+    logging.debug(
         "Copying Ansible dir %s to temp exec dir %s ...",
         handler_dir_to_fork,
         temp_workdir,
@@ -450,7 +450,7 @@ def apply_postgres_config_tuning_to_manifest(
         and m.pg_config.tuning_profile.strip().lower() != "none"
     ):
         logger.info(
-            "Applying Postgres tuning profile %s to given hardware ...",
+            "Applying Postgres tuning profile '%s' to given hardware ...",
             m.pg_config.tuning_profile,
         )
         tuned_config_lines = apply_tuning_profile(m)
@@ -481,7 +481,7 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
     """
 
     logging.info(
-        "Starting action %s for instance %s ...",
+        "Starting Ansible action %s for instance %s ...",
         action,
         m.instance_name,
     )
@@ -769,7 +769,7 @@ def do_main_loop(
                         cli_destroy_file_base_path + m.instance_name
                     )
                 logger.info(
-                    "Instance destroy file path: %s",
+                    "Instance destroy signal file path: %s",
                     cli_destroy_file_base_path + m.instance_name,
                 )
             else:

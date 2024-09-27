@@ -184,7 +184,7 @@ def get_manifest_from_args_as_string(args: ArgumentParser) -> str:
         with open(args.manifest_path) as f:
             return f.read()
     elif args.instance_name:
-        logger.info("Compiling a manifest from CLI args ...")
+        logger.debug("Compiling a manifest from CLI args ...")
         return compile_manifest_from_cmdline_params(args)
     raise Exception("Could not find / compile a manifest string")
 
