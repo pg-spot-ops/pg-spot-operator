@@ -398,7 +398,7 @@ def get_all_active_operator_instances_from_region(
 @timed_cache(seconds=10)
 def get_backing_vms_for_instances_if_any(
     region: str, instance_name: str
-) -> list[str]:
+) -> list[dict]:
     instances = []
     logger.debug(
         "Fetching all non-terminated/terminating instances for instance %s in AWS region %s ...",
@@ -425,6 +425,5 @@ def get_backing_vms_for_instances_if_any(
         for r in page.get("Reservations", []):
             if r.get("Instances"):
                 instances.extend(r["Instances"])
-    instance_ids = [x["InstanceId"] for x in instances]
-    logger.debug("Instances found: %s", instance_ids)
-    return instance_ids
+    logger.debug("Instances found: %s", [x["InstanceId"] for x in instances])
+    return instances

@@ -64,17 +64,21 @@ class UserExit(Exception):
 
 def preprocess_ensure_vm_action(
     m: InstanceManifest,
+    existing_instance_info: dict | None = None,
 ) -> ResolvedInstanceTypeInfo:
     """Fill in the "blanks" that are not set by the user but still needed, like the SKU"""
-    logger.info(
-        "Looking for the cheapest SKU in region %s for given HW requirements ...",
-        m.region,
-    )
     sku: ResolvedInstanceTypeInfo
     selected_instance_type = (
         m.vm.instance_types[0] if len(m.vm.instance_types) == 1 else ""
     )
-    if not m.vm.instance_types:
+    if existing_instance_info:
+        selected_instance_type = existing_instance_info["InstanceType"]
+    else:
+        logger.info(
+            "Looking for the cheapest SKU in region %s for given HW requirements ...",
+            m.region,
+        )
+    if not m.vm.instance_types and not existing_instance_info:
         cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
             m
         )
@@ -88,7 +92,7 @@ def preprocess_ensure_vm_action(
         m.vm.instance_types.append(sku.instance_type)
         selected_instance_type = sku.instance_type
     else:
-        if len(m.vm.instance_types) > 1:
+        if len(m.vm.instance_types) > 1 and not existing_instance_info:
             selected_instance_type = (
                 cloud_api.get_cheapest_instance_type_from_selection(
                     m.cloud, m.vm.instance_types, m.region, m.availability_zone
@@ -121,7 +125,8 @@ def preprocess_ensure_vm_action(
             1,
         )
     logger.info(
-        "Selected SKU %s (%s) in %s region %s for a monthly Spot price of $%s",
+        "%s SKU %s (%s) in %s region %s for a monthly Spot price of $%s",
+        "Found backing" if existing_instance_info else "Selected new",
         sku.instance_type,
         sku.arch,
         sku.cloud,
@@ -150,7 +155,7 @@ def preprocess_ensure_vm_action(
             / sku.monthly_ondemand_price
         )
         logger.info(
-            "Spot discount rate for SKU %s in region %s = %s%% (spot $%s vs on-demand $%s)",
+            "Current Spot discount rate for SKU %s in region %s = %s%% (spot $%s vs on-demand $%s)",
             sku.instance_type,
             m.region,
             round(spot_discount, 1),
@@ -533,14 +538,18 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
         m.cloud,
         m.uuid,
     )
-    running_operator_vms_in_region = (
-        cloud_api.get_all_operator_vms_in_manifest_region(m)
+    backing_instances = get_backing_vms_for_instances_if_any(
+        m.region, m.instance_name
     )
-    if m.instance_name in running_operator_vms_in_region:
+    if backing_instances:
+        if len(backing_instances) > 1:
+            raise Exception(
+                f"A single backing instance expected - got: {backing_instances}"
+            )  # TODO take latest by creation date
         vm = cmdb.get_latest_vm_by_uuid(m.uuid)
-        if vm:
+        if vm:  # Already registered in CMDB
             return False, vm.provider_id
-    if m.instance_name not in running_operator_vms_in_region:
+    else:
         logger.warning(
             "Detected a missing VM for instance %s (%s) - %s ...",
             m.instance_name,
@@ -549,7 +558,9 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
         )
         cmdb.mark_any_active_vms_as_deleted(m)
 
-    instance_info = preprocess_ensure_vm_action(m)
+    instance_info = preprocess_ensure_vm_action(
+        m, backing_instances[0] if backing_instances else None
+    )
 
     cloud_vm, created = ensure_spot_vm(m, dry_run=dry_run)
     if dry_run:
@@ -568,9 +579,10 @@ def destroy_instance(
         m.instance_name,
     )
 
-    backing_ins_ids = get_backing_vms_for_instances_if_any(
+    backing_instances = get_backing_vms_for_instances_if_any(
         m.region, m.instance_name
     )
+    backing_ins_ids = [x["InstanceId"] for x in backing_instances]
     logger.info("Instances found: %s", backing_ins_ids)
     if backing_ins_ids and not dry_run:
         logger.info("Terminating instances %s ...", backing_ins_ids)

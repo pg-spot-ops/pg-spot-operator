@@ -221,7 +221,7 @@ def register_instance_or_get_uuid(
             )
             return row.uuid
 
-        logger.info(
+        logger.debug(
             "Storing new instance %s (%s) to CMDB ...",
             m.instance_name,
             m.cloud,
