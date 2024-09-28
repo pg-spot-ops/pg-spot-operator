@@ -1,34 +1,37 @@
 
 # Postgres Spot Operator [Community Edition]
 
-Maintains stateful Postgres on Spot VMs.
+Maintains stateful Postgres on AWS Spot VMs. Think of it as RDS, but at a fraction of the cost! Typical [savings](https://aws.amazon.com/ec2/spot/pricing/)
+are in the ballpark of 4-5x.
 
-AWS only for now.
+Obviously for non-critical projects only, as utilizing Spot instances means can be interrupted by AWS at any time ...
 
-Not a "real" K8s operator (yet) - but does the same basically. 
+Not a "real" K8s operator (yet, at least) - but based on similar concepts - user desired state manifests (optional) and
+a restoration / reconciliation loop.
 
 # General idea
 
-1. The user specifies a few key parameters like region, minimum CPU count and storage size
-2. Specifies or mounts (Docker) the cloud credentials
-3. The operator finds the cheapest Spot instance for given HW requirements and launches as VM
-4. Runs Ansible to set up Postgres
-5. Keeps checking the VM health and if evicted launches a new one, re-mounts the data volume and restarts Postgres   
-
+* The user:
+  - Specifies a set of few key parameters like region, minimum CPUs / RAM and storage size and type (network EBS volumes or local volatile storage)
+  - Specifies or mounts (Docker) the cloud credentials if no default AWS CLI (~/.aws/credentials) set up
+* The operator:
+  - Finds the cheapest Spot instance for given HW requirements and launches a VM
+  - Runs Ansible to set up Postgres
+  - Keeps checking the VM health every minute and if evicted launches a new one, re-mounts the data volume and restarts Postgres
 
 # Usage
-
-PS! Expects a working AWS CLI setup (~/.aws/credentials)
 
 ## Python local dev/test in a virtualenv
 
 ```bash
+git clone git@github.com:pg-spot-ops/pg-spot-operator.git
+cd pg-spot-operator
 make virtualenv
 source .venv/bin/activate
-pip install -r requirements-test.txt
-python3 -m pg_spot_operator --verbose --instance-name pg1 --region eu-north-1 --cpu-min 4 --storage-min 100
+pip install -r requirements.txt
+python3 -m pg_spot_operator --verbose --instance-name pg1 --region eu-north-1 --cpu-min 2 --storage-min 100
 ```
- 
+
 ## Via Docker
 
 ```bash
@@ -47,4 +50,44 @@ docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
   -e PGSO_AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
   -e PGSO_AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
   pgspotops/pg-spot-operator:latest
+```
+
+# Technical details
+
+## Main features
+
+* Allows also to explicitly specify the target instance types
+* Uses Debian-12 base images / AMI-s
+* Installs Postgres from official PGDG repos, meaning you get instant minor version updates
+* Allows override of ALL *postgresql.conf* settings if user wishes so
+* Built-in basic tuning profiles for most common workloads (default, oltp, analytics, web)
+* Maintains a single instance per daemon to KISS
+* Supports only a single EBS volume
+* Supports block level S3 backups / restores via pgBackRest, meaning acceptable RPO possible even with instance storage
+* Can up/down-size the hardware requests
+
+## Non-features
+
+* No automated major version upgrades (stop the engine, do some magic, update the manifest `postgres_version`)
+* No persistent state keeping by default - relying on a local SQLite DB file. User can solve that though by setting
+  `--config-dir` to some persistent volume for example. Without that some superfluous work will be performed and
+  instance / state change history lost, in case of a daemon node loss.
+
+## Cleanup of all operator created objects
+
+After some work / testing one can clean up all operator created cloud resources via:
+
+```
+docker run --rm -e PGSO_TEARDOWN_REGION=y -e PGSO_REGION=eu-north-1 \
+  -e PGSO_AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
+  -e PGSO_AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
+  pgspotops/pg-spot-operator:latest
+```
+
+or by running a helper script from the "scripts" folders:
+
+PS! You need to update the list of regions to your "operational area" first in the header.
+
+```
+./scripts/aws/delete_all_operator_tagged_objects.sh yes
 ```
