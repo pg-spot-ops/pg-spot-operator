@@ -75,10 +75,11 @@ docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
 
 ## Cleanup of all operator created objects
 
-After some work / testing one can clean up all operator created cloud resources via:
+After some work / testing one can clean up all operator created cloud resources or only a single instance via
+*PGSO_TEARDOWN_REGION* or *PGSO_TEARDOWN*.
 
 ```
-docker run --rm -e PGSO_TEARDOWN_REGION=y -e PGSO_REGION=eu-north-1 \
+docker run --rm --name pg1 -e PGSO_TEARDOWN_REGION=y -e PGSO_REGION=eu-north-1 \
   -e PGSO_AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
   -e PGSO_AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
   pgspotops/pg-spot-operator:latest
@@ -91,6 +92,19 @@ PS! You need to update the list of regions to your "operational area" first in t
 ```
 ./scripts/aws/delete_all_operator_tagged_objects.sh yes
 ```
+
+A third option for local Docker convenience, to avoid a restart with different env inputs, is to create a dummy "destroy
+file" in the container that signals instance shutdown:
+
+```commandline
+docker run ...
+# Note the destroy file path from the log
+2024-09-30 10:49:38,973 INFO Instance destroy signal file path: /tmp/destroy-pg1
+...
+docker exec -it pg1 touch /tmp/destroy-pg1
+# On the next loop the resources will be cleaned up and the container shuts down
+```
+
 
 # Local non-cloud development
 
