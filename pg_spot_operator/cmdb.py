@@ -420,7 +420,7 @@ def update_instance_connect_info(m: InstanceManifest) -> tuple[str, str]:
         m.instance_name,
     )
     vm: Vm | None = None
-    if not (m.vm.address and m.vm.username):
+    if not (m.vm.host and m.vm.login_user):
         vm = get_latest_vm_by_uuid(m.uuid)
         if not vm:
             raise Exception(
@@ -436,7 +436,7 @@ def update_instance_connect_info(m: InstanceManifest) -> tuple[str, str]:
             )
         if m.pg.admin_user and m.pg.admin_user_password:
             instance.connstr_private = util.compose_postgres_connstr_uri(
-                vm.ip_private if vm else m.vm.address,
+                vm.ip_private if vm else m.vm.host,
                 m.pg.admin_user,
                 m.pg.admin_user_password,
                 dbname=m.pg.app_db_name or "postgres",

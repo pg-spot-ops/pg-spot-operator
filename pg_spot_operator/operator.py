@@ -207,8 +207,8 @@ def generate_ansible_inventory_file_for_action(
     action: str, m: InstanceManifest, temp_workdir: str
 ):
     """Places an inventory file into temp_workdir"""
-    if m.vm.address and m.vm.username:
-        inventory = f"{m.vm.address} ansible_user={m.vm.username}"
+    if m.vm.host and m.vm.login_user:
+        inventory = f"{m.vm.host} ansible_user={m.vm.login_user}"
     else:
         inventory = get_ansible_inventory_file_str_for_action(action, m.uuid, m.instance_name)  # type: ignore
     if not inventory:
@@ -900,8 +900,8 @@ def do_main_loop(
                     cli_vm_user,
                     cli_vm_address,
                 )
-                m.vm.address = cli_vm_address
-                m.vm.username = cli_vm_user
+                m.vm.host = cli_vm_address
+                m.vm.login_user = cli_vm_user
             else:
                 vm_created_recreated, vm_provider_id = ensure_vm(m)
                 if vm_created_recreated:

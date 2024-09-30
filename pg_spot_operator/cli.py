@@ -86,11 +86,11 @@ class ArgumentParser(Tap):
     admin_user_password: str = os.getenv("PGSO_ADMIN_USER_PASSWORD", "")
     aws_access_key_id: str = os.getenv("PGSO_AWS_ACCESS_KEY_ID", "")
     aws_secret_access_key: str = os.getenv("PGSO_AWS_SECRET_ACCESS_KEY", "")
-    vm_address: str = os.getenv(
-        "PGSO_VM_ADDRESS", ""
+    vm_host: str = os.getenv(
+        "PGSO_VM_HOST", ""
     )  # Skip creation and use the provided IP
-    vm_user: str = os.getenv(
-        "PGSO_VM_USER", ""
+    vm_login_user: str = os.getenv(
+        "PGSO_LOGIN_USER", ""
     )  # Default SSH key will be used
     destroy_file_base_path: str = os.getenv(
         "PGSO_DESTROY_FILE_BASE_PATH", "/tmp/destroy-"
@@ -153,10 +153,10 @@ instance_name: {args.instance_name}
         mfs += "  instance_types:\n"
         for ins_type in args.instance_types.split(","):
             mfs += f"    - {ins_type}\n"
-    if args.vm_address:
-        mfs += f"  address: {args.vm_address}\n"
-    if args.vm_user:
-        mfs += f"  username: {args.vm_user}\n"
+    if args.vm_host:
+        mfs += f"  host: {args.vm_host}\n"
+    if args.vm_login_user:
+        mfs += f"  login_user: {args.vm_login_user}\n"
     # logger.debug("Compiled manifest: %s", mfs)
     if args.ssh_keys:
         mfs += "access:\n  extra_ssh_pub_keys:\n"
@@ -197,7 +197,7 @@ def get_manifest_from_args_as_string(args: ArgumentParser) -> str:
 
 
 def check_cli_args_valid(args: ArgumentParser):
-    fixed_vm = bool(args.vm_user and args.vm_address)
+    fixed_vm = bool(args.vm_login_user and args.vm_host)
     if args.instance_name and not fixed_vm:
         if not args.region and not args.zone:
             logger.error("--region input expected for single args")
@@ -231,10 +231,10 @@ def check_cli_args_valid(args: ArgumentParser):
                 args.vault_password_file,
             )
             exit(1)
-    if args.vm_address or args.vm_user:
-        if not (args.vm_address and args.vm_user):
+    if args.vm_host or args.vm_login_user:
+        if not (args.vm_host and args.vm_login_user):
             logger.error(
-                "Both --vm-address / --vm-user need to be provided",
+                "Both --vm-host / --vm-login-user need to be provided",
             )
             exit(1)
     if args.user_tags:
@@ -384,8 +384,8 @@ def main():  # pragma: no cover
         cli_vault_password_file=args.vault_password_file,
         cli_user_manifest_path=args.manifest_path,
         cli_main_loop_interval_s=args.main_loop_interval_s,
-        cli_vm_address=args.vm_address,
-        cli_vm_user=args.vm_user,
+        cli_vm_address=args.vm_host,
+        cli_vm_user=args.vm_login_user,
         cli_vm_only=args.vm_only,
         cli_destroy_file_base_path=args.destroy_file_base_path,
     )

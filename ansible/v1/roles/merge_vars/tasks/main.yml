@@ -16,7 +16,7 @@
   set_fact:
     uuid: "{{ engine_overrides.uuid | d(None) }}"
     user_tags: "{{ user_tags | ansible.builtin.combine(engine_overrides.user_tags | d({})) }}"
-    setup_finished_callback: "{{ setup_finished_callback | d('') or engine_overrides.setup_finished_callback }}"
+    setup_finished_callback: "{{ setup_finished_callback | d('') or engine_overrides.setup_finished_callback | d('') }}"
     connstr_private: "{{ engine_overrides.connstr_private | d('') }}"
     connstr_public: "{{ engine_overrides.connstr_public | d('') }}"
 

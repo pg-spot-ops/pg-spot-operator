@@ -68,8 +68,8 @@ class SectionVm(BaseModel):
         True  # Might result in nightly restarts
     )
     kernel_tuning: bool = True  # Basic memory over-commit tuning only for now
-    address: str = ""  # Skip VM creation, use provided host for Postgres setup
-    username: str = (
+    host: str = ""  # Skip VM creation, use provided host for Postgres setup
+    login_user: str = (
         ""  # Skip VM creation, use provided login user for Postgres setup
     )
 
