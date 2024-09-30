@@ -419,11 +419,13 @@ def update_instance_connect_info(m: InstanceManifest) -> tuple[str, str]:
         "Updating instance %s connect info in CMDB ...",
         m.instance_name,
     )
-    vm = get_latest_vm_by_uuid(m.uuid)
-    if not vm:
-        raise Exception(
-            f"No active VMs found for instance {m.instance_name} ({m.cloud}) to set connect string"
-        )
+    vm: Vm | None = None
+    if not (m.vm.address and m.vm.username):
+        vm = get_latest_vm_by_uuid(m.uuid)
+        if not vm:
+            raise Exception(
+                f"No active VMs found for instance {m.instance_name} ({m.cloud}) to set connect string"
+            )
 
     with Session(engine) as session:
         stmt = select(Instance).where(Instance.uuid == m.uuid)
@@ -434,12 +436,12 @@ def update_instance_connect_info(m: InstanceManifest) -> tuple[str, str]:
             )
         if m.pg.admin_user and m.pg.admin_user_password:
             instance.connstr_private = util.compose_postgres_connstr_uri(
-                vm.ip_private,
+                vm.ip_private if vm else m.vm.address,
                 m.pg.admin_user,
                 m.pg.admin_user_password,
                 dbname=m.pg.app_db_name or "postgres",
             )
-            if vm.ip_public:
+            if vm and vm.ip_public:
                 instance.connstr_public = util.compose_postgres_connstr_uri(
                     vm.ip_public,
                     m.pg.admin_user,

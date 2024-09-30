@@ -155,6 +155,10 @@ instance_name: {args.instance_name}
         mfs += "  instance_types:\n"
         for ins_type in args.instance_types.split(","):
             mfs += f"    - {ins_type}\n"
+    if args.vm_address:
+        mfs += f"  address: {args.vm_address}\n"
+    if args.vm_user:
+        mfs += f"  username: {args.vm_user}\n"
     # logger.debug("Compiled manifest: %s", mfs)
     if args.ssh_keys:
         mfs += "access:\n  extra_ssh_pub_keys:\n"
