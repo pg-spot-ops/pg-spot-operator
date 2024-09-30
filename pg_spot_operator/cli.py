@@ -302,18 +302,17 @@ def check_manifest_and_exit(args: ArgumentParser):
     exit(0)
 
 
-def ensure_single_instance_running():
+def ensure_single_instance_running(instance_name: str):
     """https://stackoverflow.com/questions/380870/make-sure-only-a-single-instance-of-a-program-is-running"""
 
-    lock_file_pointer = os.open(
-        "/tmp/pg_spot_operator_instance.lock", os.O_WRONLY | os.O_CREAT
-    )
+    lockfile = f"/tmp/pg_spot_operator_instance-{instance_name}.lock"
+    lock_file_pointer = os.open(lockfile, os.O_WRONLY | os.O_CREAT)
 
     try:
         fcntl.lockf(lock_file_pointer, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except IOError:
         logger.error(
-            "Another instance already running? Delete /tmp/pg_spot_operator_instance.lock if not"
+            f"Another instance already running? Delete lockfile at {lockfile} if not"
         )
         exit(1)
 
@@ -344,7 +343,7 @@ def main():  # pragma: no cover
     logger.debug("Args: %s", args.as_dict()) if args.verbose else None
 
     if not args.dry_run:
-        ensure_single_instance_running()
+        ensure_single_instance_running(args.instance_name)
 
     if args.teardown_region:
         operator.teardown_region(
