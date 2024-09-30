@@ -14,6 +14,7 @@ a restoration / reconciliation loop.
 * The user:
   - Specifies a set of few key parameters like region, minimum CPUs / RAM and storage size and type (network EBS volumes or local volatile storage)
   - Specifies or mounts (Docker) the cloud credentials if no default AWS CLI (~/.aws/credentials) set up
+  - Can optionally specify also a callback (executable file) to do something / integrate with the resulting connect string (just displayed by default)
 * The operator:
   - Finds the cheapest Spot instance for given HW requirements and launches a VM
   - Runs Ansible to set up Postgres
@@ -132,4 +133,25 @@ python3 -m pg_spot_operator --verbose --instance-name pg1 --vm-host 192.168.121.
 make fmt && make lint && make test
 
 git commit
+```
+
+# Security
+
+By default, security is not super trimmed down, as main use case if for non-critical or temporary workloads. Everything
+is tunable though.
+
+Relevant attributes with defaults:
+
+```commandline
+public_ip_address: true
+pg:
+  admin_is_superuser: true
+  admin_user: ''  # Meaning only local access possible
+  admin_user_password: ''
+access:
+  pg_hba:  # Defaults allow non-postgres world access
+    - "host all postgres 0.0.0.0/0 reject"
+    - "hostssl all all 0.0.0.0/0 scram-sha-256"
+aws:
+  security_group_ids: []  # By default VPC "default" SG is used
 ```
