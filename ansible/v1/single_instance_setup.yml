@@ -26,4 +26,4 @@
     - role: pgbackrest_restore
       when: backup.type | d('none') == "pgbackrest"
     - role: open_pg_instance_access
-    - role: connstr_changed_callback
+    - role: setup_finished_callback

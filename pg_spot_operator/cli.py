@@ -95,6 +95,9 @@ class ArgumentParser(Tap):
     destroy_file_base_path: str = os.getenv(
         "PGSO_DESTROY_FILE_BASE_PATH", "/tmp/destroy-"
     )  # If a file named base+instance detected, the instance is expired and the program exits
+    setup_finished_callback: str = os.getenv(
+        "PGSO_SETUP_FINISHED_CALLBACK", ""
+    )  # An optional executable to propagate the connect string somewhere
 
 
 args: ArgumentParser | None = None
@@ -135,6 +138,8 @@ instance_name: {args.instance_name}
         mfs += f"assign_public_ip: {str(args.public_ip).lower()}\n"
     if args.postgres_version:
         mfs += f"postgres_version: {args.postgres_version}\n"
+    if args.setup_finished_callback:
+        mfs += f"setup_finished_callback: {args.setup_finished_callback}\n"
     mfs += "vm:\n"
     if args.cpu_architecture:
         mfs += f"  cpu_architecture: {args.cpu_architecture}\n"

@@ -3,6 +3,6 @@
 instance_name: "{{ instance_name | d('spot') }}"
 user_tags: "{{ user_tags | d({}) }}"
 # From the engine
-callback_full_path: "{{ callback_full_path | d('') }}"
-connstr_private: "{{ connstr_private | d('') }}"
+setup_finished_callback: "{{ setup_finished_callback | d('') }}"
+connstr_private: "{{ connstr_private | d('psql') }}"
 connstr_public: "{{ connstr_public | d('') }}"

@@ -1,14 +1,15 @@
 ---
 - name: Postgres connstr changed callback
   delegate_to: 127.0.0.1
+  become: false
   ansible.builtin.command:
     argv:
       - timeout
       - "30"
-      - "{{ callback_full_path }}"
+      - "{{ setup_finished_callback }}"
       - "{{ instance_name }}"
       - "{{ connstr_private or 'postgresql://postgres@localhost:5432/postgres' }}"
       - "{{ connstr_public }}"
       - "{{ user_tags }}"
-  when: callback_full_path|d('')
+  when: setup_finished_callback|d('')
   retries: 2

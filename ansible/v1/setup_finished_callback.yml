@@ -16,4 +16,4 @@
 
   roles:
     - role: merge_vars
-    - role: connstr_changed_callback
+    - role: setup_finished_callback

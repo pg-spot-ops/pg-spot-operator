@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os.path
 from dataclasses import field
 from typing import Any
 
@@ -21,6 +22,7 @@ from pg_spot_operator.util import decrypt_vault_secret, extract_region_from_az
 logger = logging.getLogger(__name__)
 
 default_vault_password_file: str = ""
+default_setup_finished_callback: str = ""
 
 
 def ignore(loader, tag, node):
@@ -143,6 +145,7 @@ class InstanceManifest(BaseModel):
     availability_zone: str = ""
     user_tags: dict = field(default_factory=dict)
     vault_password_file: str = ""
+    setup_finished_callback: str = ""  # An executable passed to Ansible
     expiration_date: str = ""  # now | '2024-06-11 10:40'
     destroy_backups: bool = True
     is_paused: bool = False
@@ -192,6 +195,18 @@ class InstanceManifest(BaseModel):
         if self.availability_zone and not self.region:
             self.region = self.session_vars["region"] = extract_region_from_az(
                 self.availability_zone
+            )
+        if (
+            not self.setup_finished_callback
+            and default_setup_finished_callback
+        ):
+            self.setup_finished_callback = default_setup_finished_callback
+        if (
+            self.setup_finished_callback
+            and "~" in self.setup_finished_callback
+        ):
+            self.setup_finished_callback = os.path.expanduser(
+                self.setup_finished_callback
             )
 
     def decrypt_secrets_if_any(self) -> tuple[int, int]:
