@@ -177,3 +177,26 @@ def try_rm_file_if_exists(file_path: str) -> None:
             os.unlink(os.path.expanduser(file_path))
     except Exception:
         logger.exception(f"Failed to remove file at {file_path}")
+
+
+def check_ssh_ping_ok(login: str, host: str) -> bool:
+    try:
+        logger.debug("Testing SSH connection to %s@%s ...", login, host)
+        rc, _ = run_process_with_output(
+            "ssh",
+            [
+                "-o",
+                "StrictHostKeyChecking=no",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
+                "-l",
+                login,
+                host,
+                "date",
+            ],
+        )
+        logger.debug("Retcode: %s", rc)
+        return rc == 0
+    except Exception as e:
+        logger.error("Failed to connect to %s@%s: %s", e)
+        return False

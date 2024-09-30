@@ -35,6 +35,7 @@ from pg_spot_operator.cloud_impl.cloud_util import (
 from pg_spot_operator.constants import CLOUD_AWS, MF_SEC_VM_STORAGE_TYPE_LOCAL
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.util import (
+    check_ssh_ping_ok,
     merge_action_output_params,
     merge_user_and_tuned_non_conflicting_config_params,
     run_process_with_output,
@@ -725,8 +726,8 @@ def do_main_loop(
     cli_vault_password_file: str = "",
     cli_main_loop_interval_s: int = 60,
     cli_vm_only: bool = False,
-    cli_vm_address: str = "",
-    cli_vm_user: str = "",
+    cli_vm_host: str = "",
+    cli_vm_login_user: str = "",
     cli_destroy_file_base_path: str = "",
 ):
     global dry_run
@@ -894,14 +895,19 @@ def do_main_loop(
                 raise NoOp()
 
             vm_created_recreated = False
-            if cli_vm_user and cli_vm_address:
+            if cli_vm_login_user and cli_vm_host:
                 logger.info(
                     "Using user provided VM address / user for Ansible setup: %s@%s",
-                    cli_vm_user,
-                    cli_vm_address,
+                    cli_vm_login_user,
+                    cli_vm_host,
                 )
-                m.vm.host = cli_vm_address
-                m.vm.login_user = cli_vm_user
+                m.vm.host = cli_vm_host
+                m.vm.login_user = cli_vm_login_user
+                if cli_dry_run:
+                    ssh_ok = check_ssh_ping_ok(cli_vm_login_user, cli_vm_host)
+                    if not ssh_ok:
+                        raise Exception("Could not SSH connect to --vm-host")
+                    logger.info("SSH connect OK")
             else:
                 vm_created_recreated, vm_provider_id = ensure_vm(m)
                 if vm_created_recreated:
