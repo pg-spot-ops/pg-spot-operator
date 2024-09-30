@@ -91,3 +91,26 @@ PS! You need to update the list of regions to your "operational area" first in t
 ```
 ./scripts/aws/delete_all_operator_tagged_objects.sh yes
 ```
+
+# Local non-cloud development
+
+For Postgres setup testing, plus manifest handling etc, one can get by with local Virtualbox / Vagrant VMs, by using
+according flags
+
+```bash
+git clone git@github.com:pg-spot-ops/pg-spot-operator.git
+cd pg-spot-operator
+make virtualenv
+source .venv/bin/activate
+pip install -r requirements-test.txt
+
+vagrant up && vagrant ssh -c 'hostname -I'  #  Or similar, add dev machine SSH keys ...
+
+# Dev / test stuff
+python3 -m pg_spot_operator --verbose --instance-name pg1 --vm-host 192.168.121.182 --vm-login-user vagrant
+# If changing Python code
+
+make fmt && make lint && make test
+
+git commit
+```
