@@ -114,10 +114,8 @@ def validate_and_parse_args() -> ArgumentParser:
 
 
 def compile_manifest_from_cmdline_params(args: ArgumentParser) -> str:
-    if not args.instance_name or not (args.region or args.zone):
-        raise Exception(
-            "Can't compile a manifest - required params not set: --instance-name, --region"
-        )
+    if not args.instance_name:
+        raise Exception("Can't compile a manifest --instance-name not set")
     mfs = f"""
 ---
 api_version: v1
@@ -199,7 +197,8 @@ def get_manifest_from_args_as_string(args: ArgumentParser) -> str:
 
 
 def check_cli_args_valid(args: ArgumentParser):
-    if args.instance_name:
+    fixed_vm = bool(args.vm_user and args.vm_address)
+    if args.instance_name and not fixed_vm:
         if not args.region and not args.zone:
             logger.error("--region input expected for single args")
             exit(1)
