@@ -56,15 +56,19 @@ docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
 
 ## Main features
 
+* Uses cheap (3-10x) AWS Spot VMs to run Postgres
+* Installs Postgres from official PGDG repos, meaning you get instant minor version updates
 * Allows also to explicitly specify the target instance types
 * Uses Debian-12 base images / AMI-s
-* Installs Postgres from official PGDG repos, meaning you get instant minor version updates
 * Allows override of ALL *postgresql.conf* settings if user wishes so
 * Built-in basic tuning profiles for most common workloads (default, oltp, analytics, web)
 * Maintains a single instance per daemon to KISS
-* Supports only a single EBS volume
+* Supports a single EBS volume or all local / volatile instance disks in a volume group
 * Supports block level S3 backups / restores via pgBackRest, meaning acceptable RPO possible even with instance storage
-* Can up/down-size the hardware requests
+* Can up/down-size the CPU / RAM requests
+* Can time-limit the instance lifetime via *--expiration-date "2024-10-22 00:00+03"*, after which it auto-terminates
+  given the daemon is running
+* Tunable EBS volume performance via paid IOPS / throughput
 
 ## Non-features
 
@@ -72,11 +76,12 @@ docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
 * No persistent state keeping by default - relying on a local SQLite DB file. User can solve that though by setting
   `--config-dir` to some persistent volume for example. Without that some superfluous work will be performed and
   instance / state change history lost, in case of a daemon node loss.
+* No automatic volume growth (can do manually still)
 
 ## Cleanup of all operator created objects
 
 After some work / testing one can clean up all operator created cloud resources or only a single instance via
-*PGSO_TEARDOWN_REGION* or *PGSO_TEARDOWN*.
+PGSO_TEARDOWN_REGION or PGSO_TEARDOWN.
 
 ```
 docker run --rm --name pg1 -e PGSO_TEARDOWN_REGION=y -e PGSO_REGION=eu-north-1 \
