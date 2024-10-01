@@ -87,13 +87,14 @@ class SectionBackup(BaseModel):
     retention_days: int = 1
     schedule_full: str = ""
     schedule_diff: str = ""
-    encryption: bool = False
+    encryption: bool = True
     cipher_password: str = ""
     cipher_password_file: str = ""
     s3_key: str = ""
     s3_key_file: str = ""
     s3_key_secret: str = ""
     s3_key_secret_file: str = ""
+    s3_bucket: str = ""
     pgbackrest: SubSectionPgbackrest = field(
         default_factory=SubSectionPgbackrest
     )

@@ -12,6 +12,7 @@ import yaml
 
 from pg_spot_operator import cloud_api, cmdb, constants, manifests
 from pg_spot_operator.cloud_impl import aws_client
+from pg_spot_operator.cloud_impl.aws_s3 import s3_clean_bucket_path_if_exists
 from pg_spot_operator.cloud_impl.aws_spot import (
     describe_instance_type,
     get_backing_vms_for_instances_if_any,
@@ -575,6 +576,10 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
     return True if not backing_instances else False, cloud_vm.provider_id
 
 
+def destroy_backups_if_any(m: InstanceManifest):
+    s3_clean_bucket_path_if_exists(m.region, m.backup.s3_bucket, m.instance_name)
+
+
 def destroy_instance(
     m: InstanceManifest,
 ) -> bool:  # TODO some duplication with --teardown-region
@@ -624,7 +629,7 @@ def destroy_instance(
     )
 
     if m.destroy_backups:
-        pass  # TODO
+        destroy_backups_if_any(m)
 
     cmdb.finalize_destroy_instance(m)
     cmdb.mark_manifest_snapshot_as_succeeded(m)
