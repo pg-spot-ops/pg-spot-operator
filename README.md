@@ -156,6 +156,9 @@ aws:
   security_group_ids: []  # By default VPC "default" SG is used
 ```
 
+PS! Note that if no *admin_user* is set, there will be also no public connect string generated as remote "postgres" user
+access is forbidden by default. One can enable remote "postgres" access (but can't be recommended of course) by setting
+the *admin_user* accordingly + specifying custom *pg_hba* rules.
 
 # Integrating with user applications
 
