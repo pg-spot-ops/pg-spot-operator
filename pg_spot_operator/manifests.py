@@ -12,12 +12,17 @@ from pydantic import BaseModel, ValidationError, model_validator
 from typing_extensions import Self
 
 from pg_spot_operator.constants import (
+    BACKUP_TYPE_PGBACKREST,
     CLOUD_AWS,
     DEFAULT_POSTGRES_MAJOR_VER,
     SPOT_OPERATOR_EXPIRES_TAG,
     SPOT_OPERATOR_ID_TAG,
 )
-from pg_spot_operator.util import decrypt_vault_secret, extract_region_from_az
+from pg_spot_operator.util import (
+    decrypt_vault_secret,
+    extract_region_from_az,
+    read_file,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +92,7 @@ class SectionBackup(BaseModel):
     retention_days: int = 1
     schedule_full: str = ""
     schedule_diff: str = ""
-    encryption: bool = True
+    encryption: bool = False
     cipher_password: str = ""
     cipher_password_file: str = ""
     s3_key: str = ""
@@ -209,6 +214,18 @@ class InstanceManifest(BaseModel):
             self.setup_finished_callback = os.path.expanduser(
                 self.setup_finished_callback
             )
+        if (
+            self.backup.type == BACKUP_TYPE_PGBACKREST
+        ):  # Required to create the bucket
+            if not self.backup.s3_key and self.backup.s3_key_file:
+                self.backup.s3_key = read_file(self.backup.s3_key_file)
+            if (
+                not self.backup.s3_key_secret
+                and self.backup.s3_key_secret_file
+            ):
+                self.backup.s3_key_secret = read_file(
+                    self.backup.s3_key_secret_file
+                )
 
     def decrypt_secrets_if_any(self) -> tuple[int, int]:
         """Could also be made generic somehow - a la loop over model_dump but need it only for the Postgres password for now
@@ -291,6 +308,20 @@ class InstanceManifest(BaseModel):
             except Exception:
                 raise ValueError(
                     "Failed to parse expiration_date, expecting an ISO-8601 datetime string, e.g. 2025-10-22T00:00+03"
+                )
+        return self
+
+    @model_validator(mode="after")
+    def check_backup_encryption_key_set(self) -> Self:
+        if (
+            self.backup.type == BACKUP_TYPE_PGBACKREST
+            and self.backup.encryption
+        ):
+            if not (
+                self.backup.cipher_password or self.backup.cipher_password_file
+            ):
+                raise ValueError(
+                    "Backup encryption assumes cipher_password / cipher_password_file set"
                 )
         return self
 

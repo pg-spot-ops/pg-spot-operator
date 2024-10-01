@@ -18,7 +18,7 @@
 #  s3_key_secret:  # If differs from aws.secret_access_key
 #  s3_key_file: ~/.aws/credentials_s3_key  # For dev
 #  s3_key_secret_file: ~/.aws/credentials_s3_key_secret  # For dev
-#  s3_bucket:  # If not set try to create a 'pgspotops' bucket
+#  s3_bucket:  # If not exists we try to create
 #  pgbackrest:
 #    global_settings:
 #      repo1-type: s3

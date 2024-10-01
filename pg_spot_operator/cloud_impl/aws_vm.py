@@ -833,7 +833,15 @@ def ensure_spot_vm(
                 provider_id="dummy",
                 cloud=CLOUD_AWS,
                 region=region,
-                instance_type=m.vm.instance_types[0],
+                instance_type=(
+                    i_desc["InstanceType"]
+                    if i_desc
+                    else (
+                        m.vm.instance_types[0]
+                        if m.vm.instance_types
+                        else "N/A"
+                    )
+                ),
                 login_user=LOGIN_USER,
                 ip_private="dummy",
             ),

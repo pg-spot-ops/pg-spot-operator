@@ -84,12 +84,12 @@ backup:  # Only supported backup tool is pgBackRest currently
   schedule_diff: "0 3 * * 0,2,4,6"
   encryption: true
   cipher_password:  pgspotops  # Supports Ansible vault encrypted strings
-  cipher_password_file:  # Plain text file accessible on the engine if don't want to use vault
-  s3_key:
-  s3_key_file:
-  s3_key_secret:
-  s3_key_secret_file:
-  s3_bucket:  # Auto-create will be tried if not specified, with following naming: pgspotops-{{ instance_name }}
+#  cipher_password_file:  # Plain text file accessible on the engine if don't want to use vault
+#  s3_key:
+#  s3_key_file:
+#  s3_key_secret:
+#  s3_key_secret_file:
+#  s3_bucket: pg-spot-operator  # Auto-create tried if not existing
   pgbackrest:
     # Map directly to pgBackRest config keys https://pgbackrest.org/configuration.html
     # PS following keys should not be specified:
@@ -102,6 +102,6 @@ backup:  # Only supported backup tool is pgBackRest currently
       repo1-type: s3
       repo1-s3-region: eu-north-1
       repo1-s3-endpoint: s3.eu-north-1.amazonaws.com
-    archive_push_overrides:  # PS some common-sense defaults are applied so generally adjustments should not be needed
-    backup_overrides:
-    restore_overrides:
+#    archive_push_overrides:  # PS some common-sense defaults are applied so generally adjustments should not be needed
+#    backup_overrides:
+#    restore_overrides:

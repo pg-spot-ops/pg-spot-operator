@@ -7,24 +7,25 @@
     var: backup | d({})
 
 - block:
-  - block:
-    # Ensure bucket exists
-    - name: Check if bucket there
-      become: false
-      amazon.aws.s3_bucket_info:
-        name_filter: "pgspotops-{{ instance_name }}"
-      register: bucket_info
-      delegate_to: 127.0.0.1
-
-    - name: Try create the bucket if not existing
-      become: false
-      amazon.aws.s3_bucket:
-        name: "pgspotops-{{ instance_name }}"
-        state: present
-      delegate_to: 127.0.0.1
-      when: not bucket_info['buckets']
-
-    when: not backup.s3_bucket | d('')
+# Moved to Python as only 1-time setup
+#  - block:
+#    # Ensure bucket exists
+#    - name: Check if bucket there
+#      become: false
+#      amazon.aws.s3_bucket_info:
+#        name_filter: "pgspotops-{{ instance_name }}"
+#      register: bucket_info
+#      delegate_to: 127.0.0.1
+#
+#    - name: Try create the bucket if not existing
+#      become: false
+#      amazon.aws.s3_bucket:
+#        name: "pgspotops-{{ instance_name }}"
+#        state: present
+#      delegate_to: 127.0.0.1
+#      when: not bucket_info['buckets']
+#
+#    when: not backup.s3_bucket | d('')
 
   - name: Install pgBackRest from PGDG repos
     ansible.builtin.apt:
@@ -145,4 +146,4 @@
     ansible.builtin.include_tasks: initial_bootstrap.yml
     when: stanza_info_result.stdout == "missing stanza path"
 
-  when: backups.backup_type | d('none') == 'pgbackrest'
+  when: backup.type | d('none') == 'pgbackrest'

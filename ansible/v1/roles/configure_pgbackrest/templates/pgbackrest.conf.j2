@@ -25,7 +25,7 @@ compress-level=3
 {% if 'repo1-type' not in backup.pgbackrest.global_settings|default({}) %}
 repo1-type=s3
 {% endif %}
-{% if backup.encryption %}
+{% if backup.encryption|default(False) %}
 repo1-cipher-pass={{ backup.cipher_password }}
 repo1-cipher-type=aes-256-cbc
 {% endif %}

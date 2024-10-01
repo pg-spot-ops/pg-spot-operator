@@ -98,6 +98,15 @@ class ArgumentParser(Tap):
     setup_finished_callback: str = os.getenv(
         "PGSO_SETUP_FINISHED_CALLBACK", ""
     )  # An optional executable to propagate the connect string somewhere
+    backup_s3_bucket: str = os.getenv(
+        "PGSO_BACKUP_S3_BUCKET", ""
+    )  # If set, pgbackrest will be configured
+    backup_cipher: str = os.getenv(
+        "PGSO_BACKUP_CIPHER", ""
+    )  # pgbackrest cipher password
+    backup_retention_days: str = os.getenv("PGSO_BACKUP_RETENTION_DAYS", "1")
+    backup_s3_key: str = os.getenv("PGSO_BACKUP_S3_KEY", "")
+    backup_s3_key_secret: str = os.getenv("PGSO_BACKUP_S3_KEY_SECRET", "")
 
 
 args: ArgumentParser | None = None
@@ -177,6 +186,16 @@ instance_name: {args.instance_name}
         mfs += "pg:\n"
         mfs += f"  admin_user: {args.admin_user}\n"
         mfs += f"  admin_user_password: {args.admin_user_password}\n"
+    if args.backup_s3_bucket:
+        mfs += "backup:\n"
+        mfs += "  type: pgbackrest\n"
+        mfs += f"  s3_bucket: {args.backup_s3_bucket}\n"
+        mfs += f"  retention_days: {args.backup_retention_days}\n"
+        mfs += f"  s3_key: {args.backup_s3_key}\n"
+        mfs += f"  s3_key_secret: {args.backup_s3_key_secret}\n"
+        if args.backup_cipher:
+            mfs += "  encryption: true\n"
+            mfs += f"  cipher_password: {args.backup_cipher}\n"
     return mfs
 
 
@@ -259,6 +278,13 @@ def check_cli_args_valid(args: ArgumentParser):
                     "--instance-types expected input format: iX.large,iX.xlarge"
                 )
                 exit(1)
+    if args.backup_s3_bucket and not (
+        args.backup_s3_key and args.backup_s3_key
+    ):
+        logger.error(
+            "Enabling backups (--backup-s3-bucket) requires --backup-s3-key / --backup-s3-key-secret",
+        )
+        exit(1)
 
 
 def try_load_manifest(manifest_str: str) -> InstanceManifest | None:
