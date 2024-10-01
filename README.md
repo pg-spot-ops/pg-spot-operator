@@ -155,3 +155,27 @@ access:
 aws:
   security_group_ids: []  # By default VPC "default" SG is used
 ```
+
+
+# Integrating with user applications
+
+Although the Community Edition is optimized for more light use, one can use it also to power real applications (given
+they cope with the possible service interruptions of course) by providing a "setup finished" callback hook. The hook must
+currently be a self-contained executable which gets following 4 input parameters for propagations into "somewhere":
+
+- Instance name
+- Private full connect string a la 'postgresql://postgres@localhost:5432/postgres'
+- Public full connect string, when *public_ip_address: true* is set, else an empty string
+- User provided tags as JSON, if any
+
+Example usage:
+
+```commandline
+docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
+  -e PGSO_STORAGE_MIN=100 -e PGSO_STORAGE_TYPE=local -e PGSO_CPU_MIN=2 \
+  -e PGSO_SSH_KEYS="$(cat ~/.ssh/id_rsa.pub)" \
+  -e PGSO_AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
+  -e PGSO_AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
+  -e PGSO_SETUP_FINISHED_CALLBACK="/my_callback.sh" -v "$HOME/my_callback.sh":/my_callback.sh \
+  pgspotops/pg-spot-operator:latest
+```
