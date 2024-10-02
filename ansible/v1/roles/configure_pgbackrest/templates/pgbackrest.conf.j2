@@ -38,6 +38,12 @@ repo1-block=y
 {% if 'repo1-bundle' not in backup.pgbackrest.global_settings|default({}) %}
 repo1-bundle=y
 {% endif %}
+{% if 'repo1-s3-region' not in backup.pgbackrest.global_settings|default({}) %}
+repo1-s3-region={{ region }}
+{% endif %}
+{% if 'repo1-s3-endpoint' not in backup.pgbackrest.global_settings|default({}) %}
+repo1-s3-endpoint=s3.{{ region }}.amazonaws.com
+{% endif %}
 {% if 'repo1-s3-bucket' not in backup.pgbackrest.global_settings|default({}) %}
 repo1-s3-bucket={{ backup.s3_bucket | d('pgspotops-' + instance_name, true) }}
 {% endif %}
