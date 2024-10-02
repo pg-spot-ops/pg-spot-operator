@@ -200,3 +200,8 @@ def check_ssh_ping_ok(login: str, host: str) -> bool:
     except Exception as e:
         logger.error("Failed to connect to %s@%s: %s", e)
         return False
+
+
+def read_file(file_path: str) -> str:
+    with open(os.path.expanduser(file_path)) as f:
+        return f.read()

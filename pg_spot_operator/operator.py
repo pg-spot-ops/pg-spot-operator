@@ -12,6 +12,10 @@ import yaml
 
 from pg_spot_operator import cloud_api, cmdb, constants, manifests
 from pg_spot_operator.cloud_impl import aws_client
+from pg_spot_operator.cloud_impl.aws_s3 import (
+    s3_clean_bucket_path_if_exists,
+    s3_try_create_bucket_if_not_exists,
+)
 from pg_spot_operator.cloud_impl.aws_spot import (
     describe_instance_type,
     get_backing_vms_for_instances_if_any,
@@ -32,7 +36,11 @@ from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_cpu_arch_from_sku_desc,
 )
-from pg_spot_operator.constants import CLOUD_AWS, MF_SEC_VM_STORAGE_TYPE_LOCAL
+from pg_spot_operator.constants import (
+    BACKUP_TYPE_PGBACKREST,
+    CLOUD_AWS,
+    MF_SEC_VM_STORAGE_TYPE_LOCAL,
+)
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.util import (
     check_ssh_ping_ok,
@@ -208,7 +216,9 @@ def generate_ansible_inventory_file_for_action(
     action: str, m: InstanceManifest, temp_workdir: str
 ):
     """Places an inventory file into temp_workdir"""
-    if m.vm.host and m.vm.login_user:
+    if dry_run:
+        inventory = "localhost"
+    elif m.vm.host and m.vm.login_user:
         inventory = f"{m.vm.host} ansible_user={m.vm.login_user}"
     else:
         inventory = get_ansible_inventory_file_str_for_action(action, m.uuid, m.instance_name)  # type: ignore
@@ -575,6 +585,16 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
     return True if not backing_instances else False, cloud_vm.provider_id
 
 
+def ensure_s3_backup_bucket(m: InstanceManifest):
+    s3_try_create_bucket_if_not_exists(m.region, m.backup.s3_bucket)
+
+
+def destroy_backups_if_any(m: InstanceManifest):
+    s3_clean_bucket_path_if_exists(
+        m.region, m.backup.s3_bucket, m.instance_name
+    )
+
+
 def destroy_instance(
     m: InstanceManifest,
 ) -> bool:  # TODO some duplication with --teardown-region
@@ -624,7 +644,7 @@ def destroy_instance(
     )
 
     if m.destroy_backups:
-        pass  # TODO
+        destroy_backups_if_any(m)
 
     cmdb.finalize_destroy_instance(m)
     cmdb.mark_manifest_snapshot_as_succeeded(m)
@@ -894,6 +914,9 @@ def do_main_loop(
                 logger.debug("Instance expired, skipping")
                 raise NoOp()
 
+            if m.backup.type == BACKUP_TYPE_PGBACKREST and not cli_dry_run:
+                ensure_s3_backup_bucket(m)
+
             vm_created_recreated = False
             if cli_vm_login_user and cli_vm_host:
                 logger.info(
@@ -916,11 +939,6 @@ def do_main_loop(
                         vm_provider_id,
                     )
                     time.sleep(30)
-
-                if (
-                    dry_run
-                ):  # Bail as next actions depend on output of ensure_vm
-                    raise NoOp()
 
             diff = m.diff_manifests(
                 prev_success_manifest, original_manifests_only=True

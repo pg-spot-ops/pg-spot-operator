@@ -25,7 +25,7 @@ compress-level=3
 {% if 'repo1-type' not in backup.pgbackrest.global_settings|default({}) %}
 repo1-type=s3
 {% endif %}
-{% if backup.encryption %}
+{% if backup.encryption|default(False) %}
 repo1-cipher-pass={{ backup.cipher_password }}
 repo1-cipher-type=aes-256-cbc
 {% endif %}
@@ -37,6 +37,12 @@ repo1-block=y
 {% endif %}
 {% if 'repo1-bundle' not in backup.pgbackrest.global_settings|default({}) %}
 repo1-bundle=y
+{% endif %}
+{% if 'repo1-s3-region' not in backup.pgbackrest.global_settings|default({}) %}
+repo1-s3-region={{ region }}
+{% endif %}
+{% if 'repo1-s3-endpoint' not in backup.pgbackrest.global_settings|default({}) %}
+repo1-s3-endpoint=s3.{{ region }}.amazonaws.com
 {% endif %}
 {% if 'repo1-s3-bucket' not in backup.pgbackrest.global_settings|default({}) %}
 repo1-s3-bucket={{ backup.s3_bucket | d('pgspotops-' + instance_name, true) }}

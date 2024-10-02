@@ -22,3 +22,11 @@ def get_client(
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
         )
     return session.client(service)
+
+
+def get_session(region: str) -> boto3.session.Session:
+    return boto3.session.Session(
+        region_name=region,
+        aws_access_key_id=AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+    )

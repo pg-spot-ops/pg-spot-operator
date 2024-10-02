@@ -24,3 +24,5 @@ MF_SEC_VM_STORAGE_TYPE_NETWORK = "network"
 
 CPU_ARCH_X86 = "x86"
 CPU_ARCH_ARM = "arm"
+
+BACKUP_TYPE_PGBACKREST = "pgbackrest"
