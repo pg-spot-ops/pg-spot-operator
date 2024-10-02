@@ -4,7 +4,7 @@
 #postgres_version: 16
 #backup:
 #  type: pgbackrest
-#  wal_archiving_max_interval: 1min   # Postgres archive_timeout i.e. a typical "data-loss window" on instance termination
+#  wal_archiving_max_interval: 2min   # Postgres archive_timeout i.e. a typical "data-loss window" on instance termination
 #                               # when using local / volatile disks. Very short values (minimum is 1s) can bloat your
 #                               # backup archive and a streaming replication or WAL receiver setup could be a better fit.
 ## PS Below backup_* settings only affect repo1 - multi-repo is possible though via pgbackrest_global_settings
@@ -35,4 +35,4 @@ stanza_name: "{{ instance_name | d('cluster1') }}"
 postgres_archiving_settings:
   - "archive_command = 'pgbackrest --stanza={{ stanza_name }} archive-push %p'"
   - "archive_mode = on"
-  - "archive_timeout = {{ backup.wal_archiving_max_interval | d('5min')}}"
+  - "archive_timeout = {{ backup.wal_archiving_max_interval | d('2min')}}"

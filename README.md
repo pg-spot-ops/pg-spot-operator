@@ -186,13 +186,14 @@ docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
 # Backups
 
 If using local storage instances (*--storage-type=local*, default storage type is *network*), you don't get data persistence
-by default - which is good only of course for throwaway testing instance etc. To support persistence there is built-in
+by default - which is good only of course for throwaway testing / analytics etc. To support persistence there is built-in
 support for pgBackRest with S3 storage. Backups could of course configured for network storage also, for usual extra
 safety and (manual) PITR options.
 
-Note though that default RPO / data loss window (backup.wal_archiving_max_interval) is 5min still and for larger databases
-(upwards of a few hundred GB), restoring in case of an eviction will take 15min+ and the operational side will suffer,
-so network storage with some provisioned IOPS to compensate disk latencies might be a better idea.
+Note though that enabling backup still means a small data loss in case of VM eviction, assuming data is constantly written.
+The default average data loss window is around 1min (backup.wal_archiving_max_interval=2min) and for larger databases
+(100GB+), restoring in case of an eviction will take 10min+ and the operational side will suffer, so network storage
+with some provisioned IOPS to compensate disk latencies might be a better idea.
 
 Relevant CLI / Env flags:
   * --backup-s3-bucket / PGSO_BACKUP_S3_BUCKET (signals we want backups)
