@@ -182,3 +182,10 @@ docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
   -e PGSO_SETUP_FINISHED_CALLBACK="/my_callback.sh" -v "$HOME/my_callback.sh":/my_callback.sh \
   pgspotops/pg-spot-operator:latest
 ```
+
+# Reducing downtime / eviction rates
+
+Currently the instance type selection logic is very simple - by default we take the cheapest instance type matching
+the hardware requirements, which can lead to non-optimal eviction rates. To combat that one can:
+ * Specify target instance types explicitly via the *vm.instance_types* attribute
+ * Enable instance type randomize_instance_types=true and set *cpu_max=x* to contain the costs

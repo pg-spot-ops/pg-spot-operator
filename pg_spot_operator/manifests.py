@@ -54,6 +54,7 @@ class SectionVm(BaseModel):
     detailed_monitoring: bool = False  # Has extra cost
     cpu_min: int = 0
     cpu_max: int = 0
+    randomize_instance_types: bool = False
     ram_min: int = 0
     storage_min: int = 0
     storage_type: str = "network"

@@ -14,6 +14,7 @@ def get_cheapest_skus_for_hardware_requirements(
     max_skus_to_get: int = 1,
     skus_to_avoid: list[str] | None = None,
 ) -> list[ResolvedInstanceTypeInfo]:
+    """Returns a lowest-price-first list"""
     logger.debug(
         "Looking for the cheapest Spot VM for following HW reqs: %s",
         [x for x in m.vm.dict().items() if x[1] is not None],
@@ -25,6 +26,7 @@ def get_cheapest_skus_for_hardware_requirements(
             availability_zone=m.availability_zone,
             cpu_min=m.vm.cpu_min,
             cpu_max=m.vm.cpu_max,
+            randomize_instance_types=m.vm.randomize_instance_types,
             ram_min=m.vm.ram_min,
             architecture=m.vm.cpu_architecture,
             storage_type=m.vm.storage_type,

@@ -1,4 +1,5 @@
 import logging
+import random
 from collections import defaultdict
 from datetime import datetime, timedelta
 from statistics import mean
@@ -266,6 +267,7 @@ def get_cheapest_sku_for_hw_reqs(
     availability_zone: str | None = None,
     cpu_min: int = 0,
     cpu_max: int = 0,
+    randomize_instance_types: bool = False,
     ram_min: int = 0,
     architecture: str = "any",
     storage_type: str = "network",
@@ -322,7 +324,13 @@ def get_cheapest_sku_for_hw_reqs(
     avg_by_sku_az = get_avg_spot_price_from_pricing_history_data_by_sku_and_az(
         hourly_pricing_data
     )
-    sku, az, price = avg_by_sku_az[0]
+    if randomize_instance_types:
+        sku, az, price = random.choice(avg_by_sku_az)
+        logger.debug(
+            "Chose a random SKU %s due to randomize_instance_types set", sku
+        )
+    else:
+        sku, az, price = avg_by_sku_az[0]
 
     arch: str = ""
     i_desc: dict = {}

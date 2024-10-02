@@ -71,6 +71,9 @@ class ArgumentParser(Tap):
     region: str = os.getenv("PGSO_REGION", "")
     zone: str = os.getenv("PGSO_ZONE", "")
     cpu_min: int = int(os.getenv("PGSO_CPU_MIN", "0"))
+    cpu_max: int = int(
+        os.getenv("PGSO_CPU_MAX", "0")
+    )  # Infers randomize_instance_types=True
     ram_min: int = int(os.getenv("PGSO_RAM_MIN", "0"))
     storage_min: int = int(os.getenv("PGSO_STORAGE_MIN", "0"))
     storage_type: str = os.getenv("PGSO_STORAGE_TYPE", "network")
@@ -143,6 +146,9 @@ instance_name: {args.instance_name}
         mfs += f"  cpu_architecture: {args.cpu_architecture}\n"
     if args.cpu_min:
         mfs += f"  cpu_min: {args.cpu_min}\n"
+    if args.cpu_max:
+        mfs += f"  cpu_max: {args.cpu_max}\n"
+        mfs += "  randomize_instance_types: true\n"
     if args.ram_min:
         mfs += f"  ram_min: {args.ram_min}\n"
     if args.storage_min:
