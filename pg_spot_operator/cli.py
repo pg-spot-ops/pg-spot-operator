@@ -1,7 +1,10 @@
+import datetime
 import fcntl
 import logging
 import os.path
+import shutil
 
+from dateutil.parser import isoparse
 from tap import Tap
 
 from pg_spot_operator import cmdb, manifests, operator
@@ -343,6 +346,35 @@ def ensure_single_instance_running(instance_name: str):
         exit(1)
 
 
+def clean_up_old_logs_if_any(config_dir: str, old_threshold_days: int = 7):
+    """Leaves empty instance_name/action folders in place though to indicate what operations have happened
+    on which instances
+    """
+    tmp_path = os.path.expanduser(os.path.join(config_dir, "tmp"))
+    logger.debug(
+        "Cleaning up old tmp Ansible action logs from %s if any ...", tmp_path
+    )
+    for dirpath, dirs, files in os.walk(tmp_path):
+        for (
+            d
+        ) in (
+            dirs
+        ):  # /home/krl/.pg-spot-operator/tmp/pg1/single_instance_setup/2024-10-02_093928/ansible.log
+            if not (d.startswith("20") and "-" in d):  # 2024-10-02_113800
+                continue
+            dt = isoparse(d)
+            if dt < (
+                datetime.datetime.utcnow()
+                - datetime.timedelta(days=old_threshold_days)
+            ):
+                expired_path = os.path.expanduser(os.path.join(dirpath, d))
+                logger.debug(
+                    "Removing expired action handler tmp files from %s ...",
+                    expired_path,
+                )
+                shutil.rmtree(expired_path, ignore_errors=True)
+
+
 def main():  # pragma: no cover
 
     global args
@@ -400,6 +432,9 @@ def main():  # pragma: no cover
         os.path.join(args.config_dir, SQLITE_DBNAME)
     )
     logger.debug("%s schema migration applied", applied_count)
+
+    if not args.dry_run:
+        clean_up_old_logs_if_any(args.config_dir)
 
     logger.info("Entering main loop")
 

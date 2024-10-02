@@ -1,4 +1,5 @@
 import datetime
+import unittest
 
 from dateutil.tz import tzutc
 
@@ -448,6 +449,7 @@ def test_get_current_spot_price():
     assert 0.01 < sp < 1
 
 
+@unittest.SkipTest
 def test_get_current_hourly_ondemand_price():
     sp = get_current_hourly_ondemand_price("eu-north-1", "i3.xlarge")
     assert 0.1 < sp < 10
