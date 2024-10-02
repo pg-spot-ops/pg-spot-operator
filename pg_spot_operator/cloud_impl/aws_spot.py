@@ -425,5 +425,4 @@ def get_backing_vms_for_instances_if_any(
         for r in page.get("Reservations", []):
             if r.get("Instances"):
                 instances.extend(r["Instances"])
-    logger.debug("Instances found: %s", [x["InstanceId"] for x in instances])
     return instances

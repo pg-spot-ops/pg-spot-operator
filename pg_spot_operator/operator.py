@@ -559,6 +559,12 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
             )  # TODO take latest by creation date
         vm = cmdb.get_latest_vm_by_uuid(m.uuid)
         if vm:  # Already registered in CMDB
+            logger.info(
+                "Backing instance %s (%s / %s) found",
+                vm.provider_id,
+                vm.ip_public,
+                vm.ip_private,
+            )
             return False, vm.provider_id
         logger.info(
             "Backing instance found: %s", backing_instances[0]["InstanceId"]
@@ -607,7 +613,7 @@ def destroy_instance(
         m.region, m.instance_name
     )
     backing_ins_ids = [x["InstanceId"] for x in backing_instances]
-    logger.info("Instances found: %s", backing_ins_ids)
+    logger.info("Instances found for destroying: %s", backing_ins_ids)
     if backing_ins_ids and not dry_run:
         logger.info("Terminating instances %s ...", backing_ins_ids)
         terminate_instances_in_region(m.region, backing_ins_ids)
@@ -677,7 +683,7 @@ def teardown_region(
 
             logger.info("Looking for EC2 instances to delete ...")
             ins_ids = get_all_active_operator_instances_in_region(region)
-            logger.info("Instances found: %s", ins_ids)
+            logger.info("Instances found for delete: %s", ins_ids)
             if not dry_run and ins_ids:
                 logger.info("Terminating instances %s ...", ins_ids)
                 terminate_instances_in_region(region, ins_ids)
