@@ -448,4 +448,5 @@ def main():  # pragma: no cover
         cli_vm_login_user=args.vm_login_user,
         cli_vm_only=args.vm_only,
         cli_destroy_file_base_path=args.destroy_file_base_path,
+        cli_teardown=args.teardown,
     )

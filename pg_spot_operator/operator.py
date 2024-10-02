@@ -755,6 +755,7 @@ def do_main_loop(
     cli_vm_host: str = "",
     cli_vm_login_user: str = "",
     cli_destroy_file_base_path: str = "",
+    cli_teardown: bool = False,
 ):
     global dry_run
     dry_run = cli_dry_run
@@ -863,7 +864,7 @@ def do_main_loop(
                 else False
             )
 
-            shut_down_after_destroy = False
+            shut_down_after_destroy = cli_teardown
             destroyed = False
             if os.path.exists(cli_destroy_file_base_path + m.instance_name):
                 m.expiration_date = "now"
@@ -881,7 +882,7 @@ def do_main_loop(
                 destroyed = destroy_instance(m)
             if destroyed and shut_down_after_destroy:
                 logger.info(
-                    "Shutting down after successful destroy as destroy file found"
+                    "Shutting down after successful destroy as destroy file / teardown flag set"
                 )
                 try_rm_file_if_exists(
                     cli_destroy_file_base_path + m.instance_name
