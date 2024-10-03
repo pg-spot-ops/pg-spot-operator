@@ -21,6 +21,18 @@
       login_port: "5432"
     when: pg.admin_user | d('') | length > 0
 
+  - name: Create the "app" user if requested
+    become: yes
+    become_user: postgres
+    community.postgresql.postgresql_privs:
+      database: postgres
+      type: group
+      role: "{{ pg.admin_user }}"
+      objs: "pg_checkpoint,pg_create_subscription,pg_monitor,pg_read_all_data,pg_read_all_settings,pg_read_all_stats,pg_signal_backend,pg_stat_scan_tables,pg_write_all_data"
+      login_host: /var/run/postgresql
+      login_port: "5432"
+    when: not pg.admin_is_superuser|d(False)
+
   when: pg.admin_user | d('')
 
 - name: Create the "app" DB if requested
