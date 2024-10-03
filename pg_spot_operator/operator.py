@@ -484,7 +484,8 @@ def apply_postgres_config_tuning_to_manifest(
             )
         )
         if merged_config_lines:
-            m.session_vars["pg_config"] = {}
+            if "pg_config" not in m.session_vars:
+                m.session_vars["pg_config"] = {}
             m.session_vars["pg_config"][
                 "extra_config_lines"
             ] = merged_config_lines

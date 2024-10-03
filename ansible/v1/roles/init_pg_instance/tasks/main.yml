@@ -69,6 +69,14 @@
   notify:
     - "init_pg_instance : Reload postgres"
 
+- name: Set up shared_preload_libraries
+  ansible.builtin.lineinfile:
+    path: "/etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf"
+    line: "shared_preload_libraries = '{{ pg_config.shared_preload_libraries }}'"
+  when: pg_config.shared_preload_libraries|d('')
+  notify:
+    - "init_pg_instance : Restart postgres"
+
 - name: flush_handlers
   ansible.builtin.meta: flush_handlers
 

@@ -125,6 +125,10 @@ class SectionPgConfig(BaseModel):
     extensions: list[str] = field(default_factory=list)
     extra_os_packages: list[str] = field(default_factory=list)
     ensure_shared_preload_libraries: list[str] = field(default_factory=list)
+    shared_preload_libraries: str = (
+        ""  # The final result from ensure_shared_preload_libraries
+    )
+    # Mutually exclusive with ensure_shared_preload_libraries from user TODO validate
     extra_config_lines: list[str] = field(default_factory=list)
 
 
@@ -133,7 +137,7 @@ class InstanceManifest(BaseModel):
     original_manifest: str = ""
     manifest_snapshot_id: int = 0
     uuid: str | None = None  # CMDB ID
-    session_vars: dict = field(default_factory=dict)  #
+    session_vars: dict = field(default_factory=dict)
     # *Top-level instance fields*
     # Required fields
     api_version: str
@@ -225,6 +229,21 @@ class InstanceManifest(BaseModel):
             ):
                 self.backup.s3_key_secret = read_file(
                     self.backup.s3_key_secret_file
+                )
+        if self.pg_config.ensure_shared_preload_libraries:
+            user_set_spl = False
+            for config_line in self.pg_config.extra_config_lines:
+                splits = config_line.split(
+                    "="
+                )  # # Don't mess with shared_preload_libraries if already set by user
+                if splits[0].strip() == "shared_preload_libraries":
+                    user_set_spl = True
+                    break
+            if not user_set_spl:
+                if "pg_config" not in self.session_vars:
+                    self.session_vars["pg_config"] = {}
+                self.session_vars["pg_config"]["shared_preload_libraries"] = (
+                    ",".join(self.pg_config.ensure_shared_preload_libraries)
                 )
 
     def decrypt_secrets_if_any(self) -> tuple[int, int]:
