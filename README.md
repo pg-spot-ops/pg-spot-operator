@@ -4,10 +4,11 @@
 Maintains stateful Postgres on AWS Spot VMs. Think of it as RDS, but at a fraction of the cost! Typical [savings](https://aws.amazon.com/ec2/spot/pricing/)
 are in the ballpark of 4-5x.
 
-Obviously for non-critical projects only, as utilizing Spot instances means can be interrupted by AWS at any time ...
+Obviously for non-critical projects only, as utilizing Spot instances means one can be interrupted by AWS at any time,
+and it takes a few minutes to restore the state.
 
-Not a "real" K8s operator (yet, at least) - but based on similar concepts - user desired state manifests (optional) and
-a restoration / reconciliation loop.
+Not a "real" K8s operator (yet, at least) - but based on similar concepts - user describes a desired state (manifests)
+and there's a reconciliation loop of sorts.
 
 # General idea
 
@@ -207,3 +208,25 @@ to re-use the engine credentials, as the keys will be actually placed on the Pos
 
 Also, technically non-S3 storage, or S3 outside of AWS, can be used - but in that case the user must provide full
 pgBackRest configuration lines (backup.pgbackrest.global_settings etc) as part of the manifest.
+
+# Enterprise Edition
+
+Although the Community Edition works and is free to use also for businesses, it's taking the simplest approach to Spot
+instances really, so that some aspects of the solution are "best-efforty" and one could do much more to ensure better
+uptimes.
+
+If you'd be interested in massive cost saving also for more critical Postgres databases, please register your email address
+via this form [https://tinyurl.com/pgspotops](https://tinyurl.com/pgspotops) to get notified once the upcoming Enterprise Edition
+is released.
+
+Most import features of the Enterprise Edition:
+
+  * HA / multi-node setups
+  * GCP and Azure support
+  * Advanced eviction rate heuristics
+  * Volume auto-growth
+  * Temporary fallbacks to regular non-spot VMs once uptime budget burned
+  * Major version upgrades
+  * Stop / sleep schedules for even more savings
+  * Better integration with typical DevOps flows
+  * A CLI for ad-hoc DBA operations
