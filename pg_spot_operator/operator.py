@@ -561,8 +561,9 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
         vm = cmdb.get_latest_vm_by_uuid(m.uuid)
         if vm:  # Already registered in CMDB
             logger.info(
-                "Backing instance %s (%s / %s) found",
+                "Backing instance %s %s (%s / %s) found",
                 vm.provider_id,
+                vm.sku,
                 vm.ip_public,
                 vm.ip_private,
             )
