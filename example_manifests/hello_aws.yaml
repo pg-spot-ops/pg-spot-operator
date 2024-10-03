@@ -9,19 +9,21 @@ instance_name: hello-aws  # Required
 public_ip_address: true  # Default: true
 floating_public_ip: true  # Default: true, as Elastic IPs are very limited per account
 postgres_version: 16  # Optional. Minimum supported version is v14. Defaults to latest stable
-expiration_date: "2024-10-22 00:00+03"  # Optional. Instance will be deleted after that (if engine running, no auto-destruct for now)
+expiration_date: "2024-12-22 00:00+03"  # Optional. Instance will be deleted after that (if engine running, no auto-destruct for now)
 #destroy_backups: true  # Default: true. Also destroy any S3 backups if using pgBackRest
 is_paused: false
 #vault_password_file:  # If Ansible encrypted strings are used. Can also be set globally via --vault-password-file
 vm:
-#  cpu_architecture:  # [ arm | amd | x86 | intel ]
+  host: 192.168.121.221
+  login_user: vagrant
+  #  cpu_architecture:  # [ arm | amd | x86 | intel ]
   cpu_min: 2  # Optional
 #  cpu_max: 8  # Optional
 #  ram_min: 4  # Optional
 #  allow_burstable: true
 #  instance_types: [m6gd.xlarge]  # cpu_min etc will be ignored then and cheapest of listed used
   storage_min: 100  # Required, as no auto-growth for now
-  storage_type: network  # local | network. PS Using network volumes pins you to a specific AZ
+  storage_type: local  # local | network. PS Using network volumes pins you to a specific AZ
   storage_speed_class: ssd  # hdd | ssd | nvme. For instance storage (storage_type=local)
 #  volume_type: gp3  # gp2, gp3, io1, io2 Details: https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html
 #  volume_iops:  # For provisioned / paid IOPS, EBS gp3 default is 3000
@@ -58,8 +60,8 @@ pg_config:
 #    - pgaudit
 #  extra_os_packages:  # Default: []
 #    - pgbadger
-#  ensure_shared_preload_libraries:  # Default [pg_stat_statements]
-#    - pg_stat_statements
+  ensure_shared_preload_libraries:  # Default []
+    - pg_stat_statements
 #  extra_config_lines:  # Literal postgresql.conf lines for custom overrides / tuning. Takes precedence over tuning_profile outputs.
 #    - "log_connections = on"
 access:
@@ -77,20 +79,20 @@ access:
 #  profile_name:
 #  key_pair_name:
 backup:  # Only supported backup tool is pgBackRest currently
-  type: pgbackrest  # none | pgbackrest
+  type: none  # none | pgbackrest
   wal_archiving_max_interval: 2min  # Postgres archive_timeout value. Small values (<60s, minimum is 1s) can cause storage accumulation and delayed restores
-  retention_days: 1
+  retention_days: 2
   schedule_full: "0 3 * * 1,3,5"
   schedule_diff: "0 3 * * 0,2,4,6"
-  encryption: true
-  cipher_password:  pgspotops  # Supports Ansible vault encrypted strings
+  encryption: false
+#  cipher_password:  # Supports Ansible vault encrypted strings
 #  cipher_password_file:  # Plain text file accessible on the engine if don't want to use vault
 #  s3_key:
 #  s3_key_file:
 #  s3_key_secret:
 #  s3_key_secret_file:
 #  s3_bucket: pg-spot-operator  # Auto-create tried if not existing
-  pgbackrest:
+#  pgbackrest:
     # Map directly to pgBackRest config keys https://pgbackrest.org/configuration.html
     # PS following keys should not be specified:
     # process-max - set automatically based on vCPUs
@@ -98,10 +100,10 @@ backup:  # Only supported backup tool is pgBackRest currently
     # repo1-cipher-pass - from backup.cipher_password/cipher_password_file
     # repo1-s3-key - from backup.s3_key/s3_key_file
     # repo1-s3-key-secret - from backup.s3_key_secret/s3_key_secret_file
-    global_settings:
-      repo1-type: s3
-      repo1-s3-region: eu-north-1
-      repo1-s3-endpoint: s3.eu-north-1.amazonaws.com
+#    global_settings:
+#      repo1-type: s3
+#      repo1-s3-region: eu-north-1
+#      repo1-s3-endpoint: s3.eu-north-1.amazonaws.com
 #    archive_push_overrides:  # PS some common-sense defaults are applied so generally adjustments should not be needed
 #    backup_overrides:
 #    restore_overrides:

@@ -115,7 +115,9 @@ def get_current_hourly_ondemand_price(
 ) -> float:
     """Uses an external service for now"""
     URL = f"https://ec2.shop/?region={region}&filter={instance_type}"
-    f = requests.get(URL, headers={"Content-Type": "application/json"})
+    f = requests.get(
+        URL, headers={"Content-Type": "application/json"}, timeout=5
+    )
     if f.status_code != 200:
         return 0
     pd = f.json()
