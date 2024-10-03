@@ -1,26 +1,29 @@
 ---
 - name: Enable unattended security upgrades using role default settings
-  ansible.builtin.import_role:
+  ansible.builtin.include_role:
     name: debops.debops.unattended_upgrades
-  when: vm.unattended_security_upgrades|d('') is truthy
+  vars:
+    unattended_upgrades__enabled: vm.unattended_security_upgrades|d(True)
+    unattended_upgrades__auto_reboot: True
 
-- name: Setting kernel parameters - vm.overcommit_memory
-  ansible.posix.sysctl:
-    name: vm.overcommit_memory
-    value: '2'
-  when: vm.kernel_tuning|d('') is truthy
-  ignore_errors: true
+- block:
 
-- name: Setting kernel parameters - vm.overcommit_ratio
-  ansible.posix.sysctl:
-    name: vm.overcommit_ratio
-    value: '100'
-  when: vm.kernel_tuning|d('') is truthy
-  ignore_errors: true
+  - name: Setting kernel parameters - vm.overcommit_memory
+    ansible.posix.sysctl:
+      name: vm.overcommit_memory
+      value: '2'
+    ignore_errors: true
 
-- name: Setting kernel parameters - vm.swappiness
-  ansible.posix.sysctl:
-    name: vm.swappiness
-    value: '1'
-  when: vm.kernel_tuning|d('') is truthy
-  ignore_errors: true
+  - name: Setting kernel parameters - vm.overcommit_ratio
+    ansible.posix.sysctl:
+      name: vm.overcommit_ratio
+      value: '100'
+    ignore_errors: true
+
+  - name: Setting kernel parameters - vm.swappiness
+    ansible.posix.sysctl:
+      name: vm.swappiness
+      value: '1'
+    ignore_errors: true
+
+  when: vm.kernel_tuning|d(True)
