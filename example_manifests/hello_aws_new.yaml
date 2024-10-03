@@ -8,17 +8,10 @@ instance_name: hello-aws  # Required
 description: My play instance # Optional
 public_ip_address: true  # Default: true
 floating_public_ip: true  # Default: true, as Elastic IPs are very limited per account
-postgres_version: 16  # Optional. Minimum supported version is v14. Defaults to latest stable
+postgresql_version: 16  # Optional. Minimum supported version is v14. Defaults to latest stable
 expiration_date: "2024-12-22 00:00+03"  # Optional. Instance will be deleted after that (if engine running, no auto-destruct for now)
-destroy_backups: true  # Default: true. Also destroy any S3 backups if using pgBackRest
 is_paused: false  # No engine actions on the instance
 vault_password_file:  # If Ansible encrypted strings are used. Can also be set globally via --vault-password-file
-### Moved over from "pg"...
-admin_is_superuser: true
-admin_user: admin
-app_db_name: app  # App / user DB to be created if set
-admin_user_password: kah8aiThuXegh1neingee5go  # Needs to be provided if admin_user set
-###
 vm:
   host: 192.168.121.221  # Target VM override (local testing)
   login_user: vagrant  # Target VM override (local testing)
@@ -46,6 +39,10 @@ user_tags:  # In addition to user tags the engine will add a pg-spot-operator-ta
             # in case expiration_date set
   app: backend
 postgresql:
+  admin_is_superuser: true
+  admin_user: admin
+  app_db_name: app  # App / user DB to be created if set
+  admin_user_password: kah8aiThuXegh1neingee5go  # Needs to be provided if admin_user set
   initdb_opts:  # Defaults
     - --data-checksums
     - --locale-provider=icu
@@ -54,15 +51,16 @@ postgresql:
   tuning_profile: default  # none | default | oltp | analytics | web. Set to 'none' for Postgres defaults.
   config_lines:  # Literal postgresql.conf lines for custom overrides / tuning. Takes precedence over tuning_profile outputs.
     - "log_connections = on"
+    - "shared_preload_libraries = 'pg_stat_statements,pg_cron'"
   pg_hba_lines:  # Defaults allow non-postgres world access
     - "host all postgres 0.0.0.0/0 reject"
     - "hostssl all all 0.0.0.0/0 scram-sha-256"
-  shared_preload_libraries: "pg_stat_statements,pg_cron"
 ssh_access:
   pub_keys: []  # Literal extra pubkeys to add (in addition to default ~/.ssh/id_rsa.pub) to created VMs
   pub_key_paths: []  # Extra pubkey paths accessible on the engine VM
 backup:  # Only supported backup tool is pgBackRest currently
   type: none  # none | pgbackrest
+  destroy_backups: true  # Default: true. Destroy any S3 backups when instance dropped
   wal_archiving_max_interval: 2min  # Postgres archive_timeout value. Small values (<60s, minimum is 1s) can cause storage accumulation and delayed restores
   retention_days: 2
   schedule_full: "0 3 * * 1,3,5"
