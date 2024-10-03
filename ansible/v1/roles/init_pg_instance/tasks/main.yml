@@ -1,4 +1,8 @@
 ---
+- debug:
+    var: non_su_roles
+- fail:
+    msg: x
 - name: Set role testing defaults
   set_fact:
     instance_name: spot
