@@ -74,6 +74,8 @@ class ArgumentParser(Tap):
     region: str = os.getenv("PGSO_REGION", "")
     zone: str = os.getenv("PGSO_ZONE", "")
     cpu_min: int = int(os.getenv("PGSO_CPU_MIN", "0"))
+    cpu_max: int = int( os.getenv("PGSO_CPU_MAX", "0"))
+    instance_selection_strategy: str= str( os.getenv("PGSO_INSTANCE_SELECTION_STRATEGY", "default"))
     ram_min: int = int(os.getenv("PGSO_RAM_MIN", "0"))
     storage_min: int = int(os.getenv("PGSO_STORAGE_MIN", "0"))
     storage_type: str = os.getenv("PGSO_STORAGE_TYPE", "network")
@@ -155,6 +157,8 @@ instance_name: {args.instance_name}
         mfs += f"  cpu_architecture: {args.cpu_architecture}\n"
     if args.cpu_min:
         mfs += f"  cpu_min: {args.cpu_min}\n"
+    if args.cpu_max:
+        mfs += f"  cpu_max: {args.cpu_max}\n"
     if args.ram_min:
         mfs += f"  ram_min: {args.ram_min}\n"
     if args.storage_min:
@@ -169,6 +173,8 @@ instance_name: {args.instance_name}
         mfs += f"  host: {args.vm_host}\n"
     if args.vm_login_user:
         mfs += f"  login_user: {args.vm_login_user}\n"
+    if args.instance_selection_strategy:
+        mfs += f"  instance_selection_strategy: {args.instance_selection_strategy}\n"
     # logger.debug("Compiled manifest: %s", mfs)
     if args.ssh_keys:
         mfs += "access:\n  extra_ssh_pub_keys:\n"
