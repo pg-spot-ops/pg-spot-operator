@@ -8,7 +8,6 @@ instance_name: hello-aws  # Required
 description: My play instance # Optional
 public_ip_address: true  # Default: true
 floating_public_ip: true  # Default: true, as Elastic IPs are very limited per account
-postgresql_version: 16  # Optional. Minimum supported version is v14. Defaults to latest stable
 expiration_date: "2024-12-22 00:00+03"  # Optional. Instance will be deleted after that (if engine running, no auto-destruct for now)
 is_paused: false  # No engine actions on the instance
 vault_password_file:  # If Ansible encrypted strings are used. Can also be set globally via --vault-password-file
@@ -26,9 +25,9 @@ vm:
   storage_speed_class: ssd  # hdd | ssd | nvme. For instance storage (storage_type=local)
   volume_type: gp3  # gp2, gp3, io1, io2 Details: https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html
   volume_iops:  # For provisioned / paid IOPS, EBS gp3 default is 3000
-                 gp2 / gp3 max 16K, io1 64K, io2 256K
+                # gp2 / gp3 max 16K, io1 64K, io2 256K
   volume_throughput:  # MBs. For provisioned / paid throughput for gp3, io1 and io2. gp3 default is 125
-                       gp2 max 250, gp3 / io1 max 1000, io2 max 4000. PS Not that not all instance types can achieve max!
+                      # gp2 max 250, gp3 / io1 max 1000, io2 max 4000. PS Not that not all instance types can achieve max!
   detailed_monitoring: false  # As incurs extra costs
   unattended_security_upgrades: true  # Might result in nightly restarts
   kernel_tuning: true  # Basic memory over-commit tuning for databases
@@ -39,6 +38,7 @@ user_tags:  # In addition to user tags the engine will add a pg-spot-operator-ta
             # in case expiration_date set
   app: backend
 postgresql:
+  version: 16  # Optional. Minimum supported version is v14. Defaults to latest stable
   admin_is_superuser: true
   admin_user: admin
   app_db_name: app  # App / user DB to be created if set
