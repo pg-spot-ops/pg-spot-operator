@@ -754,8 +754,6 @@ def do_main_loop(
     cli_vault_password_file: str = "",
     cli_main_loop_interval_s: int = 60,
     cli_vm_only: bool = False,
-    cli_vm_host: str = "",
-    cli_vm_login_user: str = "",
     cli_destroy_file_base_path: str = "",
     cli_teardown: bool = False,
 ):
@@ -927,16 +925,14 @@ def do_main_loop(
                 ensure_s3_backup_bucket(m)
 
             vm_created_recreated = False
-            if cli_vm_login_user and cli_vm_host:
+            if m.vm.host and m.vm.login_user:
                 logger.info(
                     "Using user provided VM address / user for Ansible setup: %s@%s",
-                    cli_vm_login_user,
-                    cli_vm_host,
+                    m.vm.login_user,
+                    m.vm.host,
                 )
-                m.vm.host = cli_vm_host
-                m.vm.login_user = cli_vm_login_user
                 if cli_dry_run:
-                    ssh_ok = check_ssh_ping_ok(cli_vm_login_user, cli_vm_host)
+                    ssh_ok = check_ssh_ping_ok(m.vm.login_user, m.vm.host)
                     if not ssh_ok:
                         raise Exception("Could not SSH connect to --vm-host")
                     logger.info("SSH connect OK")

@@ -444,8 +444,6 @@ def main():  # pragma: no cover
         cli_vault_password_file=args.vault_password_file,
         cli_user_manifest_path=args.manifest_path,
         cli_main_loop_interval_s=args.main_loop_interval_s,
-        cli_vm_host=args.vm_host,
-        cli_vm_login_user=args.vm_login_user,
         cli_vm_only=args.vm_only,
         cli_destroy_file_base_path=args.destroy_file_base_path,
         cli_teardown=args.teardown,
