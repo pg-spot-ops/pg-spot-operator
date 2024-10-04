@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os.path
+import re
 from dataclasses import field
 from typing import Any
 
@@ -342,6 +343,20 @@ class InstanceManifest(BaseModel):
                 raise ValueError(
                     "Backup encryption assumes cipher_password / cipher_password_file set"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def check_valid_instance_name(self) -> Self:
+        if not re.match(r"^[a-z0-9\-]+$", self.instance_name):
+            raise ValueError(r"Invalid instance_name. Expected: ^[a-z0-9\-]+$")
+        return self
+
+    @model_validator(mode="after")
+    def check_valid_storage_type(self) -> Self:
+        if self.vm.storage_type not in ("local", "network"):
+            raise ValueError(
+                "Invalid vm.storage_type. Expected: local | network"
+            )
         return self
 
 
