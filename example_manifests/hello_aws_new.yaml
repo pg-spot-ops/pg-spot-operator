@@ -29,11 +29,14 @@ vm:
   volume_throughput:  # MBs. For provisioned / paid throughput for gp3, io1 and io2. gp3 default is 125
                       # gp2 max 250, gp3 / io1 max 1000, io2 max 4000. PS Not that not all instance types can achieve max!
   detailed_monitoring: false  # As incurs extra costs
+os:
   unattended_security_upgrades: true  # Might result in nightly restarts
   kernel_tuning: true  # Basic memory over-commit tuning for databases
   extra_os_packages:  # Default: []
     - pgbadger
     - postgresql-16-cron
+  ssh_pub_keys: []  # Literal extra pubkeys to add (in addition to default ~/.ssh/id_rsa.pub) to created VMs
+  ssh_pub_key_paths: []  # Extra pubkey paths accessible on the engine VM
 user_tags:  # In addition to user tags the engine will add a pg-spot-operator-tag + pg-spot-operator-expiration-date
             # in case expiration_date set
   app: backend
@@ -55,9 +58,6 @@ postgresql:
   pg_hba_lines:  # Defaults allow non-postgres world access
     - "host all postgres 0.0.0.0/0 reject"
     - "hostssl all all 0.0.0.0/0 scram-sha-256"
-ssh_access:
-  pub_keys: []  # Literal extra pubkeys to add (in addition to default ~/.ssh/id_rsa.pub) to created VMs
-  pub_key_paths: []  # Extra pubkey paths accessible on the engine VM
 backup:  # Only supported backup tool is pgBackRest currently
   type: none  # none | pgbackrest
   destroy_backups: true  # Default: true. Destroy any S3 backups when instance dropped
