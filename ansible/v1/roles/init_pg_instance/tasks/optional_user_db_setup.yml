@@ -29,9 +29,9 @@
       type: group
       role: "{{ pg.admin_user }}"
       objs: >-
-        {{ non_su_roles_17 if postgres_version >= 17
-          else  non_su_roles_16 if postgres_version >= 16
-          else non_su_roles_15 if postgres_version >= 15
+        {{ non_su_roles_17 if postgres_version|int >= 17
+          else  non_su_roles_16 if postgres_version|int >= 16
+          else non_su_roles_15 if postgres_version|int >= 15
           else non_su_roles_14 }}
       login_host: /var/run/postgresql
       login_port: "5432"
