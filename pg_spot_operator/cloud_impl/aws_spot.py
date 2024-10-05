@@ -15,6 +15,7 @@ from pg_spot_operator.constants import (
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
     SPOT_OPERATOR_ID_TAG,
 )
+from pg_spot_operator.instance_type import InstanceType
 from pg_spot_operator.util import timed_cache
 
 MAX_SKUS_FOR_SPOT_PRICE_COMPARE = 10
@@ -275,8 +276,14 @@ def get_cheapest_sku_for_hw_reqs(
     allow_burstable: bool = True,
     storage_speed_class: str = "any",
     instance_types_to_avoid: list[str] | None = None,
+    instance_selection_strategy: str | None = None,
 ) -> list[ResolvedInstanceTypeInfo]:
     """Returns a price-sorted list"""
+
+    instance_selection_strategy_cls = InstanceType.get_selection_strategy(
+        instance_selection_strategy
+    )
+
     all_instances_for_region = get_all_ec2_spot_instance_types(
         region,
         with_local_storage_only=(storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL),
@@ -324,7 +331,8 @@ def get_cheapest_sku_for_hw_reqs(
     avg_by_sku_az = get_avg_spot_price_from_pricing_history_data_by_sku_and_az(
         hourly_pricing_data
     )
-    sku, az, price = avg_by_sku_az[0]
+
+    sku, az, price = instance_selection_strategy_cls.execute(avg_by_sku_az)
 
     arch: str = ""
     i_desc: dict = {}
