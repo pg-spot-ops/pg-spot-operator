@@ -280,10 +280,6 @@ def get_cheapest_sku_for_hw_reqs(
 ) -> list[ResolvedInstanceTypeInfo]:
     """Returns a price-sorted list"""
 
-    instance_selection_strategy_cls = InstanceType.get_selection_strategy(
-        instance_selection_strategy
-    )
-
     all_instances_for_region = get_all_ec2_spot_instance_types(
         region,
         with_local_storage_only=(storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL),
@@ -332,6 +328,13 @@ def get_cheapest_sku_for_hw_reqs(
         hourly_pricing_data
     )
 
+    instance_selection_strategy_cls = InstanceType.get_selection_strategy(
+        instance_selection_strategy
+    )
+    logger.debug(
+        "Applying instance selection strategy: %s ...",
+        instance_selection_strategy,
+    )
     sku, az, price = instance_selection_strategy_cls.execute(avg_by_sku_az)
 
     arch: str = ""
