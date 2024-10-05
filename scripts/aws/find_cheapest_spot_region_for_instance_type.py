@@ -49,7 +49,7 @@ def get_spot_pricing_data_for_skus_over_period(
     paginator = client.get_paginator("describe_spot_price_history")
     page_iterator = paginator.paginate(
         Filters=filters,
-        StartTime=(datetime.datetime.now(datetime.UTC) - lookback_period),
+        StartTime=(datetime.datetime.now(datetime.timezone.utc) - lookback_period),
         **kwargs,
     )
     pricing_data = []
