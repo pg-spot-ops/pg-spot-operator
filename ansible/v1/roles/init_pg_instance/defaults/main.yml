@@ -34,8 +34,4 @@ non_su_roles_14: "pg_checkpoint,pg_monitor,pg_read_all_data,pg_read_all_settings
 non_su_roles_15: "{{non_su_roles_14}}"
 non_su_roles_16: "{{non_su_roles_15}},pg_create_subscription"
 non_su_roles_17: "{{non_su_roles_16}},pg_maintain"
-non_su_roles:
-  14: "{{non_su_roles_14}}"
-  15: "{{non_su_roles_15}}"
-  16: "{{non_su_roles_16}}"
-  17: "{{non_su_roles_17}}"
+
