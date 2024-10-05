@@ -74,8 +74,10 @@ class ArgumentParser(Tap):
     region: str = os.getenv("PGSO_REGION", "")
     zone: str = os.getenv("PGSO_ZONE", "")
     cpu_min: int = int(os.getenv("PGSO_CPU_MIN", "0"))
-    cpu_max: int = int( os.getenv("PGSO_CPU_MAX", "0"))
-    instance_selection_strategy: str= str( os.getenv("PGSO_INSTANCE_SELECTION_STRATEGY", "default"))
+    cpu_max: int = int(os.getenv("PGSO_CPU_MAX", "0"))
+    instance_selection_strategy: str = str(
+        os.getenv("PGSO_INSTANCE_SELECTION_STRATEGY", "default")
+    )
     ram_min: int = int(os.getenv("PGSO_RAM_MIN", "0"))
     storage_min: int = int(os.getenv("PGSO_STORAGE_MIN", "0"))
     storage_type: str = os.getenv("PGSO_STORAGE_TYPE", "network")

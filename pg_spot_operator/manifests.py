@@ -66,7 +66,7 @@ class SectionVm(BaseModel):
     instance_types: list[str] = field(
         default_factory=list
     )  # Min CPU etc. will be ignored then
-    instance_selection_strategy: str = 'default'
+    instance_selection_strategy: str = "default"
     volume_type: str = "gp3"
     volume_iops: int = 0
     volume_throughput: int = 0

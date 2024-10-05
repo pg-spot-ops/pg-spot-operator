@@ -5,7 +5,6 @@ from statistics import mean
 
 import requests
 
-from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.cloud_impl.aws_client import get_client
 from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
@@ -16,8 +15,8 @@ from pg_spot_operator.constants import (
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
     SPOT_OPERATOR_ID_TAG,
 )
-from pg_spot_operator.util import timed_cache
 from pg_spot_operator.instance_type import InstanceType
+from pg_spot_operator.util import timed_cache
 
 MAX_SKUS_FOR_SPOT_PRICE_COMPARE = 10
 SPOT_HISTORY_LOOKBACK_DAYS = 1
@@ -266,22 +265,24 @@ def get_avg_spot_price_from_pricing_history_data_by_sku_and_az(
 
 def get_cheapest_sku_for_hw_reqs(
     max_skus_to_get: int,
-    m: InstanceManifest,
+    region: str,
+    availability_zone: str | None = None,
+    cpu_min: int = 0,
+    cpu_max: int = 0,
+    ram_min: int = 0,
+    architecture: str = "any",
+    storage_type: str = "network",
+    storage_min: int = 0,
+    allow_burstable: bool = True,
+    storage_speed_class: str = "any",
     instance_types_to_avoid: list[str] | None = None,
+    instance_selection_strategy: str | None = None,
 ) -> list[ResolvedInstanceTypeInfo]:
     """Returns a price-sorted list"""
 
-    region = m.region
-    availability_zone = m.availability_zone
-    cpu_min = getattr(m.vm, 'cpu_min', 0)
-    cpu_max = getattr(m.vm, 'cpu_max', 0)
-    ram_min = getattr(m.vm, 'ram_min', 0)
-    architecture = m.vm.cpu_architecture or "any"
-    storage_type = m.vm.storage_type or "network"
-    storage_min = getattr(m.vm, 'storage_min', 0)
-    allow_burstable = getattr(m.vm, 'allow_burstable', True)
-    storage_speed_class = m.vm.storage_speed_class or "any"
-    instance_selection_strategy = InstanceType.get_selection_strategy(m)
+    instance_selection_strategy_cls = InstanceType.get_selection_strategy(
+        instance_selection_strategy
+    )
 
     all_instances_for_region = get_all_ec2_spot_instance_types(
         region,
@@ -331,7 +332,7 @@ def get_cheapest_sku_for_hw_reqs(
         hourly_pricing_data
     )
 
-    sku, az, price = instance_selection_strategy.execute(avg_by_sku_az)
+    sku, az, price = instance_selection_strategy_cls.execute(avg_by_sku_az)
 
     arch: str = ""
     i_desc: dict = {}
