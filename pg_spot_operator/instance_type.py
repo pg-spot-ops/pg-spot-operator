@@ -39,10 +39,10 @@ class InstanceType:
         cls, instance_selection_strategy: str | None
     ) -> Type[InstanceTypeSelectionStrategy]:
         strategy = {
-            "default": InstanceTypeSelectionDefault,
+            "cheapest": InstanceTypeSelectionDefault,
             "random": InstanceTypeSelectionRandom,
         }
         return (
-            strategy.get(instance_selection_strategy or "default")
+            strategy.get(instance_selection_strategy or "cheapest")
             or InstanceTypeSelectionDefault
         )

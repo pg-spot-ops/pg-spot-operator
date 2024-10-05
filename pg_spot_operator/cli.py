@@ -75,7 +75,7 @@ class ArgumentParser(Tap):
     zone: str = os.getenv("PGSO_ZONE", "")
     cpu_min: int = int(os.getenv("PGSO_CPU_MIN", "0"))
     cpu_max: int = int(os.getenv("PGSO_CPU_MAX", "0"))
-    instance_selection_strategy: str = str(
+    selection: str = str(
         os.getenv("PGSO_INSTANCE_SELECTION_STRATEGY", "default")
     )
     ram_min: int = int(os.getenv("PGSO_RAM_MIN", "0"))
@@ -175,8 +175,8 @@ instance_name: {args.instance_name}
         mfs += f"  host: {args.vm_host}\n"
     if args.vm_login_user:
         mfs += f"  login_user: {args.vm_login_user}\n"
-    if args.instance_selection_strategy:
-        mfs += f"  instance_selection_strategy: {args.instance_selection_strategy}\n"
+    if args.selection:
+        mfs += f"  instance_selection_strategy: {args.selection}\n"
     # logger.debug("Compiled manifest: %s", mfs)
     if args.ssh_keys:
         mfs += "access:\n  extra_ssh_pub_keys:\n"
