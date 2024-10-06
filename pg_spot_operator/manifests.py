@@ -45,12 +45,16 @@ def ignore(loader, tag, node):
 yaml.add_multi_constructor("!", ignore, Loader=yaml.SafeLoader)
 
 
-class SectionPg(BaseModel):
-    initdb_opts: list[str] | None = field(default_factory=list)
+class SectionPostgresql(BaseModel):
+    version: int = DEFAULT_POSTGRES_MAJOR_VER
+    tuning_profile: str = "default"
     admin_user: str | None = None
     admin_user_password: str | None = None
     admin_is_superuser: bool = True
     app_db_name: str | None = None
+    config_lines: list[str] = field(default_factory=list)
+    pg_hba_lines: list[str] = field(default_factory=list)
+    initdb_opts: list[str] = field(default_factory=list)
 
 
 class SectionVm(BaseModel):
@@ -70,14 +74,20 @@ class SectionVm(BaseModel):
     volume_type: str = "gp3"
     volume_iops: int = 0
     volume_throughput: int = 0
-    unattended_security_upgrades: bool = (
-        True  # Might result in nightly restarts
-    )
-    kernel_tuning: bool = True  # Basic memory over-commit tuning only for now
     host: str = ""  # Skip VM creation, use provided host for Postgres setup
     login_user: str = (
         ""  # Skip VM creation, use provided login user for Postgres setup
     )
+
+
+class SectionOs(BaseModel):
+    unattended_security_upgrades: bool = (
+        True  # Might result in nightly restarts
+    )
+    kernel_tuning: bool = True  # Basic memory over-commit tuning only for now
+    extra_packages: list[str] = field(default_factory=list)
+    ssh_pub_keys: list[str] = field(default_factory=list)
+    ssh_pub_key_paths: list[str] = field(default_factory=list)
 
 
 class SubSectionPgbackrest(BaseModel):
@@ -89,6 +99,7 @@ class SubSectionPgbackrest(BaseModel):
 
 class SectionBackup(BaseModel):
     type: str = "none"
+    destroy_backups: bool = True
     wal_archiving_max_interval: str = ""
     retention_days: int = 1
     schedule_full: str = ""
@@ -106,12 +117,6 @@ class SectionBackup(BaseModel):
     )
 
 
-class SectionAccess(BaseModel):
-    extra_ssh_pub_keys: list[str] = field(default_factory=list)
-    extra_ssh_pub_key_paths: list[str] = field(default_factory=list)
-    pg_hba: list[str] = field(default_factory=list)
-
-
 class SectionAws(BaseModel):
     access_key_id: str = ""
     secret_access_key: str = ""
@@ -119,18 +124,6 @@ class SectionAws(BaseModel):
     subnet_id: str = ""
     profile_name: str = ""
     key_pair_name: str = ""
-
-
-class SectionPgConfig(BaseModel):
-    tuning_profile: str = "default"
-    extensions: list[str] = field(default_factory=list)
-    extra_os_packages: list[str] = field(default_factory=list)
-    ensure_shared_preload_libraries: list[str] = field(default_factory=list)
-    shared_preload_libraries: str = (
-        ""  # The final result from ensure_shared_preload_libraries
-    )
-    # Mutually exclusive with ensure_shared_preload_libraries from user TODO validate
-    extra_config_lines: list[str] = field(default_factory=list)
 
 
 class InstanceManifest(BaseModel):
@@ -147,7 +140,6 @@ class InstanceManifest(BaseModel):
     region: str = ""
     instance_name: str
     # Optional fields
-    postgres_version: int = DEFAULT_POSTGRES_MAJOR_VER
     assign_public_ip: bool = True
     floating_public_ip: bool = (
         True  # Has only relevance if assign_public_ip set
@@ -158,14 +150,12 @@ class InstanceManifest(BaseModel):
     vault_password_file: str = ""
     setup_finished_callback: str = ""  # An executable passed to Ansible
     expiration_date: str = ""  # now | '2024-06-11 10:40'
-    destroy_backups: bool = True
     is_paused: bool = False
     # *Sections*
-    pg: SectionPg = field(default_factory=SectionPg)
+    postgresql: SectionPostgresql = field(default_factory=SectionPostgresql)
     vm: SectionVm = field(default_factory=SectionVm)
     backup: SectionBackup = field(default_factory=SectionBackup)
-    pg_config: SectionPgConfig = field(default_factory=SectionPgConfig)
-    access: SectionAccess = field(default_factory=SectionAccess)
+    os: SectionOs = field(default_factory=SectionOs)
     aws: SectionAws = field(default_factory=SectionAws)
 
     @staticmethod
@@ -231,21 +221,6 @@ class InstanceManifest(BaseModel):
                 self.backup.s3_key_secret = read_file(
                     self.backup.s3_key_secret_file
                 )
-        if self.pg_config.ensure_shared_preload_libraries:
-            user_set_spl = False
-            for config_line in self.pg_config.extra_config_lines:
-                splits = config_line.split(
-                    "="
-                )  # # Don't mess with shared_preload_libraries if already set by user
-                if splits[0].strip() == "shared_preload_libraries":
-                    user_set_spl = True
-                    break
-            if not user_set_spl:
-                if "pg_config" not in self.session_vars:
-                    self.session_vars["pg_config"] = {}
-                self.session_vars["pg_config"]["shared_preload_libraries"] = (
-                    ",".join(self.pg_config.ensure_shared_preload_libraries)
-                )
 
     def decrypt_secrets_if_any(self) -> tuple[int, int]:
         """Could also be made generic somehow - a la loop over model_dump but need it only for the Postgres password for now
@@ -254,7 +229,7 @@ class InstanceManifest(BaseModel):
         secrets_found = decrypted = 0
         # There are also some secret backup section fields also but they're touched only in Ansible
         secret_fields = [
-            ("pg", "admin_user_password"),
+            ("postgresql", "admin_user_password"),
             ("aws", "access_key_id"),
             ("aws", "secret_access_key"),
         ]

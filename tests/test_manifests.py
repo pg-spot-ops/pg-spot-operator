@@ -13,11 +13,17 @@ region: eu-west-1
 instance_name: hello
 #vault_password_file:
 expiration_date: now
-postgres_version: 16
-pg:
+postgresql:
+  version: 16
+  tuning_profile: oltp  # builtins: oltp | warehouse | web | mixed  
   admin_user: dev
   admin_password: dev
   admin_is_real_superuser: true  # Assign all safe built-in roles + make DB owner
+  config_lines:  # Possibly overrides any tuned values
+    - "pg_stat_statements.max = 1000"
+    - "pg_stat_statements.track_utility = off"
+  pg_hba_lines:
+    - "hostssl all all 0.0.0.0/0 scram-sha-256"      
   initdb_opts:
     - data-checksums
     - "locale-provider: icu"
@@ -34,20 +40,8 @@ vm:
 #  volume_size_min:  # 100
 #  volume_iops:  # For provisioned / paid IOPS, EBS gp3 default is 3000
 #  volume_throughput:  # MBs. For provisioned / paid throughput. EBS gp3 default is 125
-pg_config:
-  tuning_profile: oltp  # builtins: oltp | warehouse | web | mixed
-  extension_packages:
-    - cron  # Engine will look for and install the postgresql-$major_ver-cron package
-            # Still need to add to ensure_shared_preload_libraries though and create the extension in SQL!
-  ensure_shared_preload_libraries:
-    - pg_stat_statements
-    - cron
-  extra_config_lines:  # Possibly overrides any tuned values
-    - "pg_stat_statements.max = 1000"
-    - "pg_stat_statements.track_utility = off"
-access:
-  pg_hba:
-    - "hostssl all all 0.0.0.0/0 scram-sha-256"
+os:
+  extra_packages: []
 user_tags:
   app: backend
   team: hackers
@@ -70,7 +64,7 @@ kind: pg_spot_operator_instance
 cloud: aws
 region: eu-west-1
 instance_name: hello
-pg:
+postgresql:
   admin_user_password: !vault |
     $ANSIBLE_VAULT;1.1;AES256
     30643364356334303739626534623937613733386535346661363166323138636537353666653262
@@ -103,7 +97,7 @@ def test_parse_manifest():
     assert m
     assert m.cloud == "aws"
     assert m.instance_name == "hello"
-    assert m.pg.admin_is_superuser
+    assert m.postgresql.admin_is_superuser
     assert m.is_expired()
     m.expiration_date = "2099-01-01"
     assert not m.is_expired()
@@ -131,8 +125,8 @@ def test_decrypt_vault_secrets():
         m: manifests.InstanceManifest = manifests.load_manifest_from_string(
             TEST_MANIFEST_VAULT_SECRETS
         )
-        assert m.pg.admin_user_password
-        assert m.pg.admin_user_password.startswith("$ANSIBLE_VAULT")
+        assert m.postgresql.admin_user_password
+        assert m.postgresql.admin_user_password.startswith("$ANSIBLE_VAULT")
         m.vault_password_file = tmpfile.name
         secrets_found, decrypted = m.decrypt_secrets_if_any()
         assert secrets_found > 0 and decrypted == 1

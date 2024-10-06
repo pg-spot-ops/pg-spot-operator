@@ -231,16 +231,16 @@ def register_instance_or_get_uuid(
         i.cloud = m.cloud
         i.region = m.region
         i.instance_name = m.instance_name
-        i.postgres_version = m.postgres_version
+        i.postgres_version = m.postgresql.version
         i.cpu_min = m.vm.cpu_min
         i.storage_min = m.vm.storage_min
         i.storage_type = m.vm.storage_type
         i.storage_speed_class = m.vm.storage_speed_class
-        i.tuning_profile = m.pg_config.tuning_profile
+        i.tuning_profile = m.postgresql.tuning_profile
         i.user_tags = m.user_tags
-        i.admin_user = m.pg.admin_user
-        i.admin_password = m.pg.admin_user_password
-        i.admin_is_real_superuser = m.pg.admin_is_superuser
+        i.admin_user = m.postgresql.admin_user
+        i.admin_password = m.postgresql.admin_user_password
+        i.admin_is_real_superuser = m.postgresql.admin_is_superuser
 
         session.add(i)
         session.commit()
@@ -434,19 +434,19 @@ def update_instance_connect_info(m: InstanceManifest) -> tuple[str, str]:
             raise Exception(
                 f"Expected instance {m.instance_name} to be registered in CMDB"
             )
-        if m.pg.admin_user and m.pg.admin_user_password:
+        if m.postgresql.admin_user and m.postgresql.admin_user_password:
             instance.connstr_private = util.compose_postgres_connstr_uri(
                 vm.ip_private if vm else m.vm.host,
-                m.pg.admin_user,
-                m.pg.admin_user_password,
-                dbname=m.pg.app_db_name or "postgres",
+                m.postgresql.admin_user,
+                m.postgresql.admin_user_password,
+                dbname=m.postgresql.app_db_name or "postgres",
             )
             if vm and vm.ip_public:
                 instance.connstr_public = util.compose_postgres_connstr_uri(
                     vm.ip_public,
-                    m.pg.admin_user,
-                    m.pg.admin_user_password,
-                    dbname=m.pg.app_db_name or "postgres",
+                    m.postgresql.admin_user,
+                    m.postgresql.admin_user_password,
+                    dbname=m.postgresql.app_db_name or "postgres",
                 )
         else:
             instance.connstr_private = util.get_local_postgres_connstr()

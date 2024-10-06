@@ -818,7 +818,7 @@ def ensure_spot_vm(
             region,
             LOGIN_USER,
             "~/.ssh/id_rsa.pub",
-            m.access.extra_ssh_pub_keys,
+            m.os.ssh_pub_keys,
             m.aws.key_pair_name,
         )
         i_desc = ec2_launch_instance(m, dry_run=dry_run, user_data=user_data)
