@@ -179,11 +179,9 @@ instance_name: {args.instance_name}
         mfs += f"  instance_selection_strategy: {args.selection_strategy}\n"
     # logger.debug("Compiled manifest: %s", mfs)
     if args.ssh_keys:
-        mfs += "access:\n  extra_ssh_pub_keys:\n"
+        mfs += "access:\n  ssh_pub_keys:\n"
         for key in args.ssh_keys.split(","):
             mfs += "    - " + key.strip() + "\n"
-    if args.tuning_profile:
-        mfs += f"pg_config:\n  tuning_profile: {args.tuning_profile}\n"
     if args.aws_access_key_id and args.aws_secret_access_key:
         mfs += "aws:\n"
         mfs += f"  access_key_id: {args.aws_access_key_id}\n"
@@ -194,9 +192,11 @@ instance_name: {args.instance_name}
             key_val = tag_set.split("=")
             mfs += f"  {key_val[0]}: {key_val[1]}\n"
     if args.admin_user and args.admin_user_password:
-        mfs += "pg:\n"
+        mfs += "postgresql:\n"
         mfs += f"  admin_user: {args.admin_user}\n"
         mfs += f"  admin_user_password: {args.admin_user_password}\n"
+    if args.tuning_profile:
+        mfs += f"  tuning_profile: {args.tuning_profile}\n"
     if args.backup_s3_bucket:
         mfs += "backup:\n"
         mfs += "  type: pgbackrest\n"
