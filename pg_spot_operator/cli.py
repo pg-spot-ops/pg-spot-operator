@@ -57,6 +57,9 @@ class ArgumentParser(Tap):
     vm_only: bool = to_bool(
         os.getenv("PGSO_VM_ONLY", "false")
     )  # No Ansible / Postgres setup
+    connstr_output_only: bool = to_bool(
+        os.getenv("PGSO_CONNSTR_OUTPUT_ONLY", "false")
+    )  # Set up Postgres, print connstr and exit
     manifest: str = os.getenv("PGSO_MANIFEST", "")  # Manifest to process
     teardown: bool = to_bool(
         os.getenv("PGSO_TEARDOWN", "false")
@@ -382,7 +385,11 @@ def main():  # pragma: no cover
             if args.verbose
             else "%(asctime)s %(levelname)s %(message)s"
         ),
-        level=(logging.DEBUG if args.verbose else logging.INFO),
+        level=(
+            logging.ERROR
+            if args.connstr_output_only
+            else logging.DEBUG if args.verbose else logging.INFO
+        ),
     )
 
     if args.show_help:
@@ -444,4 +451,5 @@ def main():  # pragma: no cover
         cli_vm_only=args.vm_only,
         cli_destroy_file_base_path=args.destroy_file_base_path,
         cli_teardown=args.teardown,
+        cli_connstr_output_only=args.connstr_output_only,
     )

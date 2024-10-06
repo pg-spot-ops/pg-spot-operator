@@ -413,6 +413,30 @@ def load_manifest_by_snapshot_id(
     return None
 
 
+def get_instance_connect_string(m: InstanceManifest) -> str:
+    """Return a public connstr if a public instance otherwise private or local connstr"""
+    main_ip: str = ""
+    if m.vm.host:
+        main_ip = m.vm.host
+    else:
+        vm = get_latest_vm_by_uuid(m.uuid)
+        if not vm:
+            raise Exception(
+                f"No active VMs found for instance {m.instance_name} ({m.cloud}) to get connect string"
+            )
+        main_ip = vm.ip_public if vm.ip_public else vm.ip_private
+
+    if m.postgresql.admin_user and m.postgresql.admin_user_password:
+        return util.compose_postgres_connstr_uri(
+            main_ip,
+            m.postgresql.admin_user,
+            m.postgresql.admin_user_password,
+            dbname=m.postgresql.app_db_name or "postgres",
+        )
+    else:
+        return util.get_local_postgres_connstr()
+
+
 def update_instance_connect_info(m: InstanceManifest) -> tuple[str, str]:
     """Returns [connstr_private, connstr_public]"""
     logger.debug(

@@ -36,6 +36,7 @@ from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_cpu_arch_from_sku_desc,
 )
+from pg_spot_operator.cmdb import get_instance_connect_string
 from pg_spot_operator.constants import (
     BACKUP_TYPE_PGBACKREST,
     CLOUD_AWS,
@@ -754,6 +755,7 @@ def do_main_loop(
     cli_vm_only: bool = False,
     cli_destroy_file_base_path: str = "",
     cli_teardown: bool = False,
+    cli_connstr_output_only: bool = False,
 ):
     global dry_run
     dry_run = cli_dry_run
@@ -988,6 +990,10 @@ def do_main_loop(
             exit(0)
         except Exception:
             logger.exception("Exception on main loop")
+
+        if cli_connstr_output_only:
+            print(get_instance_connect_string(m))
+            exit(0)
 
         first_loop = False
         logger.info(
