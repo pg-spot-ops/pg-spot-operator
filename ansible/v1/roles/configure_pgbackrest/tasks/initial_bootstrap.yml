@@ -26,6 +26,7 @@
   become_user: postgres
   ansible.builtin.command: "pgbackrest --stanza={{ stanza_name }} stanza-create"
   changed_when: false
+  retries: 2
 
 - name: Check that stanza WAL achiving works
   become: true
@@ -34,7 +35,7 @@
   changed_when: false
 
 - name: Read existing full backups info
-  ansible.builtin.shell: "pgbackrest --stanza={{ stanza_name }} --type=full --output=json info | jq '.[0].backup[0].error'"
+  ansible.builtin.shell: "pgbackrest --stanza={{ stanza_name }} --type=full --output=json info | jq '.[0].backup[0]'"
   register: backup_info
   changed_when: false
 
@@ -43,4 +44,4 @@
   become_user: postgres
   ansible.builtin.command: "pgbackrest --stanza={{ stanza_name }} --type=full backup"
   changed_when: false
-  when: backup_info.stdout != "false"
+  when: backup_info.stdout == "null"

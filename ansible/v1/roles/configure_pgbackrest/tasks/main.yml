@@ -68,7 +68,7 @@
 
   - name: Set archive_command
     ansible.builtin.lineinfile:
-      path: /etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf
+      path: /etc/postgresql/{{ postgresql.version|d(16) }}/{{ postgres_cluster_name }}/postgresql.conf
       line: "{{ item }}"
     loop: "{{ postgres_archiving_settings }}"
 
@@ -144,6 +144,6 @@
 
   - name: Create the stanza + take first backup when none exists
     ansible.builtin.include_tasks: initial_bootstrap.yml
-    when: stanza_info_result.stdout == "missing stanza path"
+    when: stanza_info_result.stdout == "missing stanza path" or stanza_info_result.stdout == "no valid backups"
 
   when: backup.type | d('none') == 'pgbackrest'
