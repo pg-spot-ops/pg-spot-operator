@@ -20,6 +20,7 @@ backup:  # Only supported backup tool is pgBackRest currently
 vm:
   cpu_min: 4
 os:
+  extra_packages: [pgbadger]
   ssh_pub_key_paths:
     - ~/.ssh/google_compute_engine.pub
 user_tags:

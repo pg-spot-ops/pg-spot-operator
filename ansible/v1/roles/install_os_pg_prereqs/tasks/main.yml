@@ -33,31 +33,20 @@
 
 - name: Install postgres
   ansible.builtin.apt:
-    name: postgresql-{{ postgres_version }}
+    name: postgresql-{{ postgresql.version | d(16) }}
     state: present
   register: result
   until: result is success
   delay: 30
   retries: 3
 
-- name: Install extension packages
-  ansible.builtin.apt:
-    name: "postgresql-{{ postgres_version }}-{{ item }}"
-    state: present
-  loop: "{{ extensions }}"
-  register: result
-  until: result is success
-  delay: 30
-  retries: 3
-  when: ( extensions is defined ) and ( extensions | type_debug == "list" )
-
-- name: Extra postgres / random packages not following the common naming schema
+- name: Extra postgres extensions / random packages needed by user
   ansible.builtin.apt:
     name: "{{ item }}"
     state: present
-  loop: "{{ extra_os_packages }}"
+  loop: "{{ os.extra_packages }}"
   register: result
   until: result is success
   delay: 30
   retries: 3
-  when: ( extra_os_packages is defined ) and ( extra_os_packages | type_debug == "list" )
+  when: ( os.extra_packages is defined ) and ( os.extra_packages | type_debug == "list" )
