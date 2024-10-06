@@ -1,7 +1,8 @@
 ---
 # Manifest
-instance_name: "{{ instance_name | d('spot') }}"
-postgres_version: "{{ postgres_version | d('16') }}"
+instance_name: spot
+postgresql:
+  version: 16
 
 # Private
 postgres_cluster_name: "{{ instance_name | replace('-', '_') }}"  # Dashes don't work with pg_createcluster
