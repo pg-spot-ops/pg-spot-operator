@@ -3,7 +3,7 @@
   ansible.builtin.include_role:
     name: debops.debops.unattended_upgrades
   vars:
-    unattended_upgrades__enabled: vm.unattended_security_upgrades|d(True)
+    unattended_upgrades__enabled: os.unattended_security_upgrades|d(True)
     unattended_upgrades__auto_reboot: True
 
 - block:
@@ -26,4 +26,4 @@
       value: '1'
     ignore_errors: true
 
-  when: vm.kernel_tuning|d(True)
+  when: os.kernel_tuning|d(True)
