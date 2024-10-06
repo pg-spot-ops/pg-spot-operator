@@ -4,6 +4,7 @@ import logging
 import os.path
 import shutil
 
+import yaml
 from dateutil.parser import isoparse
 from tap import Tap
 
@@ -66,7 +67,7 @@ class ArgumentParser(Tap):
     instance_name: str = os.getenv(
         "PGSO_INSTANCE_NAME", ""
     )  # If set other below params become relevant
-    postgresql_version: str = os.getenv("PGSO_POSTGRESQL_VERSION", "16")
+    postgresql_version: int = int(os.getenv("PGSO_POSTGRESQL_VERSION", "16"))
     instance_types: str = os.getenv(
         "PGSO_INSTANCE_TYPES", ""
     )  # i3.xlarge,i3.2xlarge
@@ -111,7 +112,9 @@ class ArgumentParser(Tap):
     backup_cipher: str = os.getenv(
         "PGSO_BACKUP_CIPHER", ""
     )  # pgbackrest cipher password
-    backup_retention_days: str = os.getenv("PGSO_BACKUP_RETENTION_DAYS", "1")
+    backup_retention_days: int = int(
+        os.getenv("PGSO_BACKUP_RETENTION_DAYS", "1")
+    )
     backup_s3_key: str = os.getenv("PGSO_BACKUP_S3_KEY", "")
     backup_s3_key_secret: str = os.getenv("PGSO_BACKUP_S3_KEY_SECRET", "")
 
@@ -129,98 +132,79 @@ def validate_and_parse_args() -> ArgumentParser:
     return args
 
 
-def compile_manifest_from_cmdline_params(args: ArgumentParser) -> str:
+def compile_manifest_from_cmdline_params(
+    args: ArgumentParser,
+) -> InstanceManifest:
     if not args.instance_name:
         raise Exception("Can't compile a manifest --instance-name not set")
-    mfs = f"""
----
-api_version: v1
-kind: pg_spot_operator_instance
-cloud: {args.cloud}
-instance_name: {args.instance_name}
-"""
-    if args.region:
-        mfs += f"region: {args.region}\n"
-    if args.zone:
-        mfs += f"availability_zone: {args.zone}\n"
+
+    m = InstanceManifest(
+        api_version="v1",
+        cloud="aws",
+        kind="pg_spot_operator_instance",
+        instance_name=args.instance_name,
+    )
+
+    m.instance_name = args.instance_name
+    m.region = args.region
+    m.availability_zone = args.zone
     if args.expiration_date:
         if args.expiration_date[0] in ('"', "'"):
-            mfs += f"expiration_date: {args.expiration_date}\n"
+            m.expiration_date = args.expiration_date
         else:
-            mfs += f'expiration_date: "{args.expiration_date}"\n'
-    if args.public_ip:
-        mfs += f"assign_public_ip: {str(args.public_ip).lower()}\n"
-    if args.setup_finished_callback:
-        mfs += f"setup_finished_callback: {args.setup_finished_callback}\n"
-    mfs += "vm:\n"
-    if args.cpu_architecture:
-        mfs += f"  cpu_architecture: {args.cpu_architecture}\n"
-    if args.cpu_min:
-        mfs += f"  cpu_min: {args.cpu_min}\n"
-    if args.cpu_max:
-        mfs += f"  cpu_max: {args.cpu_max}\n"
-    if args.ram_min:
-        mfs += f"  ram_min: {args.ram_min}\n"
-    if args.storage_min:
-        mfs += f"  storage_min: {args.storage_min}\n"
-    if args.storage_type:
-        mfs += f"  storage_type: {args.storage_type}\n"
+            m.expiration_date = f'"{args.expiration_date}"'
+    m.assign_public_ip = args.public_ip
+    m.setup_finished_callback = args.setup_finished_callback
+    m.vm.cpu_architecture = args.cpu_architecture
+    m.vm.cpu_min = args.cpu_min
+    m.vm.cpu_max = args.cpu_max
+    m.vm.ram_min = args.ram_min
+    m.vm.storage_min = args.storage_min
+    m.vm.storage_type = args.storage_type
     if args.instance_types:
-        mfs += "  instance_types:\n"
         for ins_type in args.instance_types.split(","):
-            mfs += f"    - {ins_type}\n"
-    if args.vm_host:
-        mfs += f"  host: {args.vm_host}\n"
-    if args.vm_login_user:
-        mfs += f"  login_user: {args.vm_login_user}\n"
-    if args.selection_strategy:
-        mfs += f"  instance_selection_strategy: {args.selection_strategy}\n"
-    # logger.debug("Compiled manifest: %s", mfs)
+            m.vm.instance_types.append(ins_type)
+    m.vm.host = args.vm_host
+    m.vm.login_user = args.vm_login_user
+    m.vm.instance_selection_strategy = args.selection_strategy
     if args.ssh_keys:
-        mfs += "os:\n  ssh_pub_keys:\n"
         for key in args.ssh_keys.split(","):
-            mfs += "    - " + key.strip() + "\n"
-    if args.aws_access_key_id and args.aws_secret_access_key:
-        mfs += "aws:\n"
-        mfs += f"  access_key_id: {args.aws_access_key_id}\n"
-        mfs += f"  secret_access_key: {args.aws_secret_access_key}\n"
+            m.os.ssh_pub_keys.append(key.strip())
+    m.aws.access_key_id = args.aws_access_key_id
+    m.aws.secret_access_key = args.aws_secret_access_key
     if args.user_tags:
-        mfs += "user_tags:\n"
         for tag_set in args.user_tags.split(","):
             key_val = tag_set.split("=")
-            mfs += f"  {key_val[0]}: {key_val[1]}\n"
-    if args.postgresql_version or args.admin_user or args.tuning_profile:
-        mfs += "postgresql:\n"
-    if args.postgresql_version:
-        mfs += f"  version: {args.postgresql_version}\n"
-    if args.admin_user and args.admin_user_password:
-        mfs += f"  admin_user: {args.admin_user}\n"
-        mfs += f"  admin_user_password: {args.admin_user_password}\n"
-    if args.tuning_profile:
-        mfs += f"  tuning_profile: {args.tuning_profile}\n"
+            m.user_tags[key_val[0]] = key_val[1]
+    m.postgresql.version = args.postgresql_version
+    m.postgresql.admin_user = args.admin_user
+    m.postgresql.admin_user_password = args.admin_user_password
+    m.postgresql.tuning_profile = args.tuning_profile
+
     if args.backup_s3_bucket:
-        mfs += "backup:\n"
-        mfs += "  type: pgbackrest\n"
-        mfs += f"  s3_bucket: {args.backup_s3_bucket}\n"
-        mfs += f"  retention_days: {args.backup_retention_days}\n"
-        mfs += f"  s3_key: {args.backup_s3_key}\n"
-        mfs += f"  s3_key_secret: {args.backup_s3_key_secret}\n"
+        m.backup.type = "pgbackrest"
+        m.backup.retention_days = args.backup_retention_days
+        m.backup.s3_bucket = args.backup_s3_bucket
+        m.backup.s3_key = args.backup_s3_key
+        m.backup.s3_key_secret = args.backup_s3_key_secret
         if args.backup_cipher:
-            mfs += "  encryption: true\n"
-            mfs += f"  cipher_password: {args.backup_cipher}\n"
-    return mfs
+            m.backup.encryption = True
+            m.backup.cipher_password = args.backup_cipher
+    m.original_manifest = yaml.dump(m.model_dump(exclude_none=True))
+
+    return m
 
 
-def get_manifest_from_args_as_string(args: ArgumentParser) -> str:
+def get_manifest_from_args(args: ArgumentParser) -> InstanceManifest | None:
     if args.manifest:
         logger.info("Using the provided --manifest arg ...")
-        return args.manifest
+        return try_load_manifest(args.manifest)
     elif args.manifest_path:
         logger.info(
             "Using the provided --manifest-path at %s ...", args.manifest_path
         )
         with open(args.manifest_path) as f:
-            return f.read()
+            return try_load_manifest(f.read())
     elif args.instance_name:
         logger.debug("Compiling a manifest from CLI args ...")
         return compile_manifest_from_cmdline_params(args)
@@ -313,11 +297,15 @@ def try_load_manifest(manifest_str: str) -> InstanceManifest | None:
 
 
 def check_manifest_and_exit(args: ArgumentParser):
-    manifest_str = get_manifest_from_args_as_string(args)
-    m = try_load_manifest(manifest_str)
+    m = get_manifest_from_args(args)
     if not m:
-        logger.error("Failed manifest: %s", manifest_str)
+        logger.error("Failed to manifest")
         exit(1)
+
+    m.model_validate(m)
+    logger.debug("model_validate() OK")
+    if not args.manifest and not args.manifest_path:
+        logger.debug("Compiled manifest: %s", m.original_manifest)
 
     if "$ANSIBLE_VAULT" in m.original_manifest:
         if not m.vault_password_file and args.vault_password_file:
@@ -335,7 +323,6 @@ def check_manifest_and_exit(args: ArgumentParser):
         m.instance_name,
         m.cloud,
     )
-    logger.debug("Manifest: %s", manifest_str)
     logger.info("Exiting due to --check-manifests")
     exit(0)
 
@@ -424,11 +411,12 @@ def main():  # pragma: no cover
 
     env_manifest: InstanceManifest | None = None
     if args.manifest or args.instance_name:
-        manifest_str = get_manifest_from_args_as_string(args)
-        env_manifest = try_load_manifest(manifest_str)
+        if args.manifest:
+            env_manifest = try_load_manifest(args.manifest)
+        else:
+            env_manifest = get_manifest_from_args(args)
         if not env_manifest:
-            logger.exception("Failed to parse manifest from CLI args")
-            logger.error("Manifest: %s", manifest_str)
+            logger.exception("Failed to load manifest from CLI args")
             exit(1)
         if args.teardown:  # Delete instance and any attached resources
             env_manifest.expiration_date = "now"

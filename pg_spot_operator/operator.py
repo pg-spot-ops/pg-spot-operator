@@ -770,7 +770,7 @@ def do_main_loop(
         try:
             # Step 0 - load manifest from CLI args / full adhoc ENV manifest or manifest file
             m: InstanceManifest = None  # type: ignore
-            if cli_env_manifest and cli_env_manifest.instance_name:
+            if cli_env_manifest:
                 (
                     logger.info(
                         "Processing manifest for instance %s set via ENV ...",
