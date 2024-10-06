@@ -59,7 +59,9 @@ class SectionPostgresql(BaseModel):
 
 class SectionVm(BaseModel):
     cpu_architecture: str = ""
-    allow_burstable: bool = True
+    allow_burstable: bool = (
+        False  # T-class instances tend to get killed more often, thus exclude by default
+    )
     detailed_monitoring: bool = False  # Has extra cost
     cpu_min: int = 0
     cpu_max: int = 0
