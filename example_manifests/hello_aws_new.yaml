@@ -93,3 +93,17 @@ aws:
   subnet_id:
   profile_name:
   key_pair_name:
+monitoring:
+  pgwatch2:  # TimescaleDB storage
+    enabled: true
+    instance_sharing: true  # false means metrics are non-persistent
+    preset_config: exhaustive
+    retention_days: 14
+  grafana:
+    enabled: true
+    admin_user: admin
+    admin_password: pgspotops
+    anonymous_access: true
+    self_signed_tls: false
+  prometheus:
+    enabled: true
