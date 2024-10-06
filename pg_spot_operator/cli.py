@@ -66,7 +66,7 @@ class ArgumentParser(Tap):
     instance_name: str = os.getenv(
         "PGSO_INSTANCE_NAME", ""
     )  # If set other below params become relevant
-    postgres_version: str = os.getenv("PGSO_PG_MAJOR_VERSION", "16")
+    postgresql_version: str = os.getenv("PGSO_POSTGRESQL_VERSION", "16")
     instance_types: str = os.getenv(
         "PGSO_INSTANCE_TYPES", ""
     )  # i3.xlarge,i3.2xlarge
@@ -150,8 +150,6 @@ instance_name: {args.instance_name}
             mfs += f'expiration_date: "{args.expiration_date}"\n'
     if args.public_ip:
         mfs += f"assign_public_ip: {str(args.public_ip).lower()}\n"
-    if args.postgres_version:
-        mfs += f"postgres_version: {args.postgres_version}\n"
     if args.setup_finished_callback:
         mfs += f"setup_finished_callback: {args.setup_finished_callback}\n"
     mfs += "vm:\n"
@@ -179,7 +177,7 @@ instance_name: {args.instance_name}
         mfs += f"  instance_selection_strategy: {args.selection_strategy}\n"
     # logger.debug("Compiled manifest: %s", mfs)
     if args.ssh_keys:
-        mfs += "access:\n  ssh_pub_keys:\n"
+        mfs += "os:\n  ssh_pub_keys:\n"
         for key in args.ssh_keys.split(","):
             mfs += "    - " + key.strip() + "\n"
     if args.aws_access_key_id and args.aws_secret_access_key:
@@ -191,8 +189,11 @@ instance_name: {args.instance_name}
         for tag_set in args.user_tags.split(","):
             key_val = tag_set.split("=")
             mfs += f"  {key_val[0]}: {key_val[1]}\n"
-    if args.admin_user and args.admin_user_password:
+    if args.postgresql_version or args.admin_user or args.tuning_profile:
         mfs += "postgresql:\n"
+    if args.postgresql_version:
+        mfs += f"  version: {args.postgresql_version}\n"
+    if args.admin_user and args.admin_user_password:
         mfs += f"  admin_user: {args.admin_user}\n"
         mfs += f"  admin_user_password: {args.admin_user_password}\n"
     if args.tuning_profile:
