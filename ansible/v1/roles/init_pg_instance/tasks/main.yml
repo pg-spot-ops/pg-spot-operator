@@ -1,12 +1,4 @@
 ---
-- name: Set role testing defaults
-  set_fact:
-    instance_name: spot
-    postgres_version: 16
-    pg: "{{ def_pg }}"
-    pg_config: "{{ def_pg_config }}"
-  when: not uuid|d(None)
-
 - name: Check cluster conf initialized
   ansible.builtin.stat:
     path: "/etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf"
@@ -65,17 +57,9 @@
   ansible.builtin.lineinfile:
     path: "/etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf"
     line: "{{ item }}"
-  loop: "{{ pg_config.extra_config_lines | d([]) }}"
+  loop: "{{ postgresql.config_lines | d([]) }}"
   notify:
     - "init_pg_instance : Reload postgres"
-
-- name: Set up shared_preload_libraries
-  ansible.builtin.lineinfile:
-    path: "/etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf"
-    line: "shared_preload_libraries = '{{ pg_config.shared_preload_libraries }}'"
-  when: pg_config.shared_preload_libraries|d('')
-  notify:
-    - "init_pg_instance : Restart postgres"
 
 - name: flush_handlers
   ansible.builtin.meta: flush_handlers

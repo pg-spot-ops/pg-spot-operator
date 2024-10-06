@@ -1,7 +1,7 @@
 ---
-def:
-  instance_name: spot
-def_pg:
+instance_name: spot
+postgresql:
+  version: 16
   app_db_name: appdb # Leave empty when default "postgres" DB is enough or DBs created later from app / manually
   admin_user: dev  # Leave empty to not create one
   admin_user_password: dev
@@ -11,11 +11,11 @@ def_pg:
     - --locale-provider=icu
     - --icu-locale=en
     - --locale=en_US.utf8
-def_pg_config:
-  extra_config_lines: []
+  config_lines:
+    - "cluster_name = 'spot'"
 
 # Not exposed in the manifest currently
-postgres_version: 16
+postgres_version: "{{ postgresql.version | d(16) }}"
 postgres_cluster_name: "{{ instance_name | d('') | replace('-', '_') or def.instance_name }}"  # Dashes don't work with pg_createcluster
 postgres_base_settings:
   - "archive_mode = on"
@@ -34,4 +34,3 @@ non_su_roles_14: "pg_checkpoint,pg_monitor,pg_read_all_data,pg_read_all_settings
 non_su_roles_15: "{{non_su_roles_14}}"
 non_su_roles_16: "{{non_su_roles_15}},pg_create_subscription"
 non_su_roles_17: "{{non_su_roles_16}},pg_maintain"
-
