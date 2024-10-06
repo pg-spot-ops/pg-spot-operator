@@ -168,8 +168,22 @@ the *admin_user* accordingly + specifying custom *pg_hba* rules.
 # Integrating with user applications
 
 Although the Community Edition is optimized for more light use, one can use it also to power real applications (given
-they cope with the possible service interruptions of course) by providing a "setup finished" callback hook. The hook must
-currently be a self-contained executable which gets following 4 input parameters for propagations into "somewhere":
+they cope with the possible service interruptions of course) by either providing a "setup finished" callback hook or just
+running in special *--connstr-output-only* mode.
+
+## Pipe-friendly *--connstr-output-only* mode
+
+Engine ensures VM, sets up Postgres if needed in quiet mode, prints connstr and exits. Example usage:
+
+```
+docker run --rm -e PGSO_CONNSTR_OUTPUT_ONLY=y -e PGSO_REGION=eu-north-1 -e PGSO_INSTANCE_NAME=pg1 \
+  | run_some_testing \ 
+  && docker run --rm -e PGSO_TEARDOWN=y -e PGSO_REGION=eu-north-1 -e PGSO_INSTANCE_NAME=pg1
+```
+
+## Setup finished callback file usage
+
+Currently the callback be a self-contained executable which gets following 4 input parameters for propagations into "somewhere":
 
 - Instance name
 - Private full connect string a la 'postgresql://postgres@localhost:5432/postgres'
