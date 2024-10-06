@@ -218,6 +218,8 @@ def generate_ansible_inventory_file_for_action(
     """Places an inventory file into temp_workdir"""
     if m.vm.host and m.vm.login_user:
         inventory = f"{m.vm.host} ansible_user={m.vm.login_user}"
+    elif dry_run:
+        inventory = "dummy"
     else:
         inventory = get_ansible_inventory_file_str_for_action(action, m.uuid, m.instance_name)  # type: ignore
     if not inventory:
