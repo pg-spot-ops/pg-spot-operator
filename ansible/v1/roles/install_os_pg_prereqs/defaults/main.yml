@@ -1,5 +1,6 @@
 ---
-postgres_version: 16
+postgresql:
+  version: 16
 packages_general:
 #  - python3-pip
 #  - curl
@@ -12,7 +13,5 @@ packages_general:
   - locales-all
   - tmux
   - cron
-extensions:
-  - cron
-#  - pgaudit
-extra_os_packages: []  # If something doesn't follow the postgresql-{{ postgres_version }}-$extension naming
+os:
+  extra_packages: [pgbadger]

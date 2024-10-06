@@ -17,5 +17,4 @@
 
   roles:
     - role: merge_vars
-    - role: mount_unattached_disks
     - role: install_os_pg_prereqs
