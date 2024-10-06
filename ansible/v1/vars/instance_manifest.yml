@@ -5,9 +5,9 @@ kind: pg_spot_operator_instance
 cloud: aws
 region: eu-north-1
 instance_name: hello-aws
-postgres_version: 16
 #expiration_date: now
-pg:
+postgresql:
+  version: 16
   admin_user: admin
   admin_user_password: seitselehma
 backup:  # Only supported backup tool is pgBackRest currently
@@ -17,8 +17,10 @@ backup:  # Only supported backup tool is pgBackRest currently
     global_settings:
       repo1-s3-region: eu-north-1
       repo1-s3-endpoint: s3.eu-north-1.amazonaws.com
-access:
-  extra_ssh_pub_key_paths:
+vm:
+  cpu_min: 4
+os:
+  ssh_pub_key_paths:
     - ~/.ssh/google_compute_engine.pub
 user_tags:
   app: shop

@@ -9,7 +9,6 @@
     region: "{{ instance_manifest.region | d('local') }}"
     is_paused: "{{ instance_manifest.is_paused | d(False) }}"
     user_tags: "{{ instance_manifest.user_tags | d({}) }}"
-    postgres_version: "{{ instance_manifest.postgres_version | d(16) }}"
     setup_finished_callback: "{{ instance_manifest.setup_finished_callback | d('') }}"
 
 - name: Top level override manifest keys
@@ -22,11 +21,10 @@
 
 - name: Apply override manifest sections if any
   set_fact:
-    pg: "{{ instance_manifest.pg | d({}) | ansible.builtin.combine(engine_overrides.pg | d({}), recursive=true) }}"
-    backup: "{{ instance_manifest.backup | d({}) | ansible.builtin.combine(engine_overrides.backup | d({}), recursive=true) }}"
-    access: "{{ instance_manifest.access | d({}) | ansible.builtin.combine(engine_overrides.access | d({}), recursive=true) }}"
-    pg_config: "{{ instance_manifest.pg_config | d({}) | ansible.builtin.combine(engine_overrides.pg_config | d({}), recursive=true) }}"
+    postgresql: "{{ instance_manifest.postgresql | d({}) | ansible.builtin.combine(engine_overrides.postgresql | d({}), recursive=true) }}"
     vm: "{{ instance_manifest.vm | d({}) | ansible.builtin.combine(engine_overrides.vm | d({}), recursive=true) }}"
+    os: "{{ instance_manifest.os | d({}) | ansible.builtin.combine(engine_overrides.os | d({}), recursive=true) }}"
+    backup: "{{ instance_manifest.backup | d({}) | ansible.builtin.combine(engine_overrides.backup | d({}), recursive=true) }}"
     aws: "{{ instance_manifest.aws | d({}) | ansible.builtin.combine(engine_overrides.aws | d({}), recursive=true) }}"
 
 - name: Show merged vars - top lvl
@@ -44,9 +42,8 @@
   debug:
     msg: "Section {{ item.section_name }}: {{ item.section_data }}"
   loop:
-    - { section_name: pg, section_data: "{{ pg | d({}) }}"}
-    - { section_name: access, section_data: "{{ access | d({}) }}"}
-    - { section_name: pg_config, section_data: "{{ pg_config | d({}) }}"}
+    - { section_name: postgresql, section_data: "{{ postgresql | d({}) }}"}
     - { section_name: vm, section_data: "{{ vm | d({}) }}"}
+    - { section_name: os, section_data: "{{ os | d({}) }}"}
     - { section_name: backup, section_data: "{{ backup | d({}) }}"}
     - { section_name: aws, section_data: "{{ aws | d({}) }}"}
