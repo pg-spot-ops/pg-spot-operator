@@ -148,11 +148,7 @@ def compile_manifest_from_cmdline_params(
     m.instance_name = args.instance_name
     m.region = args.region
     m.availability_zone = args.zone
-    if args.expiration_date:
-        if args.expiration_date[0] in ('"', "'"):
-            m.expiration_date = args.expiration_date
-        else:
-            m.expiration_date = f'"{args.expiration_date}"'
+    m.expiration_date = args.expiration_date
     m.assign_public_ip = args.public_ip
     m.setup_finished_callback = args.setup_finished_callback
     m.vm.cpu_architecture = args.cpu_architecture
