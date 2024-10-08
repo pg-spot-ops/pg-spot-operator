@@ -20,14 +20,14 @@
   ansible.builtin.file:
     path: /root/.aws
     state: directory
-  when: expiration_date | d('')
+  when: expiration_date | d('') and aws.self_terminate_access_key_id|d('') and aws.self_terminate_secret_access_key|d('')
 
 - name: Copy AWS creds to the instance
   ansible.builtin.template:
     src: aws_credentials.j2
     dest: /root/.aws/credentials
     mode: 0600
-  when: expiration_date | d('') and aws.access_key_id|d('') and aws.secret_access_key|d('')
+  when: expiration_date | d('') and aws.self_terminate_access_key_id|d('') and aws.self_terminate_secret_access_key|d('')
 
 - name: Install Cron
   ansible.builtin.cron:

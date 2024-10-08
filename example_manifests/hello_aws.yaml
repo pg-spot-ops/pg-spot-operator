@@ -8,7 +8,8 @@ instance_name: hello-aws  # Required
 description: My play instance # Optional
 assign_public_ip: true  # Default: true
 floating_public_ip: true  # Default: true, as Elastic IPs are very limited per account
-expiration_date: "2024-12-22 00:00+03"  # Optional. Instance will be deleted after that (if engine running, no auto-destruct for now)
+expiration_date: "2024-12-22 00:00+03"  # Optional. Instance will be deleted after that (if engine running)
+self_terminate: false  # Optional. Instance will auto-destroy itself (if AWS keys )
 is_paused: false  # No engine actions on the instance
 vault_password_file: /tmp/vault_password_file # If Ansible encrypted strings are used. Can also be set globally via --vault-password-file
 vm:
@@ -93,3 +94,5 @@ backup:  # Only supported backup tool is pgBackRest currently
 #  subnet_id:
 #  profile_name:
 #  key_pair_name:
+#  self_terminate_access_key_id:
+#  self_terminate_secret_access_key:

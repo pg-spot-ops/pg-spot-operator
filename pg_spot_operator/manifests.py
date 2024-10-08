@@ -126,6 +126,8 @@ class SectionAws(BaseModel):
     subnet_id: str = ""
     profile_name: str = ""
     key_pair_name: str = ""
+    self_terminate_access_key_id: str = ""
+    self_terminate_secret_access_key: str = ""
 
 
 class InstanceManifest(BaseModel):
@@ -152,6 +154,7 @@ class InstanceManifest(BaseModel):
     vault_password_file: str = ""
     setup_finished_callback: str = ""  # An executable passed to Ansible
     expiration_date: str = ""  # now | '2024-06-11 10:40'
+    self_terminate: bool = False
     is_paused: bool = False
     # *Sections*
     postgresql: SectionPostgresql = field(default_factory=SectionPostgresql)

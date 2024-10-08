@@ -17,7 +17,7 @@ SQLITE_DBNAME = "pgso.db"
 logger = logging.getLogger(__name__)
 
 
-def to_bool(param: str) -> bool:
+def str_to_bool(param: str) -> bool:
     if not param:
         return False
     if param.strip().lower() == "on":
@@ -30,7 +30,7 @@ def to_bool(param: str) -> bool:
 
 
 class ArgumentParser(Tap):
-    show_help: bool = to_bool(
+    show_help: bool = str_to_bool(
         os.getenv("PGSO_SHOW_HELP", "False")
     )  # Don't actually execute actions
     manifest_path: str = os.getenv(
@@ -47,21 +47,23 @@ class ArgumentParser(Tap):
     vault_password_file: str = os.getenv(
         "PGSO_VAULT_PASSWORD_FILE", ""
     )  # Can also be set on instance level
-    verbose: bool = to_bool(os.getenv("PGSO_VERBOSE", "false"))  # More chat
-    check_manifest: bool = to_bool(
+    verbose: bool = str_to_bool(
+        os.getenv("PGSO_VERBOSE", "false")
+    )  # More chat
+    check_manifest: bool = str_to_bool(
         os.getenv("PGSO_CHECK_MANIFEST", "false")
     )  # Validate instance manifests and exit
-    dry_run: bool = to_bool(
+    dry_run: bool = str_to_bool(
         os.getenv("PGSO_DRY_RUN", "false")
     )  # Just resolve the VM instance type
-    vm_only: bool = to_bool(
+    vm_only: bool = str_to_bool(
         os.getenv("PGSO_VM_ONLY", "false")
     )  # No Ansible / Postgres setup
     manifest: str = os.getenv("PGSO_MANIFEST", "")  # Manifest to process
-    teardown: bool = to_bool(
+    teardown: bool = str_to_bool(
         os.getenv("PGSO_TEARDOWN", "false")
     )  # Delete VM and other created resources
-    teardown_region: bool = to_bool(
+    teardown_region: bool = str_to_bool(
         os.getenv("PGSO_TEARDOWN_REGION", "false")
     )  # Delete all operator tagged resources in region
     instance_name: str = os.getenv(
@@ -85,7 +87,10 @@ class ArgumentParser(Tap):
     expiration_date: str = os.getenv(
         "PGSO_EXPIRATION_DATE", ""
     )  # ISO 8601 datetime
-    public_ip: bool = to_bool(os.getenv("PGSO_PUBLIC_IP", "true"))
+    self_terminate: bool = str_to_bool(
+        os.getenv("PGSO_SELF_TERMINATE", "false")
+    )
+    public_ip: bool = str_to_bool(os.getenv("PGSO_PUBLIC_IP", "true"))
     cpu_architecture: str = os.getenv("PGSO_CPU_ARCHITECTURE", "")
     ssh_keys: str = os.getenv("PGSO_SSH_KEYS", "")  # Comma separated
     tuning_profile: str = os.getenv("PGSO_TUNING_PROFILE", "default")
@@ -94,6 +99,12 @@ class ArgumentParser(Tap):
     admin_user_password: str = os.getenv("PGSO_ADMIN_USER_PASSWORD", "")
     aws_access_key_id: str = os.getenv("PGSO_AWS_ACCESS_KEY_ID", "")
     aws_secret_access_key: str = os.getenv("PGSO_AWS_SECRET_ACCESS_KEY", "")
+    self_terminate_access_key_id: str = os.getenv(
+        "PGSO_SELF_TERMINATE_ACCESS_KEY_ID", ""
+    )
+    self_terminate_secret_access_key: str = os.getenv(
+        "PGSO_SELF_TERMINATE_SECRET_ACCESS_KEY", ""
+    )
     vm_host: str = os.getenv(
         "PGSO_VM_HOST", ""
     )  # Skip creation and use the provided IP
@@ -148,11 +159,7 @@ def compile_manifest_from_cmdline_params(
     m.instance_name = args.instance_name
     m.region = args.region
     m.availability_zone = args.zone
-    if args.expiration_date:
-        if args.expiration_date[0] in ('"', "'"):
-            m.expiration_date = args.expiration_date
-        else:
-            m.expiration_date = f'"{args.expiration_date}"'
+    m.expiration_date = args.expiration_date
     m.assign_public_ip = args.public_ip
     m.setup_finished_callback = args.setup_finished_callback
     m.vm.cpu_architecture = args.cpu_architecture
@@ -172,6 +179,12 @@ def compile_manifest_from_cmdline_params(
             m.os.ssh_pub_keys.append(key.strip())
     m.aws.access_key_id = args.aws_access_key_id
     m.aws.secret_access_key = args.aws_secret_access_key
+    m.self_terminate = args.self_terminate
+    if args.self_terminate:
+        m.aws.self_terminate_access_key_id = args.self_terminate_access_key_id
+        m.aws.self_terminate_secret_access_key = (
+            args.self_terminate_secret_access_key
+        )
     if args.user_tags:
         for tag_set in args.user_tags.split(","):
             key_val = tag_set.split("=")
@@ -279,6 +292,14 @@ def check_cli_args_valid(args: ArgumentParser):
     ):
         logger.error(
             "Enabling backups (--backup-s3-bucket) requires --backup-s3-key / --backup-s3-key-secret",
+        )
+        exit(1)
+    if args.self_terminate and not (
+        args.self_terminate_access_key_id
+        and args.self_terminate_secret_access_key
+    ):
+        logger.error(
+            "Self-termination on expiration date requires --self-terminate-access-key-id and --self-terminate-secret-access-key",
         )
         exit(1)
 
