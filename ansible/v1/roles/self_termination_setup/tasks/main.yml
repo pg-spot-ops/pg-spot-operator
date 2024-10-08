@@ -1,0 +1,38 @@
+---
+
+- name: Install pre-reqs
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - python3-boto3
+    - cron
+  when: expiration_date | d('')
+
+- name: Copy self-teardown script to the instance
+  ansible.builtin.copy:
+    src: files/instance_teardown.py
+    dest: /root/instance_teardown.py
+    mode: 0700
+  when: expiration_date | d('')
+
+- name: Ensure aws config folder
+  ansible.builtin.file:
+    path: /root/.aws
+    state: directory
+  when: expiration_date | d('')
+
+- name: Copy AWS creds to the instance
+  ansible.builtin.template:
+    src: aws_credentials.j2
+    dest: /root/.aws/credentials
+    mode: 0600
+  when: expiration_date | d('') and aws.access_key_id|d('') and aws.secret_access_key|d('')
+
+- name: Install Cron
+  ansible.builtin.cron:
+    name: self_termination_on_expiration_date
+    user: root
+    minute: "*/{{ 10 }}"
+    job: "/var/lib/postgresql/instance_teardown.py {{ instance_name }} '{{ expiration_date | d('') }}' --dry-run {{ dry_run }}"
+    disabled: "{{ expiration_date | d('') | ternary('false', 'true') }}"
