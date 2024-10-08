@@ -34,5 +34,5 @@
     name: self_termination_on_expiration_date
     user: root
     minute: "*/{{ 10 }}"
-    job: "/var/lib/postgresql/instance_teardown.py {{ instance_name }} '{{ expiration_date | d('') }}' --dry-run {{ dry_run }}"
+    job: "/root/instance_teardown.py {{ instance_name }} '{{ expiration_date | d('') }}' --dry-run {{ dry_run }}"
     disabled: "{{ expiration_date | d('') | ternary('false', 'true') }}"
