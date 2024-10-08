@@ -294,6 +294,11 @@ def check_cli_args_valid(args: ArgumentParser):
             "Enabling backups (--backup-s3-bucket) requires --backup-s3-key / --backup-s3-key-secret",
         )
         exit(1)
+    if args.self_terminate and not args.expiration_date:
+        logger.error(
+            "--self-terminate assumes also --expiration-date set",
+        )
+        exit(1)
     if args.self_terminate and not (
         args.self_terminate_access_key_id
         and args.self_terminate_secret_access_key
