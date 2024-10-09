@@ -1,4 +1,8 @@
 ---
+instance_name: spot
 monitoring:
-  node_exporter: true
+  node_exporter: false
   # prometheus_db_dir: /var/lib/prometheus - allow permanent?
+  grafana: true
+  grafana_admin_user: pgspotops
+  grafana_admin_password: "{{ instance_name }}"

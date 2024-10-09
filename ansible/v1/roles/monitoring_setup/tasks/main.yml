@@ -31,3 +31,56 @@
         - time
 
   when: monitoring.node_exporter | d(False)
+
+- block:
+
+  # Following pretty much Grafana OSS Stable instructions from
+  # https://grafana.com/docs/grafana/latest/setup-grafana/installation/debian/
+  - name: Install the prerequisite packages
+    ansible.builtin.apt:
+      name: "{{ item }}"
+      state: present
+      update_cache: no
+    loop:
+      - apt-transport-https
+      - software-properties-common
+      - wget
+
+  - name: Import the GPG key
+    ansible.builtin.get_url:
+      url: https://apt.grafana.com/gpg.key
+      dest: /etc/apt/trusted.gpg.d/grafana.asc
+
+  - name: Add the repository for stable releases
+    ansible.builtin.apt_repository:
+      repo: "deb [signed-by=/etc/apt/trusted.gpg.d/grafana.asc] https://apt.grafana.com stable main"
+      filename: grafana
+      state: present
+
+  - name: Install Grafana
+    ansible.builtin.apt:
+      name: grafana
+      state: present
+
+  - name: Create a default prometheus datasource
+    ansible.builtin.copy:
+      src: files/prom_datasource.yml
+      dest: /etc/grafana/provisioning/datasources/node_exporter.yaml
+      owner: grafana
+
+  - name: Set admin user
+    ansible.builtin.lineinfile:
+      path: /etc/grafana/grafana.ini
+      regexp: "^;?admin_user = "
+      line: "admin_user = {{ monitoring.grafana_admin_user }}"
+
+  - name: Set admin password
+    ansible.builtin.lineinfile:
+      path: /etc/grafana/grafana.ini
+      regexp: "^;?admin_password = "
+      line: "admin_password = {{ monitoring.grafana_admin_password }}"
+
+  - name: Ensure Grafana started
+    ansible.builtin.service: name=grafana-server state=started
+
+  when: monitoring.grafana | d(False)
