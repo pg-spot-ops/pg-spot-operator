@@ -12,6 +12,8 @@ Meaning one can expect to run a few months uninterrupted.
 Not a "real" K8s operator (yet, at least) - but based on similar concepts - user describes a desired state (manifests)
 and there's a reconciliation loop of sorts.
 
+A typical Postgres setup from zero takes about 2-3 minutes.
+
 # General idea
 
 * The user:
