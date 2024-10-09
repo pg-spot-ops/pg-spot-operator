@@ -134,12 +134,11 @@ def preprocess_ensure_vm_action(
             1,
         )
     logger.info(
-        "%s SKU %s (%s) in %s region %s for a monthly Spot price of $%s",
+        "%s SKU %s (%s) in availability zone %s for a monthly Spot price of $%s",
         "Found existing" if existing_instance_info else "Selected new",
         sku.instance_type,
         sku.arch,
-        sku.cloud,
-        sku.region,
+        sku.availability_zone,
         sku.monthly_spot_price,
     )
     logger.info(
