@@ -1,0 +1,4 @@
+---
+monitoring:
+  node_exporter: true
+  # prometheus_db_dir: /var/lib/prometheus - allow permanent?
