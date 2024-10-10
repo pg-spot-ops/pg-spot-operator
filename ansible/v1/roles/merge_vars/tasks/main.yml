@@ -26,6 +26,7 @@
     os: "{{ instance_manifest.os | d({}) | ansible.builtin.combine(engine_overrides.os | d({}), recursive=true) }}"
     backup: "{{ instance_manifest.backup | d({}) | ansible.builtin.combine(engine_overrides.backup | d({}), recursive=true) }}"
     aws: "{{ instance_manifest.aws | d({}) | ansible.builtin.combine(engine_overrides.aws | d({}), recursive=true) }}"
+    monitoring: "{{ instance_manifest.monitoring | d({}) | ansible.builtin.combine(engine_overrides.monitoring | d({}), recursive=true) }}"
 
 - name: Show merged vars - top lvl
   debug:
@@ -47,3 +48,4 @@
     - { section_name: os, section_data: "{{ os | d({}) }}"}
     - { section_name: backup, section_data: "{{ backup | d({}) }}"}
     - { section_name: aws, section_data: "{{ aws | d({}) }}"}
+    - { section_name: monitoring, section_data: "{{ monitoring | d({}) }}"}

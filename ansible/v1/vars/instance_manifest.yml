@@ -27,3 +27,8 @@ os:
     - ~/.ssh/google_compute_engine.pub
 user_tags:
   app: shop
+monitoring:
+  prometheus_node_exporter:
+    enabled: true
+  grafana:
+    enabled: true
