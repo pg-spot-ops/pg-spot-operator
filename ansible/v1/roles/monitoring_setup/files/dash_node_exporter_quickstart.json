@@ -1,29 +1,9 @@
 {
   "__inputs": [],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "7.4.3"
-    },
-    {
-      "type": "panel",
-      "id": "graph",
-      "name": "Graph",
-      "version": ""
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    }
-  ],
   "annotations": {
     "list": []
   },
-  "editable": false,
+  "editable": true,
   "gnetId": 13978,
   "graphTooltip": 0,
   "hideControls": false,
@@ -40,7 +20,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$datasource",
+          "datasource": null,
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {},
@@ -122,7 +102,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$datasource",
+          "datasource": null,
           "fill": 0,
           "fillGradient": 0,
           "gridPos": {},
@@ -237,7 +217,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$datasource",
+          "datasource": null,
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {},
@@ -343,7 +323,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(245, 54, 54, 0.9)"
           ],
-          "datasource": "$datasource",
+          "datasource": null,
           "format": "percent",
           "gauge": {
             "maxValue": 100,
@@ -429,7 +409,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$datasource",
+          "datasource": null,
           "fill": 0,
           "fillGradient": 0,
           "gridPos": {},
@@ -536,7 +516,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$datasource",
+          "datasource": null,
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {},
@@ -646,7 +626,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$datasource",
+          "datasource": null,
           "fill": 0,
           "fillGradient": 0,
           "gridPos": {},
@@ -728,7 +708,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$datasource",
+          "datasource": null,
           "fill": 0,
           "fillGradient": 0,
           "gridPos": {},
@@ -837,7 +817,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "$datasource",
+        "datasource": null,
         "hide": 0,
         "includeAll": false,
         "label": null,
@@ -886,7 +866,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "Node Exporter Quickstart and Dashboard",
+  "title": "Node Exporter Quickstart",
   "version": 0,
-  "description": "A quickstart to setup Prometheus Node Exporter with preconfigured dashboards, alerting rules, and recording rules."
+  "description": "Basic metrics"
 }

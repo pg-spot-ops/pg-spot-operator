@@ -7,6 +7,10 @@
     vars:
       prometheus_version: 2.54.1
       prometheus_web_listen_address: "{{ 'localhost:9090' if monitoring.prometheus_node_exporter.local_only|d(True) else '0.0.0.0:9090'  }}"
+      prometheus_targets:
+        node:
+        - targets:
+          - localhost:9100
 
   - name: Install the node exporter
     ansible.builtin.include_role:
@@ -29,6 +33,7 @@
         - schedstat
         - stat
         - time
+        - vmstat
 
   when: monitoring.prometheus_node_exporter.enabled | d(False)
 
@@ -64,9 +69,30 @@
 
   - name: Create a default prometheus datasource
     ansible.builtin.copy:
-      src: files/prom_datasource.yml
-      dest: /etc/grafana/provisioning/datasources/node_exporter.yaml
+      src: files/prometheus_default_datasource.yml
+      dest: /etc/grafana/provisioning/datasources/local_prometheus.yaml
       owner: grafana
+
+  - name: Ensure dashboards dir
+    ansible.builtin.file:
+      state: directory
+      path: /var/lib/grafana/dashboards
+      owner: grafana
+
+  - name: Create a dash provisioning config
+    ansible.builtin.copy:
+      src: files/dash_provisioning_conf.yml
+      dest: /etc/grafana/provisioning/dashboards/spotops_dashboards.yaml
+      owner: grafana
+
+  - name: Install default prometheus dashboards
+    ansible.builtin.copy:
+      src: files/{{ item }}
+      dest: /var/lib/grafana/dashboards/{{ item }}
+      owner: grafana
+    loop:
+      - dash_node_exporter_quickstart.json
+      - dash_node_exporter_full.json
 
   - name: Generate grafana.ini
     ansible.builtin.template:

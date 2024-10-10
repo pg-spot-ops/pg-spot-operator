@@ -1,14 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
   "__elements": {},
   "__requires": [
     {
@@ -23801,7 +23791,7 @@
         "name": "job",
         "options": [],
         "query": {
-          "query": "label_values(node_uname_info, job)",
+          "query": "label_values(node_time_seconds, job)",
           "refId": "Prometheus-job-Variable-Query"
         },
         "refresh": 1,
@@ -23819,7 +23809,7 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "definition": "label_values(node_uname_info{job=\"$job\"}, instance)",
+        "definition": "label_values(node_time_seconds{job=\"$job\"}, instance)",
         "hide": 0,
         "includeAll": false,
         "label": "Host",
@@ -23827,7 +23817,7 @@
         "name": "node",
         "options": [],
         "query": {
-          "query": "label_values(node_uname_info{job=\"$job\"}, instance)",
+          "query": "label_values(node_time_seconds{job=\"$job\"}, instance)",
           "refId": "Prometheus-node-Variable-Query"
         },
         "refresh": 1,
@@ -23863,7 +23853,7 @@
     ]
   },
   "time": {
-    "from": "now-24h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {
