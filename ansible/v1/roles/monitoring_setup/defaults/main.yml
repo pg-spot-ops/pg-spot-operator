@@ -3,10 +3,10 @@ instance_name: spot
 monitoring:
   prometheus_node_exporter:
     enabled: true
-    local_only: false
+    externally_accessible: false
   grafana:
     enabled: true
-    local_only: false
+    externally_accessible: false
     admin_user: pgspotops
     admin_password: "{{ instance_name }}"
     anonymous_access: true

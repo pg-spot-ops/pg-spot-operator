@@ -6,7 +6,7 @@
       name: prometheus.prometheus.prometheus
     vars:
       prometheus_version: 2.54.1
-      prometheus_web_listen_address: "{{ 'localhost:9090' if monitoring.prometheus_node_exporter.local_only|d(True) else '0.0.0.0:9090'  }}"
+      prometheus_web_listen_address: "{{ 'localhost:9090' if monitoring.prometheus_node_exporter.externally_accessible|d(True) else '0.0.0.0:9090'  }}"
       prometheus_targets:
         node:
         - targets:
@@ -17,7 +17,7 @@
       name: prometheus.prometheus.node_exporter
     vars:
       node_exporter_version: 1.8.2
-      node_exporter_web_listen_address: "{{ 'localhost:9100' if monitoring.prometheus_node_exporter.local_only|d(True) else '0.0.0.0:9100'  }}"
+      node_exporter_web_listen_address: "{{ 'localhost:9100' if monitoring.prometheus_node_exporter.externally_accessible|d(True) else '0.0.0.0:9100'  }}"
       node_exporter_web_disable_exporter_metrics: true
       # Description of collectors: https://github.com/prometheus/node_exporter?tab=readme-ov-file#node-exporter
       node_exporter_enabled_collectors:
