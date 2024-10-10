@@ -131,6 +131,29 @@ class SectionAws(BaseModel):
     self_terminate_secret_access_key: str = ""
 
 
+class SubSectionMonitoringPrometheus(BaseModel):
+    enabled: bool = False
+    externally_accessible: bool = False
+
+
+class SubSectionMonitoringGrafana(BaseModel):
+    enabled: bool = False
+    externally_accessible: bool = True
+    admin_user: str = "pgspotops"
+    admin_password: str = ""
+    anonymous_access: bool = True
+    protocol: str = "https"
+
+
+class SectionMonitoring(BaseModel):
+    prometheus_node_exporter: SubSectionMonitoringPrometheus = field(
+        default_factory=SubSectionMonitoringPrometheus
+    )
+    grafana: SubSectionMonitoringGrafana = field(
+        default_factory=SubSectionMonitoringGrafana
+    )
+
+
 class InstanceManifest(BaseModel):
     # *Internal engine usage fields*
     original_manifest: str = ""
@@ -163,6 +186,7 @@ class InstanceManifest(BaseModel):
     backup: SectionBackup = field(default_factory=SectionBackup)
     os: SectionOs = field(default_factory=SectionOs)
     aws: SectionAws = field(default_factory=SectionAws)
+    monitoring: SectionMonitoring = field(default_factory=SectionMonitoring)
 
     @staticmethod
     def get_internal_usage_attributes() -> set:
@@ -227,6 +251,13 @@ class InstanceManifest(BaseModel):
                 self.backup.s3_key_secret = read_file(
                     self.backup.s3_key_secret_file
                 )
+        if (
+            self.monitoring.grafana.admin_user
+            and not self.monitoring.grafana.admin_password
+        ):
+            self.monitoring.grafana.admin_password = self.session_vars[
+                "monitoring"
+            ] = {"grafana": {"admin_password": self.instance_name}}
 
     def decrypt_secrets_if_any(self) -> tuple[int, int]:
         """Could also be made generic somehow - a la loop over model_dump but need it only for the Postgres password for now

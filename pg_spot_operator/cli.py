@@ -131,6 +131,13 @@ class ArgumentParser(Tap):
     )
     backup_s3_key: str = os.getenv("PGSO_BACKUP_S3_KEY", "")
     backup_s3_key_secret: str = os.getenv("PGSO_BACKUP_S3_KEY_SECRET", "")
+    monitoring: bool = to_bool(os.getenv("PGSO_MONITORING", "false"))
+    grafana_externally_accessible: bool = to_bool(
+        os.getenv("PGSO_GRAFANA_EXTERNALLY_ACCESSIBLE", "true")
+    )
+    grafana_anonymous: bool = to_bool(
+        os.getenv("PGSO_GRAFANA_ANONYMOUS", "true")
+    )
 
 
 args: ArgumentParser | None = None
@@ -206,6 +213,15 @@ def compile_manifest_from_cmdline_params(
         if args.backup_cipher:
             m.backup.encryption = True
             m.backup.cipher_password = args.backup_cipher
+
+    if args.monitoring:
+        m.monitoring.prometheus_node_exporter.enabled = True
+        m.monitoring.grafana.enabled = True
+        m.monitoring.grafana.anonymous_access = args.grafana_anonymous
+        m.monitoring.grafana.externally_accessible = (
+            args.grafana_externally_accessible
+        )
+
     m.original_manifest = yaml.dump(m.model_dump(exclude_none=True))
 
     return m
