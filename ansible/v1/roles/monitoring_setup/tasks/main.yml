@@ -45,7 +45,6 @@
     ansible.builtin.apt:
       name: "{{ item }}"
       state: present
-      update_cache: no
     loop:
       - apt-transport-https
       - software-properties-common
