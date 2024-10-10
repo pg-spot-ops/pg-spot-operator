@@ -10,3 +10,4 @@ monitoring:
     admin_user: pgspotops
     admin_password: "{{ instance_name }}"
     anonymous_access: true
+    protocol: https

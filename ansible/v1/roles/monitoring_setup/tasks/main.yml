@@ -93,12 +93,41 @@
       - dash_node_exporter_quickstart.json
       - dash_node_exporter_full.json
 
+  - block:
+      # TLS activation as per https://grafana.com/docs/grafana/latest/setup-grafana/set-up-https/
+    - name: Generate an OpenSSH rsa keypair with 2048 bits
+      ansible.builtin.raw: openssl genrsa -out /etc/grafana/grafana.key 2048
+
+    - name: Generate a certificate, using the private key from the previous step.
+      ansible.builtin.raw: openssl req -new -key /etc/grafana/grafana.key -out /etc/grafana/grafana.csr -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com"
+
+    - name: Generate a certificate, using the private key from the previous step.
+      ansible.builtin.raw: openssl x509 -req -days 1000 -in /etc/grafana/grafana.csr -signkey /etc/grafana/grafana.key -out /etc/grafana/grafana.crt
+
+    - name: Recursively change ownership of a directory
+      ansible.builtin.file:
+        path: /etc/grafana
+        state: directory
+        recurse: yes
+        owner: grafana
+        group: grafana
+
+    - name: Trim down key privs
+      ansible.builtin.file:
+        path: "{{ item }}"
+        mode: '0400'
+      loop:
+        - /etc/grafana/grafana.key
+        - /etc/grafana/grafana.crt
+
+    when: monitoring.grafana.protocol | d('http') == 'https'
+
   - name: Generate grafana.ini
     ansible.builtin.template:
       src: grafana.ini
       dest: /etc/grafana/grafana.ini
 
   - name: Ensure Grafana started
-    ansible.builtin.service: name=grafana-server state=started
+    ansible.builtin.service: name=grafana-server state=restarted
 
   when: monitoring.grafana.enabled | d(False)
