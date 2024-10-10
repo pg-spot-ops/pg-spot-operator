@@ -59,7 +59,7 @@ class ArgumentParser(Tap):
     vm_only: bool = str_to_bool(
         os.getenv("PGSO_VM_ONLY", "false")
     )  # No Ansible / Postgres setup
-    connstr_output_only: bool = to_bool(
+    connstr_output_only: bool = str_to_bool(
         os.getenv("PGSO_CONNSTR_OUTPUT_ONLY", "false")
     )  # Set up Postgres, print connstr and exit
     manifest: str = os.getenv("PGSO_MANIFEST", "")  # Manifest to process
