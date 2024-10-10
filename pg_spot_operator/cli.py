@@ -131,11 +131,11 @@ class ArgumentParser(Tap):
     )
     backup_s3_key: str = os.getenv("PGSO_BACKUP_S3_KEY", "")
     backup_s3_key_secret: str = os.getenv("PGSO_BACKUP_S3_KEY_SECRET", "")
-    monitoring: bool = to_bool(os.getenv("PGSO_MONITORING", "false"))
-    grafana_externally_accessible: bool = to_bool(
+    monitoring: bool = str_to_bool(os.getenv("PGSO_MONITORING", "false"))
+    grafana_externally_accessible: bool = str_to_bool(
         os.getenv("PGSO_GRAFANA_EXTERNALLY_ACCESSIBLE", "true")
     )
-    grafana_anonymous: bool = to_bool(
+    grafana_anonymous: bool = str_to_bool(
         os.getenv("PGSO_GRAFANA_ANONYMOUS", "true")
     )
 
