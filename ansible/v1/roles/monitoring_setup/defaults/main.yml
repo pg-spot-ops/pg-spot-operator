@@ -6,7 +6,7 @@ monitoring:
     externally_accessible: false
   grafana:
     enabled: true
-    externally_accessible: false
+    externally_accessible: true
     admin_user: pgspotops
     admin_password: "{{ instance_name }}"
     anonymous_access: true
