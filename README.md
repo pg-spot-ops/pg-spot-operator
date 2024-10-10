@@ -263,9 +263,9 @@ For additional high-frequency metrics overload one could though enable Prometheu
 and make it accessible via Grafana, using self-signed certificates or plain http.
 
 PS Beware - when setting `monitoring.grafana.enabled` admin password is automatically set to equal the instance name
-for convenience by default!
+for convenience by default, if `monitoring.grafana.admin_password` not set!
 
-PS2 Note that for public Grafana access to work your Security Group of choise needs to have port 3000 open.
+PS2 Note that for public Grafana access to work, your Security Group of choice needs to have port 3000 open.
 
 Relevant manifest attributes / defaults:
 
