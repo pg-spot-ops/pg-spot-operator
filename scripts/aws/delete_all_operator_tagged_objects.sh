@@ -3,7 +3,9 @@
 echo "Starting at `date`"
 set -e
 
-REGIONS="eu-west-1 eu-north-1 eu-south-1 eu-south-2"
+export PAGER=
+
+REGIONS=$(aws ec2 describe-regions --no-all-regions --query "Regions[*].[RegionName]" --output text)
 WET_RUN=
 
 if [ -n "$1" ]; then
@@ -36,7 +38,7 @@ INSTANCES=$(aws ec2 describe-instances --region $reg --filters Name=tag-key,Valu
 for x in $INSTANCES ; do
   echo "Terminating VM $x ..."
   if [ -n "$WET_RUN" ]; then
-    PAGER='' aws ec2 terminate-instances --region $reg --instance-ids $x >/dev/null
+    aws ec2 terminate-instances --region $reg --instance-ids $x >/dev/null
     TERMINATED=$((TERMINATED+1))
   fi
 done
@@ -45,8 +47,8 @@ done  # reg
 echo -e "\nDone. VMs terminated: ${TERMINATED}"
 
 if [ "$TERMINATED" -gt 0 ]; then
-  echo "Sleeping 2min before deleting volumes ..."
-  sleep 120
+  echo "Sleeping 5min before deleting volumes to give time to detach ..."
+  sleep 300
 fi
 
 
@@ -64,7 +66,14 @@ VOLUMES=$(aws ec2 describe-volumes --region $reg --filters Name=tag-key,Values=p
 for vol in $VOLUMES ; do
   echo "Terminating Volume $vol ..."
   if [ -n "$WET_RUN" ]; then
-    PAGER='' aws ec2 delete-volume --region $reg --volume-id $vol >/dev/null
+    vol_state=$(aws ec2 describe-volumes --region $reg --volume-id $vol --query "Volumes[*].State" --output text)
+    echo "vol_state: $vol_state"
+    if [ "$vol_state" != "available" ]; then
+      echo "aws ec2 delete-volume --region $reg --force --volume-id $vol >/dev/null"
+      aws ec2 delete-volume --region $reg --force --volume-id $vol >/dev/null
+    fi
+    echo "aws ec2 delete-volume --region $reg --volume-id $vol >/dev/null"
+    aws ec2 delete-volume --region $reg --volume-id $vol >/dev/null
     TERMINATED=$((TERMINATED+1))
   fi
 done
@@ -87,7 +96,7 @@ ADDRESSES=$(aws ec2 describe-addresses --region $reg --filters Name=tag-key,Valu
 for aid in $ADDRESSES ; do
   echo "Terminating address $aid ..."
   if [ -n "$WET_RUN" ]; then
-    PAGER='' aws ec2 release-address --region $reg --allocation-id $aid >/dev/null
+    aws ec2 release-address --region $reg --allocation-id $aid >/dev/null
     TERMINATED=$((TERMINATED+1))
   fi
 done
@@ -113,7 +122,7 @@ for nic in $NICS ; do
   echo "Terminating NIC $nic ..."
   if [ -n "$WET_RUN" ]; then
     echo "aws ec2 delete-network-interface --region $reg --network-interface-id $nic >/dev/null"
-    PAGER='' aws ec2 delete-network-interface --region $reg --network-interface-id $nic >/dev/null
+    aws ec2 delete-network-interface --region $reg --network-interface-id $nic >/dev/null
     TERMINATED=$((TERMINATED+1))
   fi
 done

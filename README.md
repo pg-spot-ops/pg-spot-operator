@@ -98,9 +98,7 @@ docker run --rm --name pg1 -e PGSO_TEARDOWN_REGION=y -e PGSO_REGION=eu-north-1 \
   pgspotops/pg-spot-operator:latest
 ```
 
-or by running a helper script from the "scripts" folders:
-
-PS! You need to update the list of regions to your "operational area" first in the header.
+or by running a helper script from the "scripts" folders (by default just lists the resources):
 
 ```
 ./scripts/aws/delete_all_operator_tagged_objects.sh yes
