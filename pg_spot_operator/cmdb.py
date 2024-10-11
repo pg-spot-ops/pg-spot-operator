@@ -489,9 +489,21 @@ def finalize_instance_setup(m: InstanceManifest):
 
     connstr_private, connstr_public = update_instance_connect_info(m)
     if connstr_private:
-        logger.info("*** Private connect string *** - '%s'", connstr_private)
+        logger.info(
+            "*** PRIVATE Postgres connect string *** - '%s'", connstr_private
+        )
     if connstr_public:
-        logger.info("*** Public connect string *** - '%s'", connstr_public)
+        logger.info(
+            "*** PUBLIC Postgres connect string *** - '%s'", connstr_public
+        )
+
+    if m.monitoring.grafana.enabled:
+        vm = get_latest_vm_by_uuid(m.uuid)
+        primary_ip = "localhost"
+        if vm and m.monitoring.grafana.externally_accessible:
+            primary_ip = vm.ip_public or vm.ip_private
+        grafana_url = f"{m.monitoring.grafana.protocol}://{primary_ip}:3000/"
+        logger.info("*** GRAFANA URL *** - '%s'", grafana_url)
 
 
 def finalize_ensure_vm(
