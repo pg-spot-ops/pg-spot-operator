@@ -102,6 +102,10 @@ class ArgumentParser(Tap):
     admin_user_password: str = os.getenv("PGSO_ADMIN_USER_PASSWORD", "")
     aws_access_key_id: str = os.getenv("PGSO_AWS_ACCESS_KEY_ID", "")
     aws_secret_access_key: str = os.getenv("PGSO_AWS_SECRET_ACCESS_KEY", "")
+    aws_security_group_ids: str = os.getenv(
+        "PGSO_AWS_SECURITY_GROUP_IDS", ""
+    )  # SG rules are "merged" if multiple provided
+    aws_subnet_id: str = os.getenv("PGSO_AWS_SUBNET_ID", "")
     self_terminate_access_key_id: str = os.getenv(
         "PGSO_SELF_TERMINATE_ACCESS_KEY_ID", ""
     )
@@ -180,6 +184,12 @@ def compile_manifest_from_cmdline_params(
     if args.ssh_keys:
         for key in args.ssh_keys.split(","):
             m.os.ssh_pub_keys.append(key.strip())
+    m.aws.security_group_ids = (
+        args.aws_security_group_ids.split(",")
+        if args.aws_security_group_ids
+        else []
+    )
+    m.aws.subnet_id = args.aws_subnet_id
     m.aws.access_key_id = args.aws_access_key_id
     m.aws.secret_access_key = args.aws_secret_access_key
     m.self_terminate = args.self_terminate
