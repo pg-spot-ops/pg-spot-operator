@@ -453,7 +453,7 @@ def ec2_launch_instance(
                     "DeviceName": "/dev/sda1",
                     "Ebs": {
                         "DeleteOnTermination": True,
-                        "VolumeSize": 8,
+                        "VolumeSize": 20,
                         "VolumeType": "gp3",
                         "Encrypted": True,
                     },
