@@ -20,6 +20,7 @@ from pg_spot_operator.cloud_impl.aws_spot import (
     describe_instance_type,
     get_backing_vms_for_instances_if_any,
     get_current_hourly_spot_price,
+    resolve_instance_type_info,
 )
 from pg_spot_operator.cloud_impl.aws_vm import (
     delete_network_interface,
@@ -438,7 +439,26 @@ def apply_tuning_profile(
             mf.instance_name,
         )
         return []
-    tuning_input: dict = mf.vm.model_dump()
+
+    tuning_input: dict = (
+        mf.vm.model_dump()
+    )  # Default fall back of tuning by HW min reqs from user
+    if mf.vm.instance_types:  # Use actual HW specs for tuning if available
+        try:
+            i_info = resolve_instance_type_info(
+                mf.vm.instance_types[0], mf.region
+            )
+            tuning_input = {
+                "cpu_min": i_info.cpu,
+                "ram_min": int(i_info.ram_mb / 1000),
+                "storage_type": mf.vm.storage_type,
+                "storage_speed_class": i_info.storage_speed_class,
+            }
+        except Exception:
+            logger.error(
+                "Failed to fetch actual HW details, tuning Postgres based on user HW reqs"
+            )
+
     tuning_input["cloud"] = mf.cloud
     tuning_input["postgres_version"] = mf.postgresql.version
     tuning_input["user_tags"] = mf.user_tags

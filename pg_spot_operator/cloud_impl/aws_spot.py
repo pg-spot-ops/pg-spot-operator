@@ -45,6 +45,32 @@ def describe_instance_type(instance_type: str, region: str) -> dict:
     return {}
 
 
+def resolve_instance_type_info(
+    instance_type: str, region: str, i_desc: dict | None = None
+) -> ResolvedInstanceTypeInfo:
+    """i_desc = AWS API response dict. e.g.: aws ec2 describe-instance-types --instance-types i3en.xlarge"""
+    if not i_desc:
+        i_desc = describe_instance_type(instance_type, region)
+    if not i_desc:
+        raise Exception(
+            f"Could not describe instance type {instance_type} in region {region}"
+        )
+    return ResolvedInstanceTypeInfo(
+        instance_type=instance_type,
+        arch=extract_cpu_arch_from_sku_desc(CLOUD_AWS, i_desc),
+        cloud=CLOUD_AWS,
+        region=region,
+        cpu=i_desc.get("VCpuInfo", {}).get("DefaultVCpus", 0),
+        ram_mb=i_desc.get("MemoryInfo", {}).get("SizeInMiB", 0),
+        instance_storage=i_desc.get("InstanceStorageInfo", {}).get(
+            "TotalSizeInGB", 0
+        ),
+        storage_speed_class=i_desc.get("InstanceStorageInfo", {}).get(
+            "Disks", [{"Type": "hdd"}]
+        )[0]["Type"],
+    )
+
+
 @timed_cache(seconds=3600)
 def get_all_ec2_spot_instance_types(
     region: str, with_local_storage_only: bool = False

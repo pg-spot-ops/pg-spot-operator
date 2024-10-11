@@ -14,6 +14,7 @@ class ResolvedInstanceTypeInfo:
     cpu: int = 0
     ram_mb: int = 0
     instance_storage: int = 0
+    storage_speed_class: str = "hdd"
     provider_description: dict = field(default_factory=dict)
 
 

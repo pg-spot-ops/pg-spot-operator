@@ -8,6 +8,7 @@ from pg_spot_operator.cloud_impl.aws_spot import (
     get_current_hourly_spot_price,
     get_current_hourly_ondemand_price,
     filter_instance_types_by_hw_req,
+    resolve_instance_type_info,
 )
 from pg_spot_operator.constants import MF_SEC_VM_STORAGE_TYPE_LOCAL
 
@@ -453,3 +454,13 @@ def test_get_current_spot_price():
 def test_get_current_hourly_ondemand_price():
     sp = get_current_hourly_ondemand_price("eu-north-1", "i3.xlarge")
     assert 0.1 < sp < 10
+
+
+def test_resolve_instance_type_info():
+    i_info = resolve_instance_type_info(
+        "i3.xlarge", "eu-north-1", i_desc=INSTANCE_LISTING[0]
+    )
+    assert i_info.cpu == 1
+    assert i_info.ram_mb == 8192
+    assert i_info.instance_storage == 59
+    assert i_info.storage_speed_class == "ssd"
