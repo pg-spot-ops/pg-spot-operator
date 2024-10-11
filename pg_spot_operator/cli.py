@@ -485,7 +485,7 @@ def main():  # pragma: no cover
 
     logger.debug("Args: %s", args.as_dict()) if args.verbose else None
 
-    if not args.dry_run:
+    if not (args.dry_run or args.check_price):
         ensure_single_instance_running(args.instance_name)
 
     if args.teardown_region:
