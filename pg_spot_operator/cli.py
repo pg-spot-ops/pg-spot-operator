@@ -8,7 +8,7 @@ import yaml
 from dateutil.parser import isoparse
 from tap import Tap
 
-from pg_spot_operator import cmdb, manifests, operator
+from pg_spot_operator import cloud_api, cmdb, manifests, operator
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.manifests import InstanceManifest
 
@@ -50,6 +50,9 @@ class ArgumentParser(Tap):
     verbose: bool = str_to_bool(
         os.getenv("PGSO_VERBOSE", "false")
     )  # More chat
+    check_price: bool = str_to_bool(
+        os.getenv("PGSO_CHECK_PRICE", "false")
+    )  # Resolve HW reqs, show Spot price and exit
     check_manifest: bool = str_to_bool(
         os.getenv("PGSO_CHECK_MANIFEST", "false")
     )  # Validate instance manifests and exit
@@ -410,6 +413,49 @@ def clean_up_old_logs_if_any(config_dir: str, old_threshold_days: int = 7):
                 shutil.rmtree(expired_path, ignore_errors=True)
 
 
+def resolve_manifest_and_display_price(m: InstanceManifest) -> None:
+    logger.info(
+        "Resolving HW requirements to actual instance types / prices ..."
+    )
+    cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(m)
+    if not cheapest_skus:
+        logger.error(
+            f"No SKUs matching HW requirements found for instance {m.instance_name} in region / zone {m.region or m.availability_zone}"
+        )
+        exit(1)
+    sku = cheapest_skus[0]
+    logger.info(
+        "Cheapest instance type found: %s (%s)", sku.instance_type, sku.arch
+    )
+    logger.info(
+        "Main specs - vCPU: %s, RAM: %s %s, instance storage: %s",
+        sku.cpu,
+        sku.ram_mb if sku.ram_mb < 1024 else int(sku.ram_mb / 1024),
+        "MiB" if sku.ram_mb < 1024 else "GB",
+        sku.instance_storage,
+    )
+    if not sku.monthly_ondemand_price:
+        sku.monthly_ondemand_price = (
+            cloud_api.try_get_monthly_ondemand_price_for_sku(
+                m.cloud, m.region, sku.instance_type
+            )
+        )
+
+    if sku.monthly_ondemand_price and sku.monthly_spot_price:
+        spot_discount = (
+            100.0
+            * (sku.monthly_spot_price - sku.monthly_ondemand_price)
+            / sku.monthly_ondemand_price
+        )
+        logger.info(
+            "Current Spot discount rate in AZ %s: %s%% (spot $%s vs on-demand $%s)",
+            sku.availability_zone,
+            round(spot_discount, 1),
+            sku.monthly_spot_price,
+            sku.monthly_ondemand_price,
+        )
+
+
 def main():  # pragma: no cover
 
     global args
@@ -463,6 +509,10 @@ def main():  # pragma: no cover
             exit(1)
         if args.teardown:  # Delete instance and any attached resources
             env_manifest.expiration_date = "now"
+
+    if args.check_price:
+        resolve_manifest_and_display_price(env_manifest)
+        exit(0)
 
     cmdb.init_engine_and_check_connection(
         os.path.join(args.config_dir, SQLITE_DBNAME)
