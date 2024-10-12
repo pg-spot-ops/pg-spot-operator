@@ -145,7 +145,7 @@ git commit
 By default, security is not super trimmed down, as main use case if for non-critical or temporary workloads. Everything
 is tunable though.
 
-Relevant attributes with defaults:
+## Security-relevant manifest attributes with defaults
 
 ```commandline
 public_ip_address: true
@@ -164,6 +164,19 @@ aws:
 PS! Note that if no *admin_user* is set, there will be also no public connect string generated as remote "postgres" user
 access is forbidden by default. One can enable remote "postgres" access (but can't be recommended of course) by setting
 the *admin_user* accordingly + specifying custom *pg_hba* rules.
+
+## Relevant ports / EC2 Security Group permissions
+
+* **22** - SSH. For direct Ansible SSH access to set up Postgres.
+* **5432** - Postgres. For client / app access.
+* **3000** - Grafana. Relevant if *monitoring.grafana.externally_accessible* set
+* **9100** - VM Prometheus node_exporter. Relevant if *monitoring.prometheus_node_exporter.externally_accessible* set
+
+For non-public (*public_ip_address=false*) instances, which are also launched from within the SG, default SG inbound rules
+are enough. But for public access, one needs to open up the listed ports, at least for SSH and Postgres. 
+
+PS Ports are not changeable in the Community Edition! And changing ports to non-defaults doesn't provide any real security
+anyways ...
 
 # Integrating with user applications
 
