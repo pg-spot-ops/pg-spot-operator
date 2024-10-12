@@ -178,6 +178,24 @@ are enough. But for public access, one needs to open up the listed ports, at lea
 PS Ports are not changeable in the Community Edition! And changing ports to non-defaults doesn't provide any real security
 anyways ...
 
+## Opening up a port via the AWS CLI
+
+To open port 22 for the engine node / workstation IP only, for Ansible setup to work, one could run:
+
+```
+MYPUBIP=$(curl -s whatismyip.akamai.com)
+
+aws ec2 authorize-security-group-ingress \
+  --group-name default \
+  --ip-permissions IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges="[{CidrIp=${MYPUBIP}/32}]" \
+  --region eu-north-1
+```
+
+Some AWS documentation on the topic:
+
+* https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html
+* https://docs.aws.amazon.com/cli/latest/reference/ec2/authorize-security-group-ingress.html
+
 # Integrating with user applications
 
 Although the Community Edition is optimized for more light use, one can use it also to power real applications (given
