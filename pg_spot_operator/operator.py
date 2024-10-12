@@ -300,15 +300,15 @@ def populate_temp_workdir_for_action_exec(
         os.makedirs(dir, exist_ok=True)
 
     with open(
-        os.path.join(temp_workdir, "vars", "instance_manifest.yml"), "w"
+        os.path.join(temp_workdir, "group_vars/all", "instance_manifest.yml"), "w"
     ) as f:
-        f.write(str(manifest.original_manifest))
+        f.write(yaml.dump(str({'instance_manifest': manifest.original_manifest})))
 
     if manifest.session_vars:
         with open(
-            os.path.join(temp_workdir, "vars", "engine_overrides.yml"), "w"
+            os.path.join(temp_workdir, "group_vars/all", "engine_overrides.yml"), "w"
         ) as f:
-            f.write(yaml.dump(manifest.session_vars))
+            f.write(yaml.dump({'engine_overrides': manifest.session_vars}))
 
     return temp_workdir
 
