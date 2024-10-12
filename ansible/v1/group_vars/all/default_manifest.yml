@@ -1,0 +1,110 @@
+---
+default_manifest:
+  api_version: v1  # Required
+  kind: pg_spot_operator_instance  # Required
+  cloud: aws  # Required
+  region: eu-south-2  # Optional if availability_zone set
+  availability_zone: eu-south-2b  # Optional
+  instance_name: hello-aws  # Required
+  description: My play instance # Optional
+  assign_public_ip: true  # Default: true
+  floating_public_ip: true  # Default: true, as Elastic IPs are very limited per account
+  expiration_date: "2024-12-22 00:00+03"  # Optional. Instance will be deleted after that (if engine running)
+  self_terminate: false  # Optional. Instance will auto-destroy itself (if AWS keys )
+  is_paused: false  # No engine actions on the instance
+  vault_password_file: /tmp/vault_password_file # If Ansible encrypted strings are used. Can also be set globally via --vault-password-file
+  vm:
+    host: 192.168.121.221  # Target VM override (local testing)
+    login_user: vagrant  # Target VM override (local testing)
+    cpu_architecture: arm  # [ arm | amd | x86 | intel ]  # amd | x86 | intel all resolve to same -> non-arm
+    cpu_min: 2  # Optional
+    cpu_max: 8  # Optional
+    ram_min: 4  # Optional
+    allow_burstable: true
+    instance_types: [m6gd.xlarge]  # cpu_min etc will be ignored then and cheapest of listed used
+    storage_min: 100  # Required, as no auto-growth for now
+    storage_type: local  # local | network. PS Using network volumes pins you to a specific AZ
+    storage_speed_class: ssd  # hdd | ssd | nvme. For instance storage (storage_type=local)
+    volume_type: gp3  # gp2, gp3, io1, io2 Details: https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html
+  #  volume_iops:  # For provisioned / paid IOPS, EBS gp3 default is 3000
+                  # gp2 / gp3 max 16K, io1 64K, io2 256K
+  #  volume_throughput:  # MBs. For provisioned / paid throughput for gp3, io1 and io2. gp3 default is 125
+                        # gp2 max 250, gp3 / io1 max 1000, io2 max 4000. PS Not that not all instance types can achieve max!
+    detailed_monitoring: false  # As incurs extra costs
+  os:
+    unattended_security_upgrades: true  # Might result in nightly restarts
+    kernel_tuning: true  # Basic memory over-commit tuning for databases
+    extra_packages:  # Default: []
+      - pgbadger
+      - postgresql-16-cron
+    ssh_pub_keys: []  # Literal extra pubkeys to add (in addition to default ~/.ssh/id_rsa.pub) to created VMs
+    ssh_pub_key_paths: []  # Extra pubkey paths accessible on the engine VM
+  user_tags:  # In addition to user tags the engine will add a pg-spot-operator-tag + pg-spot-operator-expiration-date
+              # in case expiration_date set
+    app: backend
+  postgresql:
+    version: 16  # Optional. Minimum supported version is v14. Defaults to latest stable
+    admin_is_superuser: true
+    admin_user: admin
+    app_db_name: app  # App / user DB to be created if set
+    admin_user_password: kah8aiThuXegh1neingee5go  # Needs to be provided if admin_user set
+    initdb_opts:  # Defaults
+      - --data-checksums
+      - --locale-provider=icu
+      - --icu-locale=en
+      - --locale=en_US.utf8
+    tuning_profile: default  # none | default | oltp | analytics | web. Set to 'none' for Postgres defaults.
+    config_lines:  # Literal postgresql.conf lines for custom overrides / tuning. Takes precedence over tuning_profile outputs.
+      - "cluster_name = {{ instance_name | d('') | replace('-', '_') }}" # Dashes don't work with pg_createcluster"
+      - "statement_timeout = '5min'"
+      - "shared_preload_libraries = 'pg_stat_statements,pg_cron,auth_delay'"
+      - "auth_delay.milliseconds = '5000'"
+      - "archive_mode = on"
+      - "archive_command = '/bin/true'"
+      - "listen_addresses = '*'"
+      - "logging_collector = on"
+      - "log_filename = 'postgresql-%a.log'"
+      - "log_truncate_on_rotation = on"
+      - "log_connections = on"
+    pg_hba_lines:  # Defaults allow non-postgres world access
+      - "host all postgres 0.0.0.0/0 reject"
+      - "hostssl all all 0.0.0.0/0 scram-sha-256"
+  backup:  # Only supported backup tool is pgBackRest currently
+    type: none  # none | pgbackrest
+    destroy_backups: true  # Default: true. Destroy any S3 backups when instance dropped
+    wal_archiving_max_interval: 2min  # Postgres archive_timeout value. Small values (<60s, minimum is 1s) can cause storage accumulation and delayed restores
+    retention_days: 2
+    schedule_full: "0 3 * * 1,3,5"
+    schedule_diff: "0 3 * * 0,2,4,6"
+    encryption: false
+  #  cipher_password:  # Supports Ansible vault encrypted strings
+  #  cipher_password_file:  # Plain text file accessible on the engine if don't want to use vault
+  #  s3_key:
+  #  s3_key_file:
+  #  s3_key_secret:
+  #  s3_key_secret_file:
+    s3_bucket: pg-spot-operator  # Engine will try to create the bucket if not existing
+  #  pgbackrest:  # Overrides needed only for performance tuning, multi-repo support, or non-AWS S3 storage
+      # Map directly to pgBackRest config keys https://pgbackrest.org/configuration.html
+      # PS following keys should not be specified:
+      # process-max - set automatically based on vCPUs
+      # repo1-cipher-type - set automatically to aes-256-cbc (current only pgBackrest impl.) when "encryption" set
+      # repo1-cipher-pass - from backup.cipher_password/cipher_password_file
+      # repo1-s3-key - from backup.s3_key/s3_key_file
+      # repo1-s3-key-secret - from backup.s3_key_secret/s3_key_secret_file
+  #    global_settings:
+  #      repo1-s3-region: eu-north-1
+  #      repo1-s3-endpoint: s3.eu-north-1.amazonaws.com
+  #    archive_push_overrides:
+  #    backup_overrides:
+  #    restore_overrides:
+  #aws:
+  #  ## By default transparent auth via local CLI credentials or AWS IAM Roles Anywhere etc assumed
+  #  access_key_id:
+  #  secret_access_key:
+  #  security_group_ids: []  # By default VPC "default" used
+  #  subnet_id:
+  #  profile_name:
+  #  key_pair_name:
+  #  self_terminate_access_key_id:
+  #  self_terminate_secret_access_key:

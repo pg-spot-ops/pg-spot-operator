@@ -302,7 +302,7 @@ def populate_temp_workdir_for_action_exec(
     with open(
         os.path.join(temp_workdir, "group_vars/all", "instance_manifest.yml"), "w"
     ) as f:
-        f.write(yaml.dump(str({'instance_manifest': manifest.original_manifest})))
+        f.write(yaml.dump({'instance_manifest': manifest.original_manifest}))
 
     if manifest.session_vars:
         with open(
