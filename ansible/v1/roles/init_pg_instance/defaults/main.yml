@@ -3,7 +3,6 @@ instance_name: spot
 
 # Not exposed in the manifest currently
 postgres_version: "{{ postgres.version | d(16) }}"
-postgres_cluster_name: "{{ postgres.config_lines.cluster_name }}"
 add_dummy_data: false  # For dev testing restores
 default_initdb_opts:
   - --data-checksums

@@ -5,7 +5,6 @@ postgres:
   version: 16
 
 # Internal
-postgres_cluster_name: "{{ instance_name | replace('-', '_') }}"  # Dashes don't work with pg_createcluster
 def_pg_hba_lines:
   - "host all postgres 0.0.0.0/0 reject"
   - "hostssl all all 0.0.0.0/0 scram-sha-256"

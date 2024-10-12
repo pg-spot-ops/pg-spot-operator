@@ -4,7 +4,6 @@ instance_name: hello_aws
 region: eu-north-1
 
 # Not exposed
-postgres_cluster_name: "{{ instance_name | d('spot') | replace('-', '_') }}"  # Dashes don't work with pg_createcluster
 stanza_name: "{{ instance_name | d('spot') }}"
 postgres_archiving_settings:
   - "archive_command = 'pgbackrest --stanza={{ stanza_name }} archive-push %p'"

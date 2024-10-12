@@ -30,3 +30,6 @@ backup: "{{ default_manifest.backup | d({})
 aws: "{{ default_manifest.aws | d({})
     | ansible.builtin.combine(instance_manifest.aws | d({}), recursive=true)
     | ansible.builtin.combine(engine_overrides.aws | d({}), recursive=true) }}"
+
+
+postgres_cluster_name: "{{ instance_name | d('') | replace('-', '_') }}" # Dashes don't work with pg_createcluster"
