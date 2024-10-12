@@ -56,7 +56,8 @@ postgresql:
   tuning_profile: default  # none | default | oltp | analytics | web. Set to 'none' for Postgres defaults.
   config_lines:  # Literal postgresql.conf lines for custom overrides / tuning. Takes precedence over tuning_profile outputs.
     - "log_connections = on"
-    - "shared_preload_libraries = 'pg_stat_statements,pg_cron'"
+    - "shared_preload_libraries = 'pg_stat_statements,pg_cron,auth_delay'"
+    #- "auth_delay.milliseconds = '5000'"
   pg_hba_lines:  # Defaults allow non-postgres world access
     - "host all postgres 0.0.0.0/0 reject"
     - "hostssl all all 0.0.0.0/0 scram-sha-256"
