@@ -12,7 +12,15 @@ postgres:
     - --icu-locale=en
     - --locale=en_US.utf8
   config_lines:
-    - "cluster_name = 'spot'"
+    - "cluster_name = {{ postgres_cluster_name }}"
+    - "shared_preload_libraries = 'auth_delay'"
+    - "auth_delay.milliseconds = '5000'"
+    - "archive_mode = on"
+    - "archive_command = '/bin/true'"
+    - "listen_addresses = '*'"
+    - "logging_collector = on"
+    - "log_filename = 'postgresql-%a.log'"
+    - "log_truncate_on_rotation = on"
 
 # Not exposed in the manifest currently
 postgres_version: "{{ postgres.version | d(16) }}"

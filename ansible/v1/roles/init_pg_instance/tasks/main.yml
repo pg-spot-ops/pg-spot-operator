@@ -45,14 +45,6 @@
   file: dest="/var/lib/postgresql/{{postgres_version}}" owner=postgres group=postgres
   when: not cluster_conf_exists.stat.exists
 
-- name: Set up postgresql.conf base settings
-  ansible.builtin.lineinfile:
-    path: "/etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf"
-    line: "{{ item }}"
-  loop: "{{ postgres_base_settings }}"
-  notify:
-    - "init_pg_instance : Reload postgres"
-
 - name: Set up postgresql.conf user settings
   ansible.builtin.lineinfile:
     path: "/etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf"
