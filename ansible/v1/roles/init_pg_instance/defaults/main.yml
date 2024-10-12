@@ -12,18 +12,19 @@ postgres:
     - --icu-locale=en
     - --locale=en_US.utf8
   config_lines:
-    - "cluster_name = 'spot'"
+    - "cluster_name = {{ postgres_cluster_name }}"
+    - "shared_preload_libraries = 'pg_stat_statements,auth_delay'"
+    - "auth_delay.milliseconds = '5000'"
+    - "archive_mode = on"
+    - "archive_command = '/bin/true'"
+    - "listen_addresses = '*'"
+    - "logging_collector = on"
+    - "log_filename = 'postgresql-%a.log'"
+    - "log_truncate_on_rotation = on"
 
 # Not exposed in the manifest currently
-postgres_version: "{{ postgres.version | d(16) }}"
+postgres_version: "{{ postgresql.version | d(16) }}"
 postgres_cluster_name: "{{ instance_name | d('') | replace('-', '_') or def.instance_name }}"  # Dashes don't work with pg_createcluster
-postgres_base_settings:
-  - "archive_mode = on"
-  - "archive_command = '/bin/true'"
-  - "listen_addresses = '*'"
-  - "logging_collector = on"
-  - "log_filename = 'postgresql-%a.log'"
-  - "log_truncate_on_rotation = on"
 add_dummy_data: false  # For dev testing restores
 default_initdb_opts:
   - --data-checksums
