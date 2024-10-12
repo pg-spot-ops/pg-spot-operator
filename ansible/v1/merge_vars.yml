@@ -2,7 +2,8 @@
 - hosts: all
   become: no
   any_errors_fatal: true
-  gather_facts: no
+  # some merged vars may make use of server facts
+  gather_facts: yes
 
   pre_tasks:
     - name: Include instance manifest
