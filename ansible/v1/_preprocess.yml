@@ -1,19 +1,28 @@
 ---
+
 - hosts: all
   become: no
   any_errors_fatal: true
-  # some merged vars may make use of server facts
-  gather_facts: yes
+  gather_facts: no
 
   pre_tasks:
-    - name: Include instance manifest
-      ansible.builtin.include_vars:
-        file: "vars/instance_manifest.yml"
-        name: instance_manifest
-    - name: Include engine override vars if any
-      ansible.builtin.include_vars:
-        file: "vars/engine_overrides.yml"
-        name: engine_overrides
+    - name: Show merged vars - top lvl
+      debug:
+        msg: "{{ item.name }}: {{ item.value }}"
+      when: item.value
+      loop:
+        - { name: uuid, value: "{{ uuid | d('') }}"}
+        - { name: instance_name, value: "{{ instance_name | d('') }}"}
+        - { name: cloud, value: "{{ cloud | d('') }}"}
+        - { name: region, value: "{{ region | d('') }}"}
+        - { name: expiration_date, value: "{{ expiration_date | d('') }}"}
 
-  roles:
-    - role: merge_vars
+    - name: Show merged vars
+      debug:
+        msg: "Section {{ item.section_name }}: {{ item.section_data }}"
+      loop:
+        - { section_name: postgresql, section_data: "{{ postgresql | d({}) }}"}
+        - { section_name: vm, section_data: "{{ vm | d({}) }}"}
+        - { section_name: os, section_data: "{{ os | d({}) }}"}
+        - { section_name: backup, section_data: "{{ backup | d({}) }}"}
+        - { section_name: aws, section_data: "{{ aws | d({}) }}"}
