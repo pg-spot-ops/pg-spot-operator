@@ -1,30 +1,9 @@
 ---
 instance_name: spot
-postgresql:
-  version: 16
-  app_db_name: appdb # Leave empty when default "postgres" DB is enough or DBs created later from app / manually
-  admin_user: dev  # Leave empty to not create one
-  admin_user_password: dev
-  admin_is_superuser: true
-  initdb_opts:
-    - --data-checksums
-    - --locale-provider=icu
-    - --icu-locale=en
-    - --locale=en_US.utf8
-  config_lines:
-    - "cluster_name = {{ postgres_cluster_name }}"
-    - "shared_preload_libraries = 'auth_delay'"
-    - "auth_delay.milliseconds = '5000'"
-    - "archive_mode = on"
-    - "archive_command = '/bin/true'"
-    - "listen_addresses = '*'"
-    - "logging_collector = on"
-    - "log_filename = 'postgresql-%a.log'"
-    - "log_truncate_on_rotation = on"
 
 # Not exposed in the manifest currently
 postgres_version: "{{ postgresql.version | d(16) }}"
-postgres_cluster_name: "{{ instance_name | d('') | replace('-', '_') or def.instance_name }}"  # Dashes don't work with pg_createcluster
+postgres_cluster_name: "{{ postgresql.config_lines.cluster_name }}"
 add_dummy_data: true  # For dev testing restores
 default_initdb_opts:
   - --data-checksums
