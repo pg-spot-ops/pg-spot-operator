@@ -55,7 +55,7 @@ default_manifest:
       - --locale=en_US.utf8
     tuning_profile: default  # none | default | oltp | analytics | web. Set to 'none' for Postgres defaults.
     config_lines:  # Literal postgresql.conf lines for custom overrides / tuning. Takes precedence over tuning_profile outputs.
-      - "cluster_name = {{ instance_name | d('') | replace('-', '_') }}" # Dashes don't work with pg_createcluster"
+      - "cluster_name = {{ postgres_cluster_name }}"
       - "statement_timeout = '5min'"
       - "shared_preload_libraries = 'pg_stat_statements,pg_cron,auth_delay'"
       - "auth_delay.milliseconds = '5000'"
