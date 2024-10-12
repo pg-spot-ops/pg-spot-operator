@@ -5,7 +5,6 @@ postgresql:
   version: 16
 
 # Private
-postgres_cluster_name: "{{ instance_name | replace('-', '_') }}"  # Dashes don't work with pg_createcluster
 stanza_name: "{{ instance_name }}"
 postgres_restore_settings:
   - "recovery_target_action = promote"
