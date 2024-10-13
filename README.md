@@ -19,9 +19,11 @@ A typical Postgres setup from zero takes a few minutes.
 * The user:
   - Specifies a set of few key parameters like region, minimum CPUs / RAM and storage size and type (network EBS volumes
     or local volatile storage) and maybe also the Postgres version (defaults to latest stable). User input can come in 3 forms:
-    - CLI / Env parameters a la *--instance-name*, *--region*, *--cpu-min*, *--storage-min*
+    - CLI / Env parameters a la *--instance-name*, *--region*, *--cpu-min*, *--storage-min*. Note that in CLI mode not all
+      features can be configured and some common choices are made for the user
     - A YAML manifest as literal text via *--manifest* / *PGSO_MANIFEST*
-    - A YAML manifest file via *--manifest-path* / *PGSO_MANIFEST_PATH*
+    - A YAML manifest file via *--manifest-path* / *PGSO_MANIFEST_PATH*. To get an idea of all possible options / features
+      one could take a look at an example manifest [here](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/example_manifests/hello_aws.yaml)
   - Specifies or mounts (Docker) the cloud credentials if no default AWS CLI (~/.aws/credentials) set up
   - Can optionally specify also a callback (executable file) to do something / integrate with the resulting connect
     string (just displayed by default) or just run in *--connstr-output-only* mode to be pipe-friendly
