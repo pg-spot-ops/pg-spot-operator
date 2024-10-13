@@ -1,0 +1,141 @@
+---
+- block:
+
+  - name: Install prometheus
+    ansible.builtin.include_role:
+      name: prometheus.prometheus.prometheus
+    vars:
+      prometheus_version: 2.54.1
+      prometheus_web_listen_address: "{{ '0.0.0.0:9090' if monitoring.prometheus_node_exporter.externally_accessible|d(False) else 'localhost:9090'  }}"
+      prometheus_targets:
+        node:
+        - targets:
+          - localhost:9100
+
+  - name: Install the node exporter
+    ansible.builtin.include_role:
+      name: prometheus.prometheus.node_exporter
+    vars:
+      node_exporter_version: 1.8.2
+      node_exporter_web_listen_address: "{{ '0.0.0.0:9100' if monitoring.prometheus_node_exporter.externally_accessible|d(False) else 'localhost:9100'  }}"
+      node_exporter_web_disable_exporter_metrics: true
+      # Description of collectors: https://github.com/prometheus/node_exporter?tab=readme-ov-file#node-exporter
+      node_exporter_enabled_collectors:
+        - disable-defaults
+        - cpu
+        - cpufreq
+        - diskstats
+        - filesystem
+        - loadavg
+        - meminfo
+        - netdev
+        - pressure
+        - schedstat
+        - stat
+        - time
+        - vmstat
+
+  when: monitoring.prometheus_node_exporter.enabled | d(False)
+
+- block:
+
+  # Following pretty much Grafana OSS Stable instructions from
+  # https://grafana.com/docs/grafana/latest/setup-grafana/installation/debian/
+  - name: Install the prerequisite packages
+    ansible.builtin.apt:
+      name: "{{ item }}"
+      state: present
+    loop:
+      - apt-transport-https
+      - software-properties-common
+      - wget
+
+  - name: Import the GPG key
+    ansible.builtin.get_url:
+      url: https://apt.grafana.com/gpg.key
+      dest: /etc/apt/trusted.gpg.d/grafana.asc
+
+  - name: Add the repository for stable releases
+    ansible.builtin.apt_repository:
+      repo: "deb [signed-by=/etc/apt/trusted.gpg.d/grafana.asc] https://apt.grafana.com stable main"
+      filename: grafana
+      state: present
+
+  - name: Install Grafana
+    ansible.builtin.apt:
+      name: grafana
+      state: present
+
+  - name: Create a default prometheus datasource
+    ansible.builtin.copy:
+      src: files/prometheus_default_datasource.yml
+      dest: /etc/grafana/provisioning/datasources/local_prometheus.yaml
+      owner: grafana
+
+  - name: Ensure dashboards dir
+    ansible.builtin.file:
+      state: directory
+      path: /var/lib/grafana/dashboards
+      owner: grafana
+
+  - name: Create a dash provisioning config
+    ansible.builtin.copy:
+      src: files/dash_provisioning_conf.yml
+      dest: /etc/grafana/provisioning/dashboards/spotops_dashboards.yaml
+      owner: grafana
+
+  - name: Install default prometheus dashboards
+    ansible.builtin.copy:
+      src: files/{{ item }}
+      dest: /var/lib/grafana/dashboards/{{ item }}
+      owner: grafana
+    loop:
+      - dash_node_exporter_quickstart.json
+      - dash_node_exporter_full.json
+
+  - block:
+      # TLS activation as per https://grafana.com/docs/grafana/latest/setup-grafana/set-up-https/
+    - name: Check if keys exist already
+      ansible.builtin.stat:
+        path: "/etc/grafana/grafana.crt"
+      register: crt_exists
+
+    - block:
+      - name: Generate an OpenSSH rsa keypair with 2048 bits
+        ansible.builtin.raw: openssl genrsa -out /etc/grafana/grafana.key 2048
+
+      - name: Generate a certificate, using the private key from the previous step.
+        ansible.builtin.raw: openssl req -new -key /etc/grafana/grafana.key -out /etc/grafana/grafana.csr -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com"
+
+      - name: Generate a certificate, using the private key from the previous step.
+        ansible.builtin.raw: openssl x509 -req -days 1000 -in /etc/grafana/grafana.csr -signkey /etc/grafana/grafana.key -out /etc/grafana/grafana.crt
+
+      when: not crt_exists.stat.exists
+
+    - name: Recursively change ownership of a directory
+      ansible.builtin.file:
+        path: /etc/grafana
+        state: directory
+        recurse: yes
+        owner: grafana
+        group: grafana
+
+    - name: Trim down key privs
+      ansible.builtin.file:
+        path: "{{ item }}"
+        mode: '0400'
+      loop:
+        - /etc/grafana/grafana.key
+        - /etc/grafana/grafana.crt
+
+    when: monitoring.grafana.protocol | d('http') == 'https'
+
+  - name: Generate grafana.ini
+    ansible.builtin.template:
+      src: grafana.ini
+      dest: /etc/grafana/grafana.ini
+
+  - name: Ensure Grafana started
+    ansible.builtin.service: name=grafana-server state=restarted
+
+  when: monitoring.grafana.enabled | d(False)

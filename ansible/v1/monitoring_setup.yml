@@ -17,15 +17,4 @@
 
   roles:
     - role: merge_vars
-    - role: mount_unattached_disks
-    - role: install_os_pg_prereqs
-    - role: os_setup
-    - role: init_pg_instance
-    - role: configure_pgbackrest
-      when: backup.type | d('none') == "pgbackrest"
-    - role: pgbackrest_restore
-      when: backup.type | d('none') == "pgbackrest"
-    - role: open_pg_instance_access
-    - role: self_termination_setup
     - role: monitoring_setup
-    - role: setup_finished_callback
