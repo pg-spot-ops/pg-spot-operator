@@ -95,14 +95,22 @@
 
   - block:
       # TLS activation as per https://grafana.com/docs/grafana/latest/setup-grafana/set-up-https/
-    - name: Generate an OpenSSH rsa keypair with 2048 bits
-      ansible.builtin.raw: openssl genrsa -out /etc/grafana/grafana.key 2048
+    - name: Check if keys exist already
+      ansible.builtin.stat:
+        path: "/etc/grafana/grafana.crt"
+      register: crt_exists
 
-    - name: Generate a certificate, using the private key from the previous step.
-      ansible.builtin.raw: openssl req -new -key /etc/grafana/grafana.key -out /etc/grafana/grafana.csr -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com"
+    - block:
+      - name: Generate an OpenSSH rsa keypair with 2048 bits
+        ansible.builtin.raw: openssl genrsa -out /etc/grafana/grafana.key 2048
 
-    - name: Generate a certificate, using the private key from the previous step.
-      ansible.builtin.raw: openssl x509 -req -days 1000 -in /etc/grafana/grafana.csr -signkey /etc/grafana/grafana.key -out /etc/grafana/grafana.crt
+      - name: Generate a certificate, using the private key from the previous step.
+        ansible.builtin.raw: openssl req -new -key /etc/grafana/grafana.key -out /etc/grafana/grafana.csr -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com"
+
+      - name: Generate a certificate, using the private key from the previous step.
+        ansible.builtin.raw: openssl x509 -req -days 1000 -in /etc/grafana/grafana.csr -signkey /etc/grafana/grafana.key -out /etc/grafana/grafana.crt
+
+      when: not crt_exists.stat.exists
 
     - name: Recursively change ownership of a directory
       ansible.builtin.file:
