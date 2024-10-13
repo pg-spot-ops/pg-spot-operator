@@ -2,41 +2,33 @@
 # Postgres Spot Operator [Community Edition]
 
 Maintains stateful Postgres on AWS Spot VMs. Think of it as RDS, but at a fraction of the cost! Typical [savings](https://aws.amazon.com/ec2/spot/pricing/)
-are in the ballpark of 3-5x.
+are around 5x compared to RDS (non-HA).
 
 Obviously for non-critical projects only, as utilizing Spot instances means one can be interrupted by AWS at any time,
 and it takes a few minutes to restore the state. But at the same time - the Spot eviction rates are insanely good for the price!
 The average frequency of interruption across all Regions and instance types is ~5% per month according to AWS [data](https://aws.amazon.com/ec2/spot/instance-advisor/).
 Meaning one can expect to run a few months uninterrupted.
 
-Not a "real" K8s operator (yet, at least) - but based on similar concepts - user describes a desired state (manifests)
-and there's a reconciliation loop of sorts.
+Not a "real" K8s operator (yet, at least) - but based on similar concepts - user describes a desired state and there's a
+reconciliation loop of sorts.
 
-A typical Postgres setup from zero takes about 2-3 minutes.
+A typical Postgres setup from zero takes a few minutes.
 
 # General idea
 
 * The user:
-  - Specifies a set of few key parameters like region, minimum CPUs / RAM and storage size and type (network EBS volumes or local volatile storage)
+  - Specifies a set of few key parameters like region, minimum CPUs / RAM and storage size and type (network EBS volumes
+    or local volatile storage) and maybe also the Postgres version (defaults to latest stable)
   - Specifies or mounts (Docker) the cloud credentials if no default AWS CLI (~/.aws/credentials) set up
-  - Can optionally specify also a callback (executable file) to do something / integrate with the resulting connect string (just displayed by default)
+  - Can optionally specify also a callback (executable file) to do something / integrate with the resulting connect
+    string (just displayed by default) or just run in *--connstr-output-only* mode to be pipe-friendly
 * The operator:
-  - Finds the cheapest Spot instance for given HW requirements and launches a VM
+  - Finds the cheapest (the default strategy) Spot instance for given HW requirements and launches a VM
   - Runs Ansible to set up Postgres
-  - Keeps checking the VM health every minute (configurable) and if evicted, launches a new one, re-mounts the data volume and resurrects Postgres
+  - Keeps checking the VM health every minute (configurable) and if evicted, launches a new one, re-mounts the data
+    volume and resurrects Postgres
 
 # Usage
-
-## Python local dev/test in a virtualenv
-
-```bash
-git clone git@github.com:pg-spot-ops/pg-spot-operator.git
-cd pg-spot-operator
-make virtualenv
-source .venv/bin/activate
-pip install -r requirements.txt
-python3 -m pg_spot_operator --verbose --instance-name pg1 --region eu-north-1 --cpu-min 2 --storage-min 100
-```
 
 ## Via Docker
 
@@ -58,38 +50,55 @@ docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
   pgspotops/pg-spot-operator:latest
 ```
 
+## Python local dev/test in a virtualenv
+
+```bash
+git clone git@github.com:pg-spot-ops/pg-spot-operator.git
+cd pg-spot-operator
+make virtualenv
+source .venv/bin/activate
+pip install -r requirements.txt
+python3 -m pg_spot_operator --verbose --instance-name pg1 --region eu-north-1 --cpu-min 2 --storage-min 100 --storage-type local
+```
+
+Python 3.10+ required. PIP support coming.
+
 # Technical details
 
 ## Main features
 
-* Uses cheap (3-10x) AWS Spot VMs to run Postgres
+* Uses cheap (3-10x compared to on-demand pricing) AWS Spot VMs to run Postgres
 * Installs Postgres from official PGDG repos, meaning you get instant minor version updates
-* Allows also to explicitly specify the target instance types
-* Uses Debian-12 base images / AMI-s
+* Supports Postgres versions v14-v17 (defaults to v16 currently if not specified)
+* Two instance selection strategies - "cheapest" and "random"
+* Allows also to explicitly specify a list of preferred instance types and cheapest used
+* Uses Debian 12 base images / AMI-s
 * Allows override of ALL *postgresql.conf* settings if user wishes so
-* Built-in basic tuning profiles for most common workloads (default, oltp, analytics, web)
-* Maintains a single instance per daemon to KISS
+* Built-in basic Postgres tuning profiles for most common workloads (default, oltp, analytics, web)
+* Maintains a single instance per daemon to keep things simple
 * Supports a single EBS volume or all local / volatile instance disks in a volume group
+* Tunable EBS volume performance via paid IOPS / throughput
 * Supports block level S3 backups / restores via pgBackRest, meaning acceptable RPO possible even with instance storage
 * Can up/down-size the CPU / RAM requests
 * Can time-limit the instance lifetime via *--expiration-date "2024-10-22 00:00+03"*, after which it auto-terminates
   given the daemon is running
 * Fire-and-forget / self-terminating mode for the VM to expire itself automatically on expiration date
-* Tunable EBS volume performance via paid IOPS / throughput
+* Optional on-the-VM detailed hardware monitoring support via node_exporter + Grafana
 
 ## Non-features
 
-* No automated major version upgrades (stop the engine, do some magic, update the manifest `postgres_version`)
+* No automated major version upgrades (stop the engine, do some magic, update the manifest `postgresql.version`)
 * No persistent state keeping by default - relying on a local SQLite DB file. User can solve that though by setting
   `--config-dir` to some persistent volume for example. Without that some superfluous work will be performed and
-  instance / state change history lost, in case of a daemon node loss.
-* No automatic volume growth (can do manually still)
+  instance state change and pricing history will be lost, in case of the engine node loss.
+* No automatic EBS volume growth (can do manually still)
 * DNS integration - all communication happening over IP for now
+* No full railguards regarding user input - undefined behaviour for example if user changes region or zone after 1st init
 
 ## Cleanup of all operator created objects
 
-After some work / testing one can clean up all operator created cloud resources or only a single instance via
-PGSO_TEARDOWN_REGION or PGSO_TEARDOWN.
+After some work / testing one can clean up all operator created cloud resources via *PGSO_TEARDOWN_REGION* or only a
+single instance via the *PGSO_TEARDOWN* flag.
 
 ```
 docker run --rm --name pg1 -e PGSO_TEARDOWN_REGION=y -e PGSO_REGION=eu-north-1 \
@@ -98,13 +107,13 @@ docker run --rm --name pg1 -e PGSO_TEARDOWN_REGION=y -e PGSO_REGION=eu-north-1 \
   pgspotops/pg-spot-operator:latest
 ```
 
-or by running a helper script from the "scripts" folders (by default just lists the resources):
+or by running a helper script from the "scripts" folders (by default just lists the resources, need to add a parameter):
 
 ```
 ./scripts/aws/delete_all_operator_tagged_objects.sh yes
 ```
 
-A third option for local Docker convenience, to avoid a restart with different env inputs, is to create a dummy "destroy
+A third option for local Docker convenience, to avoid a restart with different env. inputs, is to create a dummy "destroy
 file" in the container that signals instance shutdown:
 
 ```commandline
@@ -119,8 +128,8 @@ docker exec -it pg1 touch /tmp/destroy-pg1
 
 # Local non-cloud development
 
-For Postgres setup testing, plus manifest handling etc, one can get by with local Virtualbox / Vagrant VMs, by using
-according flags
+For Postgres setup testing, manifest handling etc, one can get by with local Virtualbox / Vagrant VMs, by using
+according flags:
 
 ```bash
 git clone git@github.com:pg-spot-ops/pg-spot-operator.git
@@ -149,12 +158,11 @@ is tunable though.
 
 ```commandline
 public_ip_address: true
-pg:
+postgresql:
   admin_is_superuser: true
   admin_user: ''  # Meaning only local access possible
   admin_user_password: ''
-access:
-  pg_hba:  # Defaults allow non-postgres world access
+  pg_hba_lines:  # Defaults allow non-postgres world access
     - "host all postgres 0.0.0.0/0 reject"
     - "hostssl all all 0.0.0.0/0 scram-sha-256"
 aws:
@@ -177,6 +185,8 @@ are enough. But for public access, one needs to open up the listed ports, at lea
 
 PS Ports are not changeable in the Community Edition! And changing ports to non-defaults doesn't provide any real security
 anyways ...
+
+PS Note that for Ansible SSH access to work the default SSH key on the engine node is expected to be passwordless!
 
 ## Opening up a port via the AWS CLI
 
@@ -237,8 +247,8 @@ docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
 
 If using local storage instances (*--storage-type=local*, default storage type is *network*), you don't get data persistence
 by default - which is good only of course for throwaway testing / analytics etc. To support persistence there is built-in
-support for pgBackRest with S3 storage. Backups could of course configured for network storage also, for usual extra
-safety and (manual) PITR options.
+support for *pgBackRest* with S3 storage. Backups could of course configured for network storage also, for the usual extra
+safety and (manual) PITR reasons.
 
 Note though that enabling backup still means a small data loss in case of VM eviction, assuming data is constantly written.
 The default average data loss window is around 1min (backup.wal_archiving_max_interval=2min) and for larger databases
@@ -322,7 +332,7 @@ Relevant CLI flags:
 
 # Enterprise Edition
 
-Although the Community Edition works and is free to use also for businesses, it's taking the simplest approach to Spot
+Although the Community Edition works and is free to use also for businesses, it's taking the simplest approach to persistent Spot
 instances really, so that some aspects of the solution are "best-efforty" and one could do much more to ensure better
 uptimes.
 
@@ -333,11 +343,12 @@ is released.
 Most import features of the Enterprise Edition:
 
   * HA / multi-node setups
-  * GCP and Azure support
-  * Advanced eviction rate heuristics
+  * GCP and Azure Spot instances support
+  * Advanced eviction rate heuristics for better uptimes
   * Volume auto-growth
   * Temporary fallbacks to regular non-spot VMs once uptime budget burned
   * Major version upgrades
   * Stop / sleep schedules for even more savings
   * Better integration with typical DevOps flows
+  * More security, e.g. certificate access
   * A CLI for ad-hoc DBA operations
