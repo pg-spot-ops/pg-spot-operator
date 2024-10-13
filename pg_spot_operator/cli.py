@@ -85,9 +85,7 @@ class ArgumentParser(Tap):
     zone: str = os.getenv("PGSO_ZONE", "")
     cpu_min: int = int(os.getenv("PGSO_CPU_MIN", "0"))
     cpu_max: int = int(os.getenv("PGSO_CPU_MAX", "0"))
-    selection_strategy: str = str(
-        os.getenv("PGSO_SELECTION_STRATEGY", "cheapest")
-    )
+    selection_strategy: str = os.getenv("PGSO_SELECTION_STRATEGY", "cheapest")
     ram_min: int = int(os.getenv("PGSO_RAM_MIN", "0"))
     storage_min: int = int(os.getenv("PGSO_STORAGE_MIN", "0"))
     storage_type: str = os.getenv("PGSO_STORAGE_TYPE", "network")
@@ -426,7 +424,8 @@ def resolve_manifest_and_display_price(
         raise Exception("Valid InstanceManifest expected")
 
     logger.info(
-        "Resolving HW requirements to actual instance types / prices ..."
+        "Resolving HW requirements to actual instance types / prices using instance selection strategy: %s ...",
+        m.vm.instance_selection_strategy,
     )
 
     # Set AWS creds
@@ -442,9 +441,7 @@ def resolve_manifest_and_display_price(
         )
         exit(1)
     sku = cheapest_skus[0]
-    logger.info(
-        "Cheapest instance type found: %s (%s)", sku.instance_type, sku.arch
-    )
+    logger.info("Instance type selected: %s (%s)", sku.instance_type, sku.arch)
     logger.info(
         "Main specs - vCPU: %s, RAM: %s %s, instance storage: %s",
         sku.cpu,
