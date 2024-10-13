@@ -2,7 +2,7 @@
 # Postgres Spot Operator [Community Edition]
 
 Maintains stateful Postgres on AWS Spot VMs. Think of it as RDS, but at a fraction of the cost! Typical [savings](https://aws.amazon.com/ec2/spot/pricing/)
-are around 5x compared to RDS (non-HA).
+are around 5x compared to RDS.
 
 Obviously for non-critical projects only, as utilizing Spot instances means one can be interrupted by AWS at any time,
 and it takes a few minutes to restore the state. But at the same time - the Spot eviction rates are insanely good for the price!
@@ -18,7 +18,10 @@ A typical Postgres setup from zero takes a few minutes.
 
 * The user:
   - Specifies a set of few key parameters like region, minimum CPUs / RAM and storage size and type (network EBS volumes
-    or local volatile storage) and maybe also the Postgres version (defaults to latest stable)
+    or local volatile storage) and maybe also the Postgres version (defaults to latest stable). User input can come in 3 forms:
+    - CLI / Env parameters a la *--instance-name*, *--region*, *--cpu-min*, *--storage-min*
+    - A YAML manifest as literal text via *--manifest* / *PGSO_MANIFEST*
+    - A YAML manifest file via *--manifest-path* / *PGSO_MANIFEST_PATH*
   - Specifies or mounts (Docker) the cloud credentials if no default AWS CLI (~/.aws/credentials) set up
   - Can optionally specify also a callback (executable file) to do something / integrate with the resulting connect
     string (just displayed by default) or just run in *--connstr-output-only* mode to be pipe-friendly
@@ -71,6 +74,8 @@ Python 3.10+ required. PIP support coming.
 * Installs Postgres from official PGDG repos, meaning you get instant minor version updates
 * Supports Postgres versions v14-v17 (defaults to v16 currently if not specified)
 * Two instance selection strategies - "cheapest" and "random"
+  - Note that *--selection-strategy=random* can produce better eviction rates as cheaper instance types are in more danger
+  of being overbooked. For the same reason burstable instances are not recommended at all for real work.
 * Allows also to explicitly specify a list of preferred instance types and cheapest used
 * Uses Debian 12 base images / AMI-s
 * Allows override of ALL *postgresql.conf* settings if user wishes so
@@ -352,3 +357,9 @@ Most import features of the Enterprise Edition:
   * Better integration with typical DevOps flows
   * More security, e.g. certificate access
   * A CLI for ad-hoc DBA operations
+
+## VC inquiries
+
+As crazy as it might sound, the math and initial interviewing show that such a solution (in a more polished form)
+would be commercially very well viable, and we're going to give it a try. To speed up the development though, we'd also
+be interested in VC dollars - thus feel free to reach out to info@pgspotops.com if you happen to possess some.
