@@ -2,17 +2,18 @@
 # Postgres Spot Operator [Community Edition]
 
 Maintains stateful Postgres on AWS Spot VMs. Think of it as RDS, but at a fraction of the cost! Typical [savings](https://aws.amazon.com/ec2/spot/pricing/)
-are around 5x compared to RDS.
+are around 5x compared to [RDS](https://aws.amazon.com/rds/postgresql/pricing/).
 
 Obviously for non-critical projects only, as utilizing Spot instances means one can be interrupted by AWS at any time,
 and it takes a few minutes to restore the state. But at the same time - the Spot eviction rates are insanely good for the price!
 The average frequency of interruption across all Regions and instance types is ~5% per month according to AWS [data](https://aws.amazon.com/ec2/spot/instance-advisor/).
-Meaning one can expect to run a few months uninterrupted.
+Meaning one can expect to run a few months uninterrupted, i.e. still in the **99.9+% uptime range**!
 
 Not a "real" K8s operator (yet, at least) - but based on similar concepts - user describes a desired state and there's a
 reconciliation loop of sorts.
 
-A typical Postgres setup from zero takes a few minutes.
+A typical Postgres setup / restore takes a few minutes on network storage, and proportional to the DB size for instance
+storage + restore from S3 via pgBackRest.
 
 # General idea
 
