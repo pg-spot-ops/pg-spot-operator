@@ -12,6 +12,7 @@ import yaml
 
 from pg_spot_operator import cloud_api, cmdb, constants, manifests
 from pg_spot_operator.cloud_impl import aws_client
+from pg_spot_operator.cloud_impl.aws_client import set_access_keys
 from pg_spot_operator.cloud_impl.aws_s3 import (
     s3_clean_bucket_path_if_exists,
     s3_try_create_bucket_if_not_exists,
@@ -856,13 +857,13 @@ def do_main_loop(
 
             # Step 2 - detect if something needs to be done based on manifest
 
-            # Set AWS creds for non-manifest related API calls
+            # Set AWS creds
             m.decrypt_secrets_if_any()
-            if m.aws.access_key_id and m.aws.secret_access_key:
-                aws_client.AWS_ACCESS_KEY_ID = m.aws.access_key_id
-                aws_client.AWS_SECRET_ACCESS_KEY = m.aws.secret_access_key
-            if m.aws.profile_name:
-                aws_client.AWS_PROFILE = m.aws.profile_name
+            set_access_keys(
+                m.aws.access_key_id,
+                m.aws.secret_access_key,
+                m.aws.profile_name,
+            )
 
             logger.debug(
                 "Processing instance '%s' (%s) ...",
