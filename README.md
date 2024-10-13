@@ -44,7 +44,7 @@ python3 -m pg_spot_operator --verbose --instance-name pg1 --region eu-north-1 --
 docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
   -e PGSO_STORAGE_MIN=100 -e PGSO_STORAGE_TYPE=local -e PGSO_CPU_MIN=2 \
   -v ~/.aws:/root/.aws:ro -v ~/.ssh:/root/.ssh:ro \
-  pg-spot-ops/pg-spot-operator:latest
+  pgspotops/pg-spot-operator:latest
 ```
 
 or more securely only passing the needed AWS secrets / public keys:
