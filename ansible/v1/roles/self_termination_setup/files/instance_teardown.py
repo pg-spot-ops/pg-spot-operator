@@ -228,7 +228,7 @@ if __name__ == "__main__":
     dry_run = args.dry_run
 
     if not is_expiration_date_passed(args.expiration_date):
-        logger.info("Expiration date not yet arrived. Exit")
+        logger.debug("Expiration date not yet arrived. Exit")
         exit(0)
 
     if not access_key_id and not os.path.exists(
