@@ -264,7 +264,9 @@ def check_cli_args_valid(args: ArgumentParser):
         if not args.instance_name:
             logger.error("--instance-name input expected for single args")
             exit(1)
-        if not args.storage_min:
+        if not args.storage_min and not (
+            args.teardown or args.teardown_region
+        ):
             logger.error("--storage-min input expected for single args")
             exit(1)
         if args.region and len(args.region.split("-")) != 3:
