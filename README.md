@@ -15,6 +15,68 @@ reconciliation loop of sorts.
 A typical Postgres setup / restore takes a few minutes on network storage, and proportional to the DB size for instance
 storage + restore from S3 via pgBackRest.
 
+# The why / Quickstart
+
+Let's say we're a Data Scientist (sexiest job of 21st century, remember?) and need to perform some advances ad-hoc
+exploration / analytics on a medium-size dataset of a few hundred GB.
+
+Although we have a new and shiny MacBook Pro, it still has only 16GB of RAM and our data exploration quest might not
+exactly be a lot of fun...what about tapping into the power of cloud instead? Let's check how much a day of fast SSD-backed
+analytics would cost us / the company, given we want at least 128GB of RAM for feedback to remain interactive:
+
+```
+docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 \
+  -e PGSO_RAM_MIN=128 -e PGSO_STORAGE_MIN=500 -e PGSO_STORAGE_TYPE=local -e PGSO_CHECK_PRICE=y \
+  -v ~/.aws:/root/.aws:ro -v ~/.ssh:/root/.ssh:ro \
+  pgspotops/pg-spot-operator:latest
+
+2024-10-14 14:32:57,530 INFO Resolving HW requirements to actual instance types / prices ...
+2024-10-14 14:33:01,408 INFO Cheapest instance type found: r6gd.4xlarge (arm)
+2024-10-14 14:33:01,409 INFO Main specs - vCPU: 16, RAM: 128 GB, instance storage: 950
+2024-10-14 14:33:01,730 INFO Current Spot discount rate in AZ eu-north-1b: -70.7% (spot $205.2 vs on-demand $700.4)
+```
+
+Incredible, an 8h work day will cost us less than a cup of coffee, specifically $2.3! Let's go for it:
+```
+docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 \
+  -e PGSO_RAM_MIN=128 -e PGSO_STORAGE_MIN=500 -e PGSO_STORAGE_TYPE=local -e PGSO_CONNSTR_OUTPUT_ONLY=y \
+  -e PGSO_ADMIN_USER=pgspotops -e PGSO_ADMIN_USER_PASSWORD=topsecret123 \
+  -v ~/.aws:/root/.aws:ro -v ~/.ssh:/root/.ssh:ro pgspotops/pg-spot-operator:latest
+...
+postgresql://pgspotops:topsecret123@13.60.208.195:5432/postgres?sslmode=require
+```
+
+Nice, we have our instance, let's load up the dataset and get to work...
+PS Note that the instance is tuned according to the hardware already!
+
+```
+$ psql "postgresql://pgspotops:topsecret123@13.60.208.195:5432/postgres?sslmode=require"
+
+postgres=# show shared_buffers ;
+ shared_buffers
+----------------
+ 26214MB
+(1 row)
+
+postgres=# \i my_dataset.sql
+
+postgres=# SELECT ...
+```
+
+Wow, that went smooth, other people's computers can be really useful sometimes...OK time to call it a day and shut down
+the instance ...
+
+```
+docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 -e PGSO_REGION=eu-north-1 -e PGSO_TEARDOWN=y \
+  -v ~/.aws:/root/.aws:ro -v ~/.ssh:/root/.ssh:ro \
+  pgspotops/pg-spot-operator:latest
+
+...
+2024-10-14 14:57:03,201 INFO Destroying cloud resources if any for instance analytics ...
+...
+2024-10-14 14:59:09,293 INFO OK - cloud resources for instance analytics cleaned-up
+```
+
 # General idea
 
 * The user:
@@ -114,7 +176,7 @@ running in special *--connstr-output-only* mode.
 Engine ensures VM, sets up Postgres if needed in quiet mode, prints connstr and exits. Example usage:
 
 ```
-docker run --rm -e PGSO_CONNSTR_OUTPUT_ONLY=y -e PGSO_REGION=eu-north-1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_STORAGE_MIN=100 \
+docker run --rm -e PGSO_CONNSTR_OUTPUT_ONLY=y -e PGSO_REGION=eu-north-1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_STORAGE_MIN=100 pg-spt \
   | run_some_testing \ 
   && docker run --rm -e PGSO_TEARDOWN=y -e PGSO_REGION=eu-north-1 -e PGSO_INSTANCE_NAME=pg1
 ```
