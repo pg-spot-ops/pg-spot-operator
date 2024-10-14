@@ -36,7 +36,11 @@ docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 \
 2024-10-14 14:33:01,730 INFO Current Spot discount rate in AZ eu-north-1b: -70.7% (spot $205.2 vs on-demand $700.4)
 ```
 
-Incredible, an 8h work day will cost us less than a cup of coffee, specifically $2.3! Let's go for it:
+Incredible, a 8h work day will cost us less than a cup of coffee, specifically $2.3 - let's go for it!
+
+PS Note that the displayed 3.4x discount is calculated from the normal on-demand EC2 instance cost, RDS adds a ~50%
+premium on top of that + EBS storage costs.
+
 ```
 docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 \
   -e PGSO_RAM_MIN=128 -e PGSO_STORAGE_MIN=500 -e PGSO_STORAGE_TYPE=local -e PGSO_CONNSTR_OUTPUT_ONLY=y \
