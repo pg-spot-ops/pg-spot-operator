@@ -1,8 +1,5 @@
 ---
 
-- name: Merge Variables
-  ansible.builtin.import_playbook: _preprocess.yml
-
 - hosts: all
   become: yes
   become_method: sudo
