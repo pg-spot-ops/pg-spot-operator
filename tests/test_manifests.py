@@ -18,7 +18,7 @@ postgresql:
   tuning_profile: oltp  # builtins: oltp | warehouse | web | mixed  
   admin_user: dev
   admin_password: dev
-  admin_is_real_superuser: true  # Assign all safe built-in roles + make DB owner
+  admin_is_superuser: true  # Assign all safe built-in roles + make DB owner
   config_lines:  # Possibly overrides any tuned values
     - "pg_stat_statements.max = 1000"
     - "pg_stat_statements.track_utility = off"
