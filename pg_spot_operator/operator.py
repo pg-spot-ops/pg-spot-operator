@@ -915,6 +915,7 @@ def do_main_loop(
                 not m.expiration_date
                 and prev_success_manifest
                 and not prev_success_manifest.expiration_date
+                and not m.vm.host
             ):
                 # Check for user signalled expiry via manual tag setting on the VM
                 tag_signalled_expiration_date = (
@@ -927,9 +928,10 @@ def do_main_loop(
                         tag_signalled_expiration_date,
                     )
                     m.expiration_date = tag_signalled_expiration_date
-                    cmdb.add_instance_to_ignore_list(
-                        m.instance_name
-                    )  # To make sure externally signalled instance doesn't get resurrected on this engine node
+                    if not cli_dry_run:
+                        cmdb.add_instance_to_ignore_list(
+                            m.instance_name
+                        )  # To make sure externally signalled instance doesn't get resurrected on this engine node")
 
             if not instance and m.is_expired():
                 if first_loop and not current_manifest_applied_successfully:
