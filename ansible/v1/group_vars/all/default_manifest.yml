@@ -43,11 +43,11 @@ default_manifest:
               # in case expiration_date set
     app: backend
   postgresql:
-    version: 16  # Optional. Minimum supported version is v14. Defaults to latest stable
+    version: 16             # Optional. Minimum supported version is v14. Defaults to latest stable
     admin_is_superuser: true
     admin_user: admin
-    app_db_name: app  # App / user DB to be created if set
-    admin_user_password: kah8aiThuXegh1neingee5go  # Needs to be provided if admin_user set
+    app_db_name: app        # App / user DB to be created if set
+    admin_user_password:    # Needs to be provided if admin_user set
     initdb_opts:  # Defaults
       - --data-checksums
       - --locale-provider=icu
@@ -55,17 +55,17 @@ default_manifest:
       - --locale=en_US.utf8
     tuning_profile: default  # none | default | oltp | analytics | web. Set to 'none' for Postgres defaults.
     config_lines:  # Literal postgresql.conf lines for custom overrides / tuning. Takes precedence over tuning_profile outputs.
-      - "cluster_name = {{ postgres_cluster_name }}"
-      - "statement_timeout = '5min'"
-      - "shared_preload_libraries = 'pg_stat_statements,pg_cron,auth_delay'"
-      - "auth_delay.milliseconds = '5000'"
-      - "archive_mode = on"
-      - "archive_command = '/bin/true'"
-      - "listen_addresses = '*'"
-      - "logging_collector = on"
-      - "log_filename = 'postgresql-%a.log'"
-      - "log_truncate_on_rotation = on"
-      - "log_connections = on"
+      cluster_name: "{{ postgres_cluster_name }}"
+      statement_timeout: '5min'
+      shared_preload_libraries: 'pg_stat_statements,pg_cron,auth_delay'
+      auth_delay.milliseconds: '5000'
+      archive_mode: 'on'
+      archive_command: '/bin/true'
+      listen_addresses: '*'
+      logging_collector: 'on'
+      log_filename: 'postgresql-%a.log'
+      log_truncate_on_rotation: 'on'
+      log_connections: 'on'
     pg_hba_lines:  # Defaults allow non-postgres world access
       - "host all postgres 0.0.0.0/0 reject"
       - "hostssl all all 0.0.0.0/0 scram-sha-256"
@@ -108,3 +108,8 @@ default_manifest:
   #  key_pair_name:
   #  self_terminate_access_key_id:
   #  self_terminate_secret_access_key:
+  monitoring:
+    prometheus_node_exporter:
+      enabled: true
+    grafana:
+      enabled: true

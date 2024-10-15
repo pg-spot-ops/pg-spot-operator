@@ -303,7 +303,7 @@ def populate_temp_workdir_for_action_exec(
     with open(
         os.path.join(temp_workdir, "group_vars/all", "instance_manifest.yml"), "w"
     ) as f:
-        f.write(yaml.dump({'instance_manifest': manifest.original_manifest}))
+        f.write(yaml.dump({'instance_manifest': yaml.safe_load(manifest.original_manifest)}))
 
     if manifest.session_vars:
         with open(
@@ -312,7 +312,6 @@ def populate_temp_workdir_for_action_exec(
             f.write(yaml.dump({'engine_overrides': manifest.session_vars}))
 
     return temp_workdir
-
 
 def collect_output_params_from_handler_temp_dir(
     exec_temp_dir: str, action: str
