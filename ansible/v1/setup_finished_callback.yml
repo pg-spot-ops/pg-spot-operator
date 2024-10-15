@@ -1,8 +1,5 @@
 ---
 
-- name: Merge Variables
-  ansible.builtin.import_playbook: _preprocess.yml
-
 - hosts: all
   become: no
   any_errors_fatal: true

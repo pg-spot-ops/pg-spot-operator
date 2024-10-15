@@ -57,7 +57,7 @@ class SectionPostgresql(BaseModel):
     admin_user_password: str | None = None
     admin_is_superuser: bool = False
     app_db_name: str | None = None
-    config_lines: list[str] = field(default_factory=list)
+    config_lines: dict = field(default_factory=dict)
     extensions: list[str] = field(default_factory=list)
     pg_hba_lines: list[str] = field(default_factory=list)
     initdb_opts: list[str] = field(default_factory=list)
@@ -383,19 +383,19 @@ def load_manifest_from_string(manifest_yaml_str: Any) -> InstanceManifest:
     return InstanceManifest(**m)
 
 
-def try_load_manifest_from_string(
-    manifest_yaml_str: Any,
-) -> InstanceManifest | None:
-    try:
-        m = yaml.safe_load(manifest_yaml_str)
-        mf = InstanceManifest(**m)
-        mf.original_manifest = manifest_yaml_str
-        return mf
-    except ValidationError as e:
-        logger.error(
-            "Failed to load user manifest from string: %s", manifest_yaml_str
-        )
-        logger.error(str(e))
-    except Exception:
-        return None
-    return None
+#def try_load_manifest_from_string(
+#    manifest_yaml_str: Any,
+#) -> InstanceManifest | None:
+#    try:
+#        m = yaml.safe_load(manifest_yaml_str)
+#        mf = InstanceManifest(**m)
+#        mf.original_manifest = manifest_yaml_str
+#        return mf
+#    except ValidationError as e:
+#        logger.error(
+#            "Failed to load user manifest from string: %s", manifest_yaml_str
+#        )
+#        logger.error(str(e))
+#    except Exception:
+#        return None
+#    return None

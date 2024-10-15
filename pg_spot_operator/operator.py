@@ -511,7 +511,7 @@ def apply_postgres_config_tuning_to_manifest(
         merged_config_lines = (
             merge_user_and_tuned_non_conflicting_config_params(
                 tuned_config_lines,
-                m.postgresql.config_lines.copy(),
+                m.postgresql.config_lines,
             )
         )
         if merged_config_lines:
