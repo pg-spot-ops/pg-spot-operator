@@ -930,7 +930,6 @@ def do_main_loop(
                     cmdb.add_instance_to_ignore_list(
                         m.instance_name
                     )  # To make sure externally signalled instance doesn't get resurrected on this engine node
-                    shut_down_after_destroy = True
 
             if not instance and m.is_expired():
                 if first_loop and not current_manifest_applied_successfully:
