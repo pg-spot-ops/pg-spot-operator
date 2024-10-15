@@ -50,3 +50,15 @@
     login_host: /var/run/postgresql
     login_port: "5432"
   when: postgresql.app_db_name | d('') | length > 0
+
+- name: Add user listed extensions to the default or app db
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_ext:
+    db: "{{ postgresql.app_db_name | d('') or 'postgres' }}"
+    name: "{{ item }}"
+    login_host: /var/run/postgresql
+    login_port: "5432"
+    cascade: true
+  loop: "{{ postgresql.extensions }}"
+  when: postgresql.extensions | d([])

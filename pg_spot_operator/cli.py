@@ -109,6 +109,7 @@ class ArgumentParser(Tap):
     shared_preload_libraries: str = os.getenv(
         "PGSO_SHARED_PRELOAD_LIBRARIES", "pg_stat_statements"
     )  # Comma separated
+    extensions: str = os.getenv("PGSO_EXTENSIONS", "pg_stat_statements")
     aws_access_key_id: str = os.getenv("PGSO_AWS_ACCESS_KEY_ID", "")
     aws_secret_access_key: str = os.getenv("PGSO_AWS_SECRET_ACCESS_KEY", "")
     aws_security_group_ids: str = os.getenv(
@@ -227,6 +228,8 @@ def compile_manifest_from_cmdline_params(
         m.postgresql.config_lines.append(
             f"shared_preload_libraries = '{args.shared_preload_libraries.rstrip("'").lstrip("'")}'"
         )
+    if args.extensions:
+        m.postgresql.extensions = args.extensions.strip().split(",")
     if args.os_extra_packages:
         m.os.extra_packages = args.os_extra_packages.strip().split(",")
 
