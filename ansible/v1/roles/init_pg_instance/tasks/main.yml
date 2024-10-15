@@ -48,8 +48,8 @@
 - name: Set up postgresql.conf user settings
   ansible.builtin.lineinfile:
     path: "/etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf"
-    line: "{{ item }}"
-  loop: "{{ postgres.config_lines | d([]) }}"
+    line: "{{ item.key }} = {{ item.value }}"
+  loop: "{{ postgresql.config_lines | d({}) | dict2items }}"
   notify:
     - "init_pg_instance : Reload postgres"
 
