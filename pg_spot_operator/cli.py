@@ -103,6 +103,12 @@ class ArgumentParser(Tap):
     admin_user: str = os.getenv("PGSO_ADMIN_USER", "")
     admin_user_password: str = os.getenv("PGSO_ADMIN_USER_PASSWORD", "")
     admin_is_superuser: str = os.getenv("PGSO_ADMIN_IS_SUPERUSER", "false")
+    os_extra_packages: str = os.getenv(
+        "PGSO_OS_EXTRA_PACKAGES", ""
+    )  # Comma separated, e.g. postgresql-16-postgis-3
+    shared_preload_libraries: str = os.getenv(
+        "PGSO_SHARED_PRELOAD_LIBRARIES", "pg_stat_statements"
+    )  # Comma separated
     aws_access_key_id: str = os.getenv("PGSO_AWS_ACCESS_KEY_ID", "")
     aws_secret_access_key: str = os.getenv("PGSO_AWS_SECRET_ACCESS_KEY", "")
     aws_security_group_ids: str = os.getenv(
@@ -217,6 +223,12 @@ def compile_manifest_from_cmdline_params(
     m.postgresql.admin_user_password = args.admin_user_password
     m.postgresql.admin_is_superuser = str_to_bool(args.admin_is_superuser)
     m.postgresql.tuning_profile = args.tuning_profile
+    if args.shared_preload_libraries:
+        m.postgresql.config_lines.append(
+            f"shared_preload_libraries = '{args.shared_preload_libraries.rstrip("'").lstrip("'")}'"
+        )
+    if args.os_extra_packages:
+        m.os.extra_packages = args.os_extra_packages.strip().split(",")
 
     if args.backup_s3_bucket:
         m.backup.type = "pgbackrest"
