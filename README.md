@@ -12,17 +12,17 @@ Meaning one can expect to run a few months uninterrupted, i.e. still in the **99
 Not a "real" K8s operator (yet, at least) - but based on similar concepts - user describes a desired state and there's a
 reconciliation loop of sorts.
 
-A typical Postgres setup / restore takes a few minutes on network storage, and proportional to the DB size for instance
+A typical Postgres setup/restore takes a few minutes on network storage, and proportional to the DB size for instance
 storage + restore from S3 via pgBackRest.
 
-# The why / Quickstart
+# Quickstart
 
-Let's say we're a Data Scientist (sexiest job of 21st century, remember?) and need to perform some advances ad-hoc
-exploration / analytics on a medium-size dataset of a few hundred GB.
+Let's say we're Data Scientists (sexiest job of 21st century, remember?) and need to perform some advanced ad-hoc
+exploration/analytics on a medium-size dataset of a few hundred GB.
 
 Although we have a new and shiny MacBook Pro, it still has only 16GB of RAM and our data exploration quest might not
 exactly be a lot of fun...what about tapping into the power of cloud instead? Let's check how much a day of fast SSD-backed
-analytics would cost us / the company, given we want at least 128GB of RAM for feedback to remain interactive:
+analytics would cost our company, given we want at least 128GB of RAM for feedback to remain interactive:
 
 ```
 docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 \
@@ -36,7 +36,7 @@ docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 \
 2024-10-14 14:33:01,730 INFO Current Spot discount rate in AZ eu-north-1b: -70.7% (spot $205.2 vs on-demand $700.4)
 ```
 
-Incredible, a 8h work day will cost us less than a cup of coffee, specifically $2.3 - let's go for it!
+Incredible, an 8h work day will cost us less than a cup of coffee, specifically $2.3 - let's go for it!
 
 PS Note that the displayed 3.4x discount is calculated from the normal on-demand EC2 instance cost, RDS adds a ~50%
 premium on top of that + EBS storage costs.
@@ -84,16 +84,16 @@ docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 -e PGS
 # General idea
 
 * The user:
-  - Specifies a set of few key parameters like region, minimum CPUs / RAM and storage size and type (network EBS volumes
+  - Specifies a set of few key parameters like region, minimum CPUs/RAM and storage size and type (network EBS volumes
     or local volatile storage) and maybe also the Postgres version (defaults to latest stable). User input can come in 3 forms:
-    - CLI / Env parameters a la *--instance-name*, *--region*, *--cpu-min*, *--storage-min*. Note that in CLI mode not all
+    - CLI/Env parameters a la `*--instance-name*`, `*--region*`, `*--cpu-min*`, `*--storage-min*`. Note that in CLI mode not all
       features can be configured and some common choices are made for the user
-    - A YAML manifest as literal text via *--manifest* / *PGSO_MANIFEST*
-    - A YAML manifest file via *--manifest-path* / *PGSO_MANIFEST_PATH*. To get an idea of all possible options / features
+    - A YAML manifest as literal text via `*--manifest*/*PGSO_MANIFEST*`
+    - A YAML manifest file via `*--manifest-path*/*PGSO_MANIFEST_PATH*`. To get an idea of all possible options/features
       one could take a look at an example manifest [here](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/example_manifests/hello_aws.yaml)
-  - Specifies or mounts (Docker) the cloud credentials if no default AWS CLI (~/.aws/credentials) set up
-  - Can optionally specify also a callback (executable file) to do something / integrate with the resulting connect
-    string (just displayed by default) or just run in *--connstr-output-only* mode to be pipe-friendly
+  - Specifies or mounts (Docker) the cloud credentials if no default AWS CLI (`~/.aws/credentials`) set up
+  - Can optionally specify also a callback (executable file) to do something/integrate with the resulting connect
+    string (just displayed by default) or just run in `*--connstr-output-only*` mode to be pipe-friendly
 * The operator:
   - Finds the cheapest (the default strategy) Spot instance for given HW requirements and launches a VM
   - Runs Ansible to set up Postgres
@@ -111,7 +111,7 @@ docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
   pgspotops/pg-spot-operator:latest
 ```
 
-or more securely only passing the needed AWS secrets / public keys:
+or more securely only passing the needed AWS secrets/public keys:
 
 ```bash
 docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
@@ -143,20 +143,20 @@ Python 3.10+ required. PIP support coming.
 * Installs Postgres from official PGDG repos, meaning you get instant minor version updates
 * Supports Postgres versions v14-v17 (defaults to v16 currently if not specified)
 * Two instance selection strategies - "cheapest" and "random"
-  - Note that *--selection-strategy=random* can produce better eviction rates as cheaper instance types are in more danger
+  - Note that `*--selection-strategy=random*` can produce better eviction rates as cheaper instance types are in more danger
   of being overbooked. For the same reason burstable instances are not recommended at all for real work.
 * Allows also to explicitly specify a list of preferred instance types and cheapest used
 * Uses Debian 12 base images / AMI-s
-* Allows override of ALL *postgresql.conf* settings if user wishes so
+* Allows override of ALL `*postgresql.conf*` settings if user wishes so
 * Built-in basic Postgres tuning profiles for most common workloads (default, oltp, analytics, web)
 * Maintains a single instance per daemon to keep things simple
-* Supports a single EBS volume or all local / volatile instance disks in a volume group
-* Tunable EBS volume performance via paid IOPS / throughput
-* Supports block level S3 backups / restores via pgBackRest, meaning acceptable RPO possible even with instance storage
-* Can up/down-size the CPU / RAM requests
-* Can time-limit the instance lifetime via *--expiration-date "2024-10-22 00:00+03"*, after which it auto-terminates
+* Supports a single EBS volume or all local/volatile instance disks in a volume group
+* Tunable EBS volume performance via paid IOPS/throughput
+* Supports block level S3 backups/restores via pgBackRest, meaning acceptable RPO possible even with instance storage
+* Can up/down-size the CPU/RAM requests
+* Can time-limit the instance lifetime via `*--expiration-date "2024-10-22 00:00+03"*`, after which it auto-terminates
   given the daemon is running
-* Fire-and-forget / self-terminating mode for the VM to expire itself automatically on expiration date
+* Fire-and-forget/self-terminating mode for the VM to expire itself automatically on expiration date
 * Optional on-the-VM detailed hardware monitoring support via node_exporter + Grafana
 
 ## Non-features
@@ -173,7 +173,7 @@ Python 3.10+ required. PIP support coming.
 
 Although the Community Edition is optimized for more light use, one can use it also to power real applications (given
 they cope with the possible service interruptions of course) by either providing a "setup finished" callback hook or just
-running in special *--connstr-output-only* mode.
+running in special `*--connstr-output-only*` mode.
 
 ## Pipe-friendly *--connstr-output-only* mode
 
@@ -190,8 +190,8 @@ docker run --rm -e PGSO_CONNSTR_OUTPUT_ONLY=y -e PGSO_REGION=eu-north-1 -e PGSO_
 Currently the callback be a self-contained executable which gets following 4 input parameters for propagations into "somewhere":
 
 - Instance name
-- Private full connect string a la 'postgresql://postgres@localhost:5432/postgres'
-- Public full connect string, when *public_ip_address: true* is set, else an empty string
+- Private full connect string a la `postgresql://postgres@localhost:5432/postgres`
+- Public full connect string, when `*public_ip_address: true*` is set, else an empty string
 - User provided tags as JSON, if any
 
 Example usage:
@@ -208,8 +208,8 @@ docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
 
 ## Cleanup of all operator created objects
 
-After some work / testing one can clean up all operator created cloud resources via *PGSO_TEARDOWN_REGION* or only a
-single instance via the *PGSO_TEARDOWN* flag.
+After some work/testing one can clean up all operator created cloud resources via `*PGSO_TEARDOWN_REGION*` or only a
+single instance via the `*PGSO_TEARDOWN*` flag.
 
 ```
 docker run --rm --name pg1 -e PGSO_TEARDOWN_REGION=y -e PGSO_REGION=eu-north-1 \
@@ -236,11 +236,11 @@ docker exec -it pg1 touch /tmp/destroy-pg1
 # On the next loop the resources will be cleaned up and the container shuts down
 ```
 
-PS The operator tags all created object with special *pg-spot-operator-\** tags, thus uses those also for the cleanup.
+PS The operator tags all created object with special `*pg-spot-operator-\**` tags, thus uses those also for the cleanup.
 
 # Local non-cloud development
 
-For Postgres setup testing, manifest handling etc, one can get by with local Virtualbox / Vagrant VMs, by using
+For Postgres setup testing, manifest handling etc, one can get by with local Virtualbox/Vagrant VMs, by using
 according flags:
 
 ```bash
@@ -252,8 +252,10 @@ pip install -r requirements-test.txt
 
 vagrant up && vagrant ssh -c 'hostname -I'  #  Or similar, add dev machine SSH keys ...
 
-# Dev / test stuff
+# Dev/test stuff
+
 python3 -m pg_spot_operator --verbose --instance-name pg1 --vm-host 192.168.121.182 --vm-login-user vagrant
+
 # If changing Python code
 
 make fmt && make lint && make test
@@ -281,9 +283,9 @@ aws:
   security_group_ids: []  # By default VPC "default" SG is used
 ```
 
-PS! Note that if no *admin_user* is set, there will be also no public connect string generated as remote "postgres" user
+PS! Note that if no `*admin_user*` is set, there will be also no public connect string generated as remote `postgres` user
 access is forbidden by default. One can enable remote "postgres" access (but can't be recommended of course) by setting
-the *admin_user* accordingly + specifying custom *pg_hba* rules.
+the `*admin_user*` accordingly + specifying custom `*pg_hba*` rules.
 
 ## Relevant ports / EC2 Security Group permissions
 
@@ -292,7 +294,7 @@ the *admin_user* accordingly + specifying custom *pg_hba* rules.
 * **3000** - Grafana. Relevant if *monitoring.grafana.externally_accessible* set
 * **9100** - VM Prometheus node_exporter. Relevant if *monitoring.prometheus_node_exporter.externally_accessible* set
 
-For non-public (*public_ip_address=false*) instances, which are also launched from within the SG, default SG inbound rules
+For non-public (`*public_ip_address=false*`) instances, which are also launched from within the SG, default SG inbound rules
 are enough. But for public access, one needs to open up the listed ports, at least for SSH and Postgres. 
 
 PS Ports are not changeable in the Community Edition! And changing ports to non-defaults doesn't provide any real security
@@ -302,7 +304,7 @@ PS Note that for Ansible SSH access to work the default SSH key on the engine no
 
 ## Opening up a port via the AWS CLI
 
-To open port 22 for the engine node / workstation IP only, for Ansible setup to work, one could run:
+To open port 22 for the engine node/workstation IP only, for Ansible setup to work, one could run:
 
 ```
 MYPUBIP=$(curl -s whatismyip.akamai.com)
@@ -320,13 +322,13 @@ Some AWS documentation on the topic:
 
 # Backups
 
-If using local storage instances (*--storage-type=local*, default storage type is *network*), you don't get data persistence
-by default - which is good only of course for throwaway testing / analytics etc. To support persistence there is built-in
-support for *pgBackRest* with S3 storage. Backups could of course configured for network storage also, for the usual extra
+If using local storage instances (`*--storage-type=local*`, default storage type is `*network*`), you don't get data persistence
+by default - which is good only of course for throwaway testing/analytics etc. To support persistence there is built-in
+support for `*pgBackRest*` with S3 storage. Backups could of course configured for network storage also, for the usual extra
 safety and (manual) PITR reasons.
 
 Note though that enabling backup still means a small data loss in case of VM eviction, assuming data is constantly written.
-The default average data loss window is around 1min (backup.wal_archiving_max_interval=2min) and for larger databases
+The default average data loss window is around 1min (`backup.wal_archiving_max_interval=2min`) and for larger databases
 (100GB+), restoring in case of an eviction will take 10min+ and the operational side will suffer, so network storage
 with some provisioned IOPS to compensate disk latencies might be a better idea.
 
@@ -341,18 +343,18 @@ Relevant CLI / Env flags:
 to re-use the engine credentials, as the keys will be actually placed on the Postgres VMs for pgBackRest to work.
 
 Also, technically non-S3 storage, or S3 outside of AWS, can be used - but in that case the user must provide full
-pgBackRest configuration lines (backup.pgbackrest.global_settings etc) as part of the manifest.
+pgBackRest configuration lines (`backup.pgbackrest.global_settings` etc) as part of the manifest.
 
 # Fire-and-forget mode
 
-In the self-terminating mode the VM will expire itself automatically after the *--expiration-date*, meaning the engine
-daemon doesn't have to be kept running in the background, which is great for automation / integration. 
+In the self-terminating mode the VM will expire itself automatically after the `*--expiration-date*`, meaning the engine
+daemon doesn't have to be kept running in the background, which is great for automation/integration. 
 
 It works by installing a Cronjob at the end of the Ansible setup (under "root"), which runs the `instance_teardown.py`
-script that checks if we've passed the *expiration_date*, and if so - cleans up any volumes, elastic IPs and finally
+script that checks if we've passed the `*expiration_date*`, and if so - cleans up any volumes, elastic IPs and finally
 terminates itself.
 
-Relevant CLI / Env flags:
+Relevant CLI/Env flags:
 
   * --self-terminate / PGSO_SELF_TERMINATE
   * --self-terminate-access-key-id / PGSO_SELF_TERMINATE_ACCESS_KEY_ID
@@ -381,7 +383,7 @@ for convenience by default, if `monitoring.grafana.admin_password` not set!
 
 PS2 Note that for public Grafana access to work, your Security Group of choice needs to have port 3000 open.
 
-Relevant manifest attributes / defaults:
+Relevant manifest attributes/defaults:
 
 ```
 monitoring:
@@ -430,6 +432,6 @@ Most import features of the Enterprise Edition:
 
 ## VC inquiries
 
-As crazy as it might sound, the math and initial interviewing show that such a solution (in a more polished form)
-would be commercially very well viable, and we're going to give it a try. To speed up the development though, we'd also
-be interested in VC dollars - thus feel free to reach out to info@pgspotops.com if you happen to possess some.
+As crazy as it might sound, the math and initial interviewings indicate that, such a solution (in a more polished form)
+would be commercially very much viable, and we're going to give it a try. To speed up the development though, we'd also
+be interested in VC dollars - thus feel free to reach out to `info@pgspotops.com` if you happen to possess some.
