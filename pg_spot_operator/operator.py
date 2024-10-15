@@ -43,6 +43,7 @@ from pg_spot_operator.constants import (
     BACKUP_TYPE_PGBACKREST,
     CLOUD_AWS,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
+    SPOT_OPERATOR_EXPIRES_TAG,
 )
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.util import (
@@ -766,6 +767,26 @@ def have_main_hw_reqs_changed(
     return False
 
 
+def check_for_explicit_tag_signalled_expiration_date(m) -> str:
+    """Checks for user set SPOT_OPERATOR_EXPIRES_TAG on the instance directly
+    to counter the "runaway daemon" problem (https://github.com/pg-spot-ops/pg-spot-operator/issues/33)
+    """
+    logger.debug(
+        "Checking if %s tag set on the currently backing instance ...",
+        SPOT_OPERATOR_EXPIRES_TAG,
+    )
+    backing_instances = get_backing_vms_for_instances_if_any(
+        m.region, m.instance_name
+    )
+    if not backing_instances:
+        return ""
+    for instance in backing_instances:
+        for tag in instance.get("Tags", []):
+            if tag.get("Key") == SPOT_OPERATOR_EXPIRES_TAG:
+                return tag["Value"]
+    return ""
+
+
 def do_main_loop(
     cli_dry_run: bool = False,
     cli_env_manifest: InstanceManifest | None = None,
@@ -889,6 +910,25 @@ def do_main_loop(
             if os.path.exists(cli_destroy_file_base_path + m.instance_name):
                 m.expiration_date = "now"
                 shut_down_after_destroy = True
+
+            if (
+                not m.expiration_date
+                and prev_success_manifest
+                and not prev_success_manifest.expiration_date
+            ):
+                # Check for user signalled expiry via manual tag setting on the VM
+                tag_signalled_expiration_date = (
+                    check_for_explicit_tag_signalled_expiration_date(m)
+                )
+                if tag_signalled_expiration_date:
+                    logger.warning(
+                        "Detected a user tag (%s) signalled expiry: %s",
+                        SPOT_OPERATOR_EXPIRES_TAG,
+                        tag_signalled_expiration_date,
+                    )
+                    m.expiration_date = tag_signalled_expiration_date
+                    shut_down_after_destroy = True
+
             if not instance and m.is_expired():
                 if first_loop and not current_manifest_applied_successfully:
                     destroyed = destroy_instance(m)
