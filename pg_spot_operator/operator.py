@@ -927,6 +927,9 @@ def do_main_loop(
                         tag_signalled_expiration_date,
                     )
                     m.expiration_date = tag_signalled_expiration_date
+                    cmdb.add_instance_to_ignore_list(
+                        m.instance_name
+                    )  # To make sure externally signalled instance doesn't get resurrected on this engine node
                     shut_down_after_destroy = True
 
             if not instance and m.is_expired():
@@ -977,8 +980,10 @@ def do_main_loop(
                             "HW reqs change detected but no backing VM found"
                         )
 
-            if m.is_expired():
-                logger.debug("Instance expired, skipping")
+            if m.is_expired() or cmdb.is_instance_ignore_listed(
+                m.instance_name
+            ):
+                logger.debug("Instance expired or ignore-listed, skipping")
                 raise NoOp()
 
             if m.backup.type == BACKUP_TYPE_PGBACKREST and not cli_dry_run:

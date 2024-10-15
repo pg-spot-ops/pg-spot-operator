@@ -92,3 +92,12 @@ CREATE TABLE manifest_snapshot (
 DDL_MIGRATIONS.append(
     """CREATE INDEX manifest_snapshot_instance_uuid ON manifest_snapshot (instance_uuid);"""
 )
+
+DDL_MIGRATIONS.append(
+    """
+CREATE TABLE ignored_instance (
+  instance_name text NOT NULL,
+  created_on datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+"""
+)
