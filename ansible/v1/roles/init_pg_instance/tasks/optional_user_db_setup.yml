@@ -37,6 +37,34 @@
       login_port: "5432"
     when: not postgresql.admin_is_superuser|d(False)
 
+  - name: Add DB privs to non-superuser
+    become: yes
+    become_user: postgres
+    community.postgresql.postgresql_privs:
+      database: postgres
+      type: database
+      role: "{{ postgresql.admin_user }}"
+      privs: ALL
+      login_host: /var/run/postgresql
+      login_port: "5432"
+    when: not postgresql.admin_is_superuser|d(False) and item
+    loop:
+      - postgres
+      - "{{ postgresql.app_db_name | d('') }}"
+
+  - name: Add PUBLIC schema privs to non-superuser
+    become: yes
+    become_user: postgres
+    community.postgresql.postgresql_query:
+      db: "{{ item }}"
+      login_host: /var/run/postgresql
+      login_port: "5432"
+      query: "GRANT ALL ON SCHEMA PUBLIC TO {{ postgresql.admin_user }}"
+    when: item
+    loop:
+      - 'postgres'
+      - "{{ postgresql.app_db_name | d('') }}"
+
   when: postgresql.admin_user | d('')
 
 - name: Create the "app" DB if requested
