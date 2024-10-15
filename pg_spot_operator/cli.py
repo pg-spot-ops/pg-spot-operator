@@ -100,6 +100,7 @@ class ArgumentParser(Tap):
     ssh_keys: str = os.getenv("PGSO_SSH_KEYS", "")  # Comma separated
     tuning_profile: str = os.getenv("PGSO_TUNING_PROFILE", "default")
     user_tags: str = os.getenv("PGSO_USER_TAGS", "")  # key=val,key2=val2
+    app_db_name: str = os.getenv("PGSO_APP_DB_NAME", "")
     admin_user: str = os.getenv("PGSO_ADMIN_USER", "")
     admin_user_password: str = os.getenv("PGSO_ADMIN_USER_PASSWORD", "")
     admin_is_superuser: str = os.getenv("PGSO_ADMIN_IS_SUPERUSER", "false")
@@ -216,6 +217,7 @@ def compile_manifest_from_cmdline_params(
     m.postgresql.admin_user = args.admin_user
     m.postgresql.admin_user_password = args.admin_user_password
     m.postgresql.admin_is_superuser = str_to_bool(args.admin_is_superuser)
+    m.postgresql.app_db_name = args.app_db_name
     m.postgresql.tuning_profile = args.tuning_profile
 
     if args.backup_s3_bucket:
