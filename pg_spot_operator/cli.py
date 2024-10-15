@@ -102,6 +102,7 @@ class ArgumentParser(Tap):
     user_tags: str = os.getenv("PGSO_USER_TAGS", "")  # key=val,key2=val2
     admin_user: str = os.getenv("PGSO_ADMIN_USER", "")
     admin_user_password: str = os.getenv("PGSO_ADMIN_USER_PASSWORD", "")
+    admin_is_superuser: str = os.getenv("PGSO_ADMIN_IS_SUPERUSER", "false")
     aws_access_key_id: str = os.getenv("PGSO_AWS_ACCESS_KEY_ID", "")
     aws_secret_access_key: str = os.getenv("PGSO_AWS_SECRET_ACCESS_KEY", "")
     aws_security_group_ids: str = os.getenv(
@@ -214,6 +215,7 @@ def compile_manifest_from_cmdline_params(
     m.postgresql.version = args.postgresql_version
     m.postgresql.admin_user = args.admin_user
     m.postgresql.admin_user_password = args.admin_user_password
+    m.postgresql.admin_is_superuser = str_to_bool(args.admin_is_superuser)
     m.postgresql.tuning_profile = args.tuning_profile
 
     if args.backup_s3_bucket:

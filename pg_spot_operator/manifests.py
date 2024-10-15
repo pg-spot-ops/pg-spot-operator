@@ -51,7 +51,7 @@ class SectionPostgresql(BaseModel):
     tuning_profile: str = "default"
     admin_user: str | None = None
     admin_user_password: str | None = None
-    admin_is_superuser: bool = True
+    admin_is_superuser: bool = False
     app_db_name: str | None = None
     config_lines: list[str] = field(default_factory=list)
     pg_hba_lines: list[str] = field(default_factory=list)
