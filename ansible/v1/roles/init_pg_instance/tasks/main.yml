@@ -1,12 +1,12 @@
 ---
 - name: Check cluster conf initialized
   ansible.builtin.stat:
-    path: "/etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf"
+    path: "{{ postgres_config_directory }}/postgresql.conf"
   register: cluster_conf_exists
 
 - name: Check cluster datadir initialized
   ansible.builtin.stat:
-    path: "/var/lib/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/global/pg_control"
+    path: "{{ postgres_data_directory }}/global/pg_control"
   register: cluster_datadir_exists
 
 - name: Create cluster - when nothing exists
@@ -30,9 +30,9 @@
 
   - name: Replace data_directory in config
     ansible.builtin.replace:
-      path: /etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf
+      path: "{{ postgres_config_directory }}/postgresql.conf"
       regexp: "^data_directory.*"
-      replace: "data_directory = '/var/lib/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}'"
+      replace: "data_directory = '{{ postgres_data_directory }}'"
 
   - name: Clean cluster temp dir path if exist
     ansible.builtin.file:
