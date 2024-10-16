@@ -366,19 +366,21 @@ def check_cli_args_valid(args: ArgumentParser):
             "Self-termination on expiration date requires --self-terminate-access-key-id and --self-terminate-secret-access-key",
         )
         exit(1)
-    if (
-        args.ssh_private_key
-        and not (
-            args.teardown
-            or args.teardown_region
-            or args.dry_run
-            or args.check_price
-            or args.check_manifest
-        )
-        and not os.path.exists(os.path.expanduser(args.ssh_private_key))
+    if args.ssh_private_key and not (
+        args.teardown
+        or args.teardown_region
+        or args.dry_run
+        or args.check_price
+        or args.check_manifest
     ):
-        logger.error("--ssh-private-key file not found")
-        exit(1)
+        if not os.path.exists(os.path.expanduser(args.ssh_private_key)):
+            logger.error("--ssh-private-key file not found")
+            exit(1)
+        if not os.path.exists(
+            os.path.expanduser(args.ssh_private_key + ".pub")
+        ):
+            logger.error("--ssh-private-key .pub file not found")
+            exit(1)
 
 
 def try_load_manifest(manifest_str: str) -> InstanceManifest | None:
