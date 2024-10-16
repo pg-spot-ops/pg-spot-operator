@@ -17,6 +17,7 @@ from sqlalchemy import (
     text,
     update,
 )
+from sqlalchemy.dialects.postgresql import Insert
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
@@ -153,6 +154,14 @@ class ManifestSnapshot(Base):
 
     def __repr__(self) -> str:
         return f"ManifestSnapshot(id={self.id}, instance_uuid={self.instance_uuid}, created_on={self.created_on})"
+
+
+class IgnoredInstance(Base):
+    __tablename__ = "ignored_instance"
+    instance_name: Mapped[str] = mapped_column(String, primary_key=True)
+    created_on: Mapped[datetime] = mapped_column(
+        DateTime, server_default=text("DEFAULT")
+    )
 
 
 def init_engine_and_check_connection(sqlite_connstr: str):
@@ -389,6 +398,28 @@ def mark_any_active_vms_as_deleted(
         )
         session.execute(stmt)
     return
+
+
+def add_instance_to_ignore_list(instance_name: str) -> None:
+    with Session(engine) as session:
+        insert_stmt = Insert(IgnoredInstance).values(
+            instance_name=instance_name
+        )
+        insert_stmt.on_conflict_do_nothing(index_elements=["instance_name"])
+        session.execute(insert_stmt)
+        session.commit()
+
+
+def is_instance_ignore_listed(instance_name: str) -> bool:
+    with Session(engine) as session:
+        stmt = select(IgnoredInstance).where(
+            IgnoredInstance.instance_name == instance_name
+        )
+        row = session.scalars(stmt).first()
+        if row:
+            return True
+        else:
+            return False
 
 
 def load_manifest_by_snapshot_id(
