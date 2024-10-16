@@ -153,6 +153,9 @@ class ArgumentParser(Tap):
     grafana_anonymous: bool = str_to_bool(
         os.getenv("PGSO_GRAFANA_ANONYMOUS", "true")
     )
+    ssh_private_key: str = os.getenv(
+        "PGSO_SSH_PRIVATE_KEY", ""
+    )  # To use a non-default (~/.ssh/id_rsa) SSH key
 
 
 args: ArgumentParser | None = None
@@ -254,6 +257,8 @@ def compile_manifest_from_cmdline_params(
         m.monitoring.grafana.externally_accessible = (
             args.grafana_externally_accessible
         )
+
+    m.ansible.private_key = args.ssh_private_key
 
     m.original_manifest = yaml.dump(m.model_dump(exclude_none=True))
 
@@ -360,6 +365,19 @@ def check_cli_args_valid(args: ArgumentParser):
         logger.error(
             "Self-termination on expiration date requires --self-terminate-access-key-id and --self-terminate-secret-access-key",
         )
+        exit(1)
+    if (
+        args.ssh_private_key
+        and not (
+            args.teardown
+            or args.teardown_region
+            or args.dry_run
+            or args.check_price
+            or args.check_manifest
+        )
+        and not os.path.exists(os.path.expanduser(args.ssh_private_key))
+    ):
+        logger.error("--ssh-private-key file not found")
         exit(1)
 
 

@@ -184,13 +184,13 @@ class NoAliasDumper(yaml.SafeDumper):
 
 
 def get_ansible_inventory_file_str_for_action(
-    action: str, uuid: str, instance_name: str
+    action: str, m: InstanceManifest
 ) -> str:
     groups: dict = {"all": {"hosts": {}}}
     logging.debug(
         "Putting together required inventory for action %s of %s ...",
         action,
-        instance_name,
+        m.instance_name,
     )
     if action in [
         constants.ACTION_ENSURE_VM,
@@ -201,14 +201,16 @@ def get_ansible_inventory_file_str_for_action(
         groups["all"]["hosts"]["localhost"] = {}
         return yaml.dump(groups, Dumper=NoAliasDumper)
 
-    vm = cmdb.get_latest_vm_by_uuid(uuid)
+    vm = cmdb.get_latest_vm_by_uuid(m.uuid)
     if not vm:
         raise Exception(
-            f"No active VM found for instance {instance_name} UUID {uuid} to compile an inventory file"
+            f"No active VM found for instance {m.instance_name} to compile an inventory file"
         )
     host_vars = {"ansible_user": vm.login_user}
     if vm.ip_public:
         host_vars["ansible_host"] = vm.ip_public
+    if m.ansible.private_key:
+        host_vars["ansible_ssh_private_key_file"] = m.ansible.private_key
 
     groups["all"]["hosts"][vm.ip_private] = host_vars
 
@@ -220,11 +222,16 @@ def generate_ansible_inventory_file_for_action(
 ):
     """Places an inventory file into temp_workdir"""
     if m.vm.host and m.vm.login_user:
-        inventory = f"{m.vm.host} ansible_user={m.vm.login_user}"
+        inventory = (
+            f"{m.vm.host} ansible_user={m.vm.login_user}"
+            + f" ansible_ssh_private_key_file={m.ansible.private_key}"
+            if m.ansible.private_key
+            else ""
+        )
     elif dry_run:
         inventory = "dummy"
     else:
-        inventory = get_ansible_inventory_file_str_for_action(action, m.uuid, m.instance_name)  # type: ignore
+        inventory = get_ansible_inventory_file_str_for_action(action, m)
     if not inventory:
         raise Exception(
             f"Could not compile inventory for action {action} of instance {m.instance_name}"

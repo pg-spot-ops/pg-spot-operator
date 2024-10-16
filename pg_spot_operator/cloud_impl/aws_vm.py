@@ -814,10 +814,16 @@ def ensure_spot_vm(
             f"Instance {i_desc['InstanceId']} already running for instance {instance_name}, skipping create"
         )
     else:
+        pub_key_file = "~/.ssh/id_rsa.pub"
+        if m.ansible.private_key:
+            if m.ansible.private_key.endswith(".pub"):
+                pub_key_file = m.ansible.private_key
+            else:
+                pub_key_file = m.ansible.private_key + ".pub"
         user_data = compile_cloud_init_user_data_config(
             region,
             LOGIN_USER,
-            "~/.ssh/id_rsa.pub",
+            pub_key_file,
             m.os.ssh_pub_keys,
             m.aws.key_pair_name,
         )
