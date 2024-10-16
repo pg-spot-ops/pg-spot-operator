@@ -579,18 +579,23 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
                 f"A single backing instance expected - got: {backing_instances}"
             )  # TODO take latest by creation date
         vm = cmdb.get_latest_vm_by_uuid(m.uuid)
-        if vm:  # Already registered in CMDB
+        instance_id = backing_instances[0]["InstanceId"]
+        ip_priv = backing_instances[0]["PrivateIpAddress"]
+        ip_pub = backing_instances[0].get("PublicIpAddress")
+        if vm and (
+            vm.provider_id == vm.ip_private
+            and vm.ip_private == ip_priv
+            and (vm.ip_public == ip_pub if ip_pub else True)
+        ):  # Already registered in CMDB
             logger.info(
-                "Backing instance %s %s (%s / %s) found",
+                "Backing instance %s %s (%s / %s) found and CMDB registered",
                 vm.provider_id,
                 vm.sku,
                 vm.ip_public,
                 vm.ip_private,
             )
             return False, vm.provider_id
-        logger.info(
-            "Backing instance found: %s", backing_instances[0]["InstanceId"]
-        )
+        logger.info("Backing instance found: %s", instance_id)
     else:
         logger.warning(
             "Detected a missing VM for instance %s (%s) - %s ...",
