@@ -1010,7 +1010,9 @@ def do_main_loop(
                     m.vm.host,
                 )
                 if cli_dry_run:
-                    ssh_ok = check_ssh_ping_ok(m.vm.login_user, m.vm.host)
+                    ssh_ok = check_ssh_ping_ok(
+                        m.vm.login_user, m.vm.host, m.ansible.private_key
+                    )
                     if not ssh_ok:
                         raise Exception("Could not SSH connect to --vm-host")
                     logger.info("SSH connect OK")
@@ -1031,13 +1033,8 @@ def do_main_loop(
                 vm_created_recreated
                 or diff
                 or not current_manifest_applied_successfully
-                and not cli_vm_only
             ):
                 # Just reconfigure the VM if any changes discovered, relying on Ansible idempotence
-                logging.info(
-                    "Re-configuring Postgres for instance %s ...",
-                    m.instance_name,
-                )
                 if diff:
                     logging.info("Detected manifest changes: %s", diff)
 
