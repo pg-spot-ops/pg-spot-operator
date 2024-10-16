@@ -105,7 +105,7 @@ class ArgumentParser(Tap):
     admin_is_superuser: str = os.getenv("PGSO_ADMIN_IS_SUPERUSER", "false")
     os_extra_packages: str = os.getenv(
         "PGSO_OS_EXTRA_PACKAGES", ""
-    )  # Comma separated, e.g. postgresql-16-postgis-3
+    )  # Comma separated, e.g. postgresql-16-postgis-3,postgresql-16-pgrouting
     shared_preload_libraries: str = os.getenv(
         "PGSO_SHARED_PRELOAD_LIBRARIES", "pg_stat_statements"
     )  # Comma separated
