@@ -1024,6 +1024,7 @@ def do_main_loop(
                 vm_created_recreated
                 or diff
                 or not current_manifest_applied_successfully
+                and not cli_vm_only
             ):
                 # Just reconfigure the VM if any changes discovered, relying on Ansible idempotence
                 logging.info(
