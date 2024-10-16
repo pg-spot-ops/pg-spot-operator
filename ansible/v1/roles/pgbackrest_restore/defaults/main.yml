@@ -1,8 +1,6 @@
 ---
 # Manifest
 instance_name: spot
-postgresql:
-  version: 16
 
 # Private
 stanza_name: "{{ instance_name }}"

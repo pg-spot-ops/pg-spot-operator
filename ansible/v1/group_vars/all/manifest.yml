@@ -33,3 +33,5 @@ aws: "{{ default_manifest.aws | d({})
 
 
 postgres_cluster_name: "{{ instance_name | d('') | replace('-', '_') }}" # Dashes don't work with pg_createcluster"
+postgres_data_directory: "/var/lib/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}"
+postgres_config_directory: "/etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}"

@@ -43,11 +43,11 @@ default_manifest:
               # in case expiration_date set
     app: backend
   postgresql:
-    version: 16             # Optional. Minimum supported version is v14. Defaults to latest stable
+    version: 16                   # Optional. Minimum supported version is v14. Defaults to latest stable
     admin_is_superuser: true
     admin_user: admin
-    app_db_name: app        # App / user DB to be created if set
-    admin_user_password:    # Needs to be provided if admin_user set
+    app_db_name: app              # App / user DB to be created if set
+    admin_user_password:          # Needs to be provided if admin_user set
     initdb_opts:  # Defaults
       - --data-checksums
       - --locale-provider=icu
