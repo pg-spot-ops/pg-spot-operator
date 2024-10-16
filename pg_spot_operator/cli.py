@@ -521,11 +521,7 @@ def main():  # pragma: no cover
             if args.verbose
             else "%(asctime)s %(levelname)s %(message)s"
         ),
-        level=(
-            logging.ERROR
-            if args.connstr_output_only
-            else logging.DEBUG if args.verbose else logging.INFO
-        ),
+        level=(logging.DEBUG if args.verbose else logging.INFO),
     )
 
     if args.show_help:
