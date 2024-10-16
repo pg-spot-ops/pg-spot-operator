@@ -514,6 +514,13 @@ def update_instance_connect_info(m: InstanceManifest) -> tuple[str, str]:
         return instance.connstr_private, instance.connstr_public or ""
 
 
+def get_ssh_connstr(m: InstanceManifest) -> str:
+    vm = get_latest_vm_by_uuid(m.uuid)
+    if not vm:
+        return ""
+    return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=1 -l {vm.login_user} {vm.ip_public or vm.ip_private}"
+
+
 def finalize_instance_setup(m: InstanceManifest):
     logger.info("Instance %s setup completed", m.instance_name)
 
@@ -528,6 +535,8 @@ def finalize_instance_setup(m: InstanceManifest):
         logger.info(
             "*** PUBLIC Postgres connect string *** - '%s'", connstr_public
         )
+
+    logger.info("*** SSH connect string *** - '%s'", get_ssh_connstr(m))
 
     if m.monitoring.grafana.enabled:
         vm = get_latest_vm_by_uuid(m.uuid)
