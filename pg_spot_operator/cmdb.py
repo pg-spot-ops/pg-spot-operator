@@ -347,6 +347,7 @@ def get_latest_vm_by_uuid(instance_uuid: str | None) -> Vm | None:
         stmt = (
             select(Vm)
             .where(Vm.instance_uuid == instance_uuid)
+            .where(Vm.deleted_on.is_(None))
             .order_by(Vm.created_on.desc())
         )
         row = session.scalars(stmt).first()
