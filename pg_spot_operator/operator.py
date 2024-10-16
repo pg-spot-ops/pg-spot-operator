@@ -583,7 +583,7 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
         ip_priv = backing_instances[0]["PrivateIpAddress"]
         ip_pub = backing_instances[0].get("PublicIpAddress")
         if vm and (
-            vm.provider_id == vm.ip_private
+            vm.provider_id == instance_id
             and vm.ip_private == ip_priv
             and (vm.ip_public == ip_pub if ip_pub else True)
         ):  # Already registered in CMDB
