@@ -38,7 +38,7 @@ from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_cpu_arch_from_sku_desc,
 )
-from pg_spot_operator.cmdb import get_instance_connect_string
+from pg_spot_operator.cmdb import get_instance_connect_string, get_ssh_connstr
 from pg_spot_operator.constants import (
     BACKUP_TYPE_PGBACKREST,
     CLOUD_AWS,
@@ -1036,6 +1036,9 @@ def do_main_loop(
 
                 if cli_vm_only:
                     logger.info("Skipping Postgres setup as --vm-only set")
+                    logger.info(
+                        "*** SSH connect string *** - '%s'", get_ssh_connstr(m)
+                    )
                 else:
                     run_action(constants.ACTION_INSTANCE_SETUP, m)
 
