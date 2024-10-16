@@ -46,6 +46,10 @@ def ignore(loader, tag, node):
 yaml.add_multi_constructor("!", ignore, Loader=yaml.SafeLoader)
 
 
+class SectionAnsible(BaseModel):
+    private_key: str = ""
+
+
 class SectionPostgresql(BaseModel):
     version: int = DEFAULT_POSTGRES_MAJOR_VER
     tuning_profile: str = "default"
@@ -188,6 +192,7 @@ class InstanceManifest(BaseModel):
     os: SectionOs = field(default_factory=SectionOs)
     aws: SectionAws = field(default_factory=SectionAws)
     monitoring: SectionMonitoring = field(default_factory=SectionMonitoring)
+    ansible: SectionAnsible = field(default_factory=SectionAnsible)
 
     @staticmethod
     def get_internal_usage_attributes() -> set:
