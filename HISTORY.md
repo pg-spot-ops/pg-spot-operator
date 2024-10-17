@@ -2,6 +2,26 @@ Changelog
 =========
 
 
+(unreleased)
+------------
+- README - Add info on Python installation via pipx (#59) [Kaarel
+  Moppel]
+
+  * Add info on Python installation via pipx
+
+  * Demo the newly added --ansible-path flag when running via pipx
+- Make custom Ansible paths possible via --ansible-path (#58) [Kaarel
+  Moppel]
+
+  For example when wanting to do some customizations to the Postgres setup
+  or when using via PyPI / pipx
+
+
+0.8.1 (2024-10-17)
+------------------
+- Release: version 0.8.1 🚀 [Kaarel Moppel]
+
+
 0.8.0 (2024-10-17)
 ------------------
 - Release: version 0.8.0 🚀 [Kaarel Moppel]
