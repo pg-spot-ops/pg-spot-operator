@@ -127,8 +127,11 @@ docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
 ```bash
 pipx install pg-spot-operator
 pipx ensurepath
+# Need to also clone the project as Ansible files not uploaded to PyPY
+git clone https://github.com/pg-spot-ops/pg-spot-operator.git /tmp/pg-spot-operator
 # Assuming local AWS CLI is configured
-pg_spot_operator --check-price --region=eu-north-1 --ram-min=16 --storage-min=1000 --storage-type=local --instance-name pg1
+pg_spot_operator --region=eu-north-1 --ram-min=16 --storage-min=1000 --storage-type=local --instance-name pg1 \
+  --check-price --ansible-path /tmp/pg-spot-operator/ansible
 ```
 
 # Technical details
