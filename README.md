@@ -122,18 +122,14 @@ docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
   pgspotops/pg-spot-operator:latest
 ```
 
-## Python local dev/test in a virtualenv
+## Python
 
 ```bash
-git clone git@github.com:pg-spot-ops/pg-spot-operator.git
-cd pg-spot-operator
-make virtualenv
-source .venv/bin/activate
-pip install -r requirements.txt
-python3 -m pg_spot_operator --verbose --instance-name pg1 --region eu-north-1 --cpu-min 2 --storage-min 100 --storage-type local
+pipx install pg-spot-operator
+pipx ensurepath
+# Assuming local AWS CLI is configured
+pg_spot_operator --check-price --region=eu-north-1 --ram-min=16 --storage-min=1000 --storage-type=local --instance-name pg1
 ```
-
-Python 3.10+ required. PIP support coming.
 
 # Technical details
 
