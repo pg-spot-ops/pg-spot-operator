@@ -37,7 +37,9 @@ class ArgumentParser(Tap):
     manifest_path: str = os.getenv(
         "PGSO_MANIFEST_PATH", ""
     )  # User manifest path
-    ansible_path: str = os.getenv("PGSO_ANSIBLE_PATH", "./ansible")
+    ansible_path: str = os.getenv(
+        "PGSO_ANSIBLE_PATH", ""
+    )  # Use a non-default Ansible path
     main_loop_interval_s: int = int(
         os.getenv("PGSO_MAIN_LOOP_INTERVAL_S")
         or 60  # Increase if causing too many calls to the cloud API
@@ -381,6 +383,18 @@ def check_cli_args_valid(args: ArgumentParser):
         ):
             logger.error("--ssh-private-key .pub file not found")
             exit(1)
+    if (
+        args.ansible_path
+        and not (
+            args.check_price
+            or args.check_manifest
+            or args.teardown
+            or args.teardown_region
+        )
+        and not os.path.exists(os.path.expanduser(args.ansible_path))
+    ):
+        logger.error("--ansible-path %s not found", args.ansible_path)
+        exit(1)
 
 
 def try_load_manifest(manifest_str: str) -> InstanceManifest | None:
@@ -608,4 +622,5 @@ def main():  # pragma: no cover
         cli_destroy_file_base_path=args.destroy_file_base_path,
         cli_teardown=args.teardown,
         cli_connstr_output_only=args.connstr_output_only,
+        cli_ansible_path=args.ansible_path,
     )

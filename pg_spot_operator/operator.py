@@ -58,13 +58,14 @@ MAX_PARALLEL_ACTIONS = 2
 ACTION_MAX_DURATION = 600
 VM_KEEPALIVE_SCANNER_INTERVAL_S = 60
 ACTION_HANDLER_TEMP_SPACE_ROOT = "~/.pg-spot-operator/tmp"
-ANSIBLE_ROOT = "./ansible"
+ANSIBLE_DEFAULT_ROOT_PATH = "./ansible"
 
 logger = logging.getLogger(__name__)
 
 default_vault_password_file: str = ""
 dry_run: bool = False
 operator_startup_time = time.time()
+ansible_root_path: str = ANSIBLE_DEFAULT_ROOT_PATH
 
 
 class NoOp(Exception):
@@ -267,7 +268,7 @@ def populate_temp_workdir_for_action_exec(
     logging.debug("Ensuring temp exec dir %s ...", temp_workdir)
     os.makedirs(temp_workdir, exist_ok=True)
 
-    handler_dir_to_fork = os.path.join(ANSIBLE_ROOT, manifest.api_version)
+    handler_dir_to_fork = os.path.join(ansible_root_path, manifest.api_version)
     if not os.path.exists(handler_dir_to_fork):
         raise Exception(f"Ansible folder at {handler_dir_to_fork} not found")
     # Copy the whole Ansible dir for now into temp dir
@@ -814,11 +815,15 @@ def do_main_loop(
     cli_destroy_file_base_path: str = "",
     cli_teardown: bool = False,
     cli_connstr_output_only: bool = False,
+    cli_ansible_path: str = "",
 ):
     global dry_run
     dry_run = cli_dry_run
     global default_vault_password_file
     default_vault_password_file = cli_vault_password_file
+    if cli_ansible_path:
+        global ansible_root_path
+        ansible_root_path = cli_ansible_path
 
     first_loop = True
     loops = 0
