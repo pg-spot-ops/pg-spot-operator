@@ -15,7 +15,7 @@ def get_cheapest_skus_for_hardware_requirements(
     skus_to_avoid: list[str] | None = None,
 ) -> list[ResolvedInstanceTypeInfo]:
     logger.debug(
-        "Looking for the cheapest Spot VM for following HW reqs: %s",
+        "Looking for Spot VMs for following HW reqs: %s",
         [x for x in m.vm.dict().items() if x[1] is not None],
     )
     if m.cloud == CLOUD_AWS:
