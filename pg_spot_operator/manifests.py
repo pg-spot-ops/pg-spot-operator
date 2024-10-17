@@ -174,8 +174,8 @@ class InstanceManifest(BaseModel):
     instance_name: str
     # Optional fields
     assign_public_ip: bool = True
-    floating_public_ip: bool = (
-        True  # Has only relevance if assign_public_ip set
+    floating_ips: bool = (
+        True  # If False NIC resources can be left hanging if not cleaned up properly
     )
     description: str = ""
     availability_zone: str = ""

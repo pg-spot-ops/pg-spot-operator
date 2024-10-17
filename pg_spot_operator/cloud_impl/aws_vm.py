@@ -388,9 +388,9 @@ def ec2_launch_instance(
     network_interface: dict[str, Any] = {
         "AssociatePublicIpAddress": False,
         "DeviceIndex": 0,
-        "DeleteOnTermination": False,
+        "DeleteOnTermination": m.floating_ips,
     }
-    if m.floating_public_ip and m.assign_public_ip:
+    if m.floating_ips and m.assign_public_ip:
         network_interface["AssociatePublicIpAddress"] = True
     if subnet_id:
         network_interface["SubnetId"] = subnet_id
@@ -399,15 +399,16 @@ def ec2_launch_instance(
     logger.debug("network_interface %s", network_interface)
 
     existing_nic_found = False
-    nic_id = get_nic_id_if_any_by_id_tag(instance_name, region)
-    if nic_id:
-        existing_nic_found = True
-        wait_until_nic_available(nic_id, region)
-        network_interface = {
-            "DeviceIndex": 0,
-            "DeleteOnTermination": False,
-            "NetworkInterfaceId": nic_id,
-        }
+    if not m.floating_ips:
+        nic_id = get_nic_id_if_any_by_id_tag(instance_name, region)
+        if nic_id:
+            existing_nic_found = True
+            wait_until_nic_available(nic_id, region)
+            network_interface = {
+                "DeviceIndex": 0,
+                "DeleteOnTermination": False,
+                "NetworkInterfaceId": nic_id,
+            }
 
     kwargs_run: dict[str, Any] = {}
     if instance_type.startswith("t"):
@@ -431,7 +432,7 @@ def ec2_launch_instance(
                 "ResourceType": "network-interface",
                 "Tags": [
                     {
-                        "Key": "pg-spot-operator-instance",
+                        "Key": SPOT_OPERATOR_ID_TAG,
                         "Value": instance_name,
                     }
                 ],
@@ -857,7 +858,7 @@ def ensure_spot_vm(
     if m.vm.storage_type == STORAGE_TYPE_NETWORK:
         vol_desc = ensure_volume_attached(m, i_desc)
 
-    if m.assign_public_ip and not m.floating_public_ip:
+    if m.assign_public_ip and not m.floating_ips:
         pip = ensure_public_elastic_ip_attached(
             region, instance_name, i_desc["InstanceId"]
         )
