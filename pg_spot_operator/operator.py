@@ -652,14 +652,14 @@ def destroy_instance(
     if backing_ins_ids and not dry_run:
         logger.info("Terminating instances %s ...", backing_ins_ids)
         terminate_instances_in_region(m.region, backing_ins_ids)
-        logger.info("OK. Sleeping 60s before deleting volumes ...")
-        time.sleep(60)
 
     vol_ids_and_sizes = get_operator_volumes_in_region(
         m.region, m.instance_name
     )
     logger.info("Volumes found: %s", vol_ids_and_sizes)
     if not dry_run and vol_ids_and_sizes:
+        logger.info("OK. Sleeping 60s before deleting volumes ...")
+        time.sleep(60)
         for vol_id, size in vol_ids_and_sizes:
             logger.info("Deleting VolumeId %s (%s GB) ...", vol_id, size)
             delete_volume_in_region(m.region, vol_id)
@@ -672,13 +672,17 @@ def destroy_instance(
             logger.info("Releasing Address with AllocationId %s ...", alloc_id)
             release_address_by_allocation_id_in_region(m.region, alloc_id)
 
-    logger.info("Looking for NICs to delete ....")
-    nic_ids = get_network_interfaces(m.region, m.instance_name)
-    logger.info("NICs found: %s", nic_ids)
-    if not dry_run and nic_ids:
-        for nic_id in nic_ids:
-            logger.info("Deleting NIC %s ...", nic_id)
-            delete_network_interface(m.region, nic_id)
+    if not m.floating_ips:
+        logger.info("Looking for NICs to delete ....")
+        nic_ids = get_network_interfaces(m.region, m.instance_name)
+        logger.info("NICs found: %s", nic_ids)
+        if not dry_run and nic_ids:
+            if not vol_ids_and_sizes:
+                logger.info("OK. Sleeping 60s before deleting NICs ...")
+                time.sleep(60)
+            for nic_id in nic_ids:
+                logger.info("Deleting NIC %s ...", nic_id)
+                delete_network_interface(m.region, nic_id)
 
     logger.info(
         "OK - cloud resources for instance %s cleaned-up", m.instance_name
