@@ -88,8 +88,9 @@ def preprocess_ensure_vm_action(
         selected_instance_type = existing_instance_info["InstanceType"]
     else:
         logger.info(
-            "Looking for the cheapest SKU in region %s for given HW requirements ...",
+            "Resolving HW requirements in region %s using strategy '%s' ...",
             m.region,
+            m.vm.instance_selection_strategy,
         )
     if not m.vm.instance_types and not existing_instance_info:
         cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
