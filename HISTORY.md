@@ -2,8 +2,9 @@ Changelog
 =========
 
 
-(unreleased)
-------------
+0.8.0 (2024-10-17)
+------------------
+- Release: version 0.8.0 🚀 [Kaarel Moppel]
 - Faster teardown - don't sleep unnecessarily (#57) [Kaarel Moppel]
 
   If there are no volumes (--storage-type=local) then no reason to sleep.
