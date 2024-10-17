@@ -1020,10 +1020,10 @@ def do_main_loop(
                 vm_created_recreated, vm_provider_id = ensure_vm(m)
                 if vm_created_recreated:
                     logger.info(
-                        "Sleeping 30s as VM %s created, give time to boot",
+                        "Sleeping 5s as VM %s created, give time to boot",
                         vm_provider_id,
                     )
-                    time.sleep(30)
+                    time.sleep(5)
 
             diff = m.diff_manifests(
                 prev_success_manifest, original_manifests_only=True
