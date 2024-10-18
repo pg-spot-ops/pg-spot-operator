@@ -210,7 +210,7 @@ docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
 By default, security is not super trimmed down, as the experience is geared towards more casual or temporary workloads.
 Everything is tunable though.
 
-**PS** For public Spot Operator managed testing / play instances it is very much recommended to create a new special
+**PS** For all public Spot Operator managed instances it is very much recommended to create a new special
 purpose VPC, isolated from the rest of the account! Especially as this is as simple as running a `terraform apply` for
 example from [here](https://github.com/terraform-aws-modules/terraform-aws-vpc/tree/master/examples/simple) - just replace
 *private_subnets* with *public_subnets*, plus the *locals.region* of course.
