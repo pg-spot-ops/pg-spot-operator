@@ -25,7 +25,7 @@ def run_process_with_output(
 
 
 def merge_user_and_tuned_non_conflicting_config_params(
-    config_lines_tuned: list[str], config_lines_user: list[str]
+    config_lines_tuned: list[str], config_lines_user: dict
 ) -> dict:
     """User input wins over tuned config lines
     Input lines are ready-to-use PG conf lines a la: work_mem='64MB'
@@ -35,7 +35,7 @@ def merge_user_and_tuned_non_conflicting_config_params(
 
     for tuned_line in config_lines_tuned:
         tuned_line = tuned_line.strip()
-        if not tuned_line.startswith('#'):
+        if not tuned_line.startswith("#"):
             splits = tuned_line.partition("=")
             key = splits[0].strip()
             if key in config_lines_user or len(splits) < 2:

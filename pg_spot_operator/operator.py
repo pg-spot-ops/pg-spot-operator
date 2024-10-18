@@ -9,7 +9,6 @@ import time
 from datetime import datetime
 
 import yaml
-import json
 
 from pg_spot_operator import cloud_api, cmdb, constants, manifests
 from pg_spot_operator.cloud_impl import aws_client
@@ -290,17 +289,30 @@ def populate_temp_workdir_for_action_exec(
         os.makedirs(dir, exist_ok=True)
 
     with open(
-        os.path.join(temp_workdir, "group_vars/all", "instance_manifest.yml"), "w"
+        os.path.join(temp_workdir, "group_vars/all", "instance_manifest.yml"),
+        "w",
     ) as f:
-        f.write(yaml.dump({'instance_manifest': yaml.safe_load(manifest.original_manifest)}))
+        f.write(
+            yaml.dump(
+                {
+                    "instance_manifest": yaml.safe_load(
+                        manifest.original_manifest
+                    )
+                }
+            )
+        )
 
     if manifest.session_vars:
         with open(
-            os.path.join(temp_workdir, "group_vars/all", "engine_overrides.yml"), "w"
+            os.path.join(
+                temp_workdir, "group_vars/all", "engine_overrides.yml"
+            ),
+            "w",
         ) as f:
-            f.write(yaml.dump({'engine_overrides': manifest.session_vars}))
+            f.write(yaml.dump({"engine_overrides": manifest.session_vars}))
 
     return temp_workdir
+
 
 def collect_output_params_from_handler_temp_dir(
     exec_temp_dir: str, action: str
