@@ -232,11 +232,7 @@ def compile_manifest_from_cmdline_params(
     m.postgresql.app_db_name = args.app_db_name
     m.postgresql.tuning_profile = args.tuning_profile
     if args.shared_preload_libraries:
-        m.postgresql.config_lines.append(
-            "shared_preload_libraries = '"
-            + args.shared_preload_libraries.rstrip("'").lstrip("'")
-            + "'"
-        )
+        m.postgresql.config_lines['shared_preload_libraries'] = args.shared_preload_libraries
     if args.extensions:
         m.postgresql.extensions = args.extensions.strip().split(",")
     if args.os_extra_packages:

@@ -45,15 +45,15 @@
   file: dest="/var/lib/postgresql/{{postgres_version}}" owner=postgres group=postgres
   when: not cluster_conf_exists.stat.exists
 
-#- name: Set up postgresql.conf in conf.d
-#  ansible.builtin.template:
-#    src: "pgspotops.conf.j2"
-#    dest: "{{ postgres_config_directory }}/conf.d/pgspotops.conf"
-#    owner: postgres
-#    group: postgres
-#    mode: "655"
-#  notify:
-#    - "init_pg_instance : Reload postgres"
+- name: Set up postgresql.conf in conf.d
+  ansible.builtin.template:
+    src: "pgspotops.conf.j2"
+    dest: "{{ postgres_config_directory }}/conf.d/pgspotops.conf"
+    owner: postgres
+    group: postgres
+    mode: "655"
+  notify:
+    - "init_pg_instance : Reload postgres"
 
 - name: flush_handlers
   ansible.builtin.meta: flush_handlers
