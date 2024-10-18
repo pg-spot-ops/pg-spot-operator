@@ -796,6 +796,55 @@ def ensure_volume_attached(m: InstanceManifest, instance_desc: dict) -> dict:
     return get_existing_data_volume_for_instance_if_any(region, instance_name)
 
 
+def get_subnet_id_for_vpc_az(region: str, vpc_id: str, az: str) -> str:
+    """Look for a default subnet, otherwise just take first in available state.
+    Throw an error if none found
+    """
+    client = get_client("ec2", region)
+
+    logger.debug(
+        "Looking for a default subnet in VPC %s AZ %s ...", vpc_id, az
+    )
+    response = client.describe_subnets(
+        Filters=[
+            {
+                "Name": "vpc-id",
+                "Values": [
+                    vpc_id,
+                ],
+            },
+            {
+                "Name": "availability-zone",
+                "Values": [
+                    az,
+                ],
+            },
+        ],
+    )
+    for sn in response.get("Subnets", []):
+        if sn.get("DefaultForAz"):
+            logger.debug("OK - found default subnet: %s", sn["SubnetId"])
+            return sn["SubnetId"]
+    # If no default found (is possible even?)
+    for sn in response.get("Subnets", []):
+        if sn["State"] == "available":
+            logger.debug("Chose non-default subnet: %s", sn["SubnetId"])
+            return sn["SubnetId"]
+    raise Exception(f"No subnets found for VPC {vpc_id} in Zone {az}")
+
+
+def get_default_vpc(region: str) -> str:
+    client = get_client("ec2", region)
+    logger.debug("Fetching the default VPC for region %s ...", region)
+    result = client.describe_vpcs(
+        Filters=[{"Name": "is-default", "Values": ["true"]}]
+    )
+    if result.get("Vpcs"):
+        # logger.debug("OK - default VPC: %s", result["Vpcs"][0]["VpcId"])
+        return result["Vpcs"][0]["VpcId"]
+    return ""
+
+
 def ensure_spot_vm(
     m: InstanceManifest, dry_run: bool = False
 ) -> tuple[CloudVM, bool]:
@@ -828,6 +877,12 @@ def ensure_spot_vm(
             m.os.ssh_pub_keys,
             m.aws.key_pair_name,
         )
+        if m.aws.vpc_id and not m.aws.subnet_id:
+            if m.aws.vpc_id != get_default_vpc(region):
+                m.aws.subnet_id = get_subnet_id_for_vpc_az(
+                    region, m.aws.vpc_id, m.availability_zone
+                )
+
         i_desc = ec2_launch_instance(m, dry_run=dry_run, user_data=user_data)
         if not dry_run:
             new_vm_created = True

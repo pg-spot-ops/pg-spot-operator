@@ -118,6 +118,9 @@ class ArgumentParser(Tap):
     aws_security_group_ids: str = os.getenv(
         "PGSO_AWS_SECURITY_GROUP_IDS", ""
     )  # SG rules are "merged" if multiple provided
+    aws_vpc_id: str = os.getenv(
+        "PGSO_AWS_VPC_ID", ""
+    )  # If not set default VPC in region used
     aws_subnet_id: str = os.getenv("PGSO_AWS_SUBNET_ID", "")
     self_terminate_access_key_id: str = os.getenv(
         "PGSO_SELF_TERMINATE_ACCESS_KEY_ID", ""
@@ -212,6 +215,7 @@ def compile_manifest_from_cmdline_params(
         if args.aws_security_group_ids
         else []
     )
+    m.aws.vpc_id = args.aws_vpc_id
     m.aws.subnet_id = args.aws_subnet_id
     m.aws.access_key_id = args.aws_access_key_id
     m.aws.secret_access_key = args.aws_secret_access_key
@@ -394,6 +398,11 @@ def check_cli_args_valid(args: ArgumentParser):
         and not os.path.exists(os.path.expanduser(args.ansible_path))
     ):
         logger.error("--ansible-path %s not found", args.ansible_path)
+        exit(1)
+    if args.aws_vpc_id and not args.aws_vpc_id.startswith("vpc-"):
+        logger.error(
+            "Invalid --aws-vpc-id, expecting to start with 'vpc-'",
+        )
         exit(1)
 
 

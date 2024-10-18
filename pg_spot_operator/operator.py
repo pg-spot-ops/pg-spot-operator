@@ -617,6 +617,8 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
     instance_info = preprocess_ensure_vm_action(
         m, backing_instances[0] if backing_instances else None
     )
+    if not m.availability_zone:
+        m.availability_zone = instance_info.availability_zone
 
     cloud_vm, created = ensure_spot_vm(m, dry_run=dry_run)
     if dry_run:
