@@ -9,7 +9,7 @@ cloud: "{{ instance_manifest.cloud | d('vagrant-libvirt') }}"
 region: "{{ instance_manifest.region | d('local') }}"
 is_paused: "{{ instance_manifest.is_paused | d(False) }}"
 user_tags: "{{ instance_manifest.user_tags | d({}) | ansible.builtin.combine(engine_overrides.user_tags | d({})) }}"
-setup_finished_callback: "{{ instance_manifest.setup_finished_callback | engine_overrides.setup_finished_callback | d('') }}"
+setup_finished_callback: "{{ instance_manifest.setup_finished_callback | d(engine_overrides.setup_finished_callback) | d('') }}"
 
 connstr_private: "{{ engine_overrides.connstr_private | d('') }}"
 connstr_public: "{{ engine_overrides.connstr_public | d('') }}"
