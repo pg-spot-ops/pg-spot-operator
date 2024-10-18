@@ -36,7 +36,7 @@ docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 \
 2024-10-14 14:33:01,730 INFO Current Spot discount rate in AZ eu-north-1b: -70.7% (spot $205.2 vs on-demand $700.4)
 ```
 
-Incredible, an 8h work day will cost us less than a cup of coffee, specifically $2.3 - let's go for it!
+Incredible, an 8h work day on a pretty beefy private DB will cost us less than a cup of coffee, specifically $2.3 - let's go for it!
 
 PS Note that the displayed 3.4x discount is calculated from the normal on-demand EC2 instance cost, RDS adds a ~50%
 premium on top of that + EBS storage costs.
@@ -205,7 +205,86 @@ docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
   pgspotops/pg-spot-operator:latest
 ```
 
-## Cleanup of all operator created objects
+# Security
+
+By default, security is not super trimmed down, as the experience is geared towards more casual or temporary workloads.
+Everything is tunable though.
+
+**PS** For public Spot Operator managed testing / play instances it is very much recommended to create a new special
+purpose VPC, isolated from the rest of the account! Especially as this is as simple as running a `terraform apply` for
+example from [here](https://github.com/terraform-aws-modules/terraform-aws-vpc/tree/master/examples/simple) - just replace
+*private_subnets* with *public_subnets*, plus the *locals.region* of course.
+
+
+## Security-relevant attributes with defaults
+
+When using Docker / CLI:
+
+* --public-ip (Defaults to true)
+* --aws-vpc-id (Default VPC used if not set)
+* --aws-subnet-id (Default Subnet used if not set)
+* --aws-security-group-ids (Default Security Group used if not set)
+* --admin-user
+* --admin-user-password
+* --admin-is-superuser (Defaults to false)
+
+Note that not all attributes can be set via single params, for full customization one needs to compile a manifest.
+
+When using manifests:
+
+```commandline
+public_ip_address: true
+postgresql:
+  admin_is_superuser: true
+  admin_user: ''  # Meaning only local access possible
+  admin_user_password: ''
+  pg_hba_lines:  # Defaults allow non-postgres world access
+    - "host all postgres 0.0.0.0/0 reject"
+    - "hostssl all all 0.0.0.0/0 scram-sha-256"
+aws:
+  vpc_id: ''  # "default" VPC used by default
+  security_group_ids: []  # By default VPC "default" SG is used
+```
+
+PS! Note that if no `admin_user` is set, there will be also no public connect string generated as remote `postgres` user
+access is forbidden by default. One can enable remote "postgres" access (but can't be recommended of course) by setting
+the `admin_user` accordingly + specifying custom `pg_hba` rules.
+
+## Relevant ports / EC2 Security Group permissions
+
+* **22** - SSH. For direct Ansible SSH access to set up Postgres.
+* **5432** - Postgres. For client / app access.
+* **3000** - Grafana. Relevant if `monitoring.grafana.externally_accessible` set
+* **9100** - VM Prometheus node_exporter. Relevant if `monitoring.prometheus_node_exporter.externally_accessible` set
+
+For non-public (`public_ip_address=false`) instances, which are also launched from within the SG, default SG inbound rules
+are enough. But for public access, one needs to open up the listed ports, at least for SSH and Postgres. 
+
+PS Ports are not changeable in the Community Edition! And changing ports to non-defaults doesn't provide any real security
+anyways ...
+
+PS Note that for Ansible SSH access to work the default SSH key on the engine node is expected to be passwordless!
+
+## Opening up a port via the AWS CLI
+
+To open port 22 for the engine node/workstation IP only, for Ansible setup to work, one could run:
+
+```
+MYPUBIP=$(curl -s whatismyip.akamai.com)
+
+aws ec2 authorize-security-group-ingress \
+  --group-name default \
+  --ip-permissions IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges="[{CidrIp=${MYPUBIP}/32}]" \
+  --region eu-north-1
+```
+
+Some AWS documentation on the topic:
+
+* https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html
+* https://docs.aws.amazon.com/cli/latest/reference/ec2/authorize-security-group-ingress.html
+
+
+# Cleanup of all operator created objects
 
 After some work/testing one can clean up all operator created cloud resources via `PGSO_TEARDOWN_REGION` or only a
 single instance via the `PGSO_TEARDOWN` flag.
@@ -261,63 +340,6 @@ make fmt && make lint && make test
 
 git commit
 ```
-
-# Security
-
-By default, security is not super trimmed down, as main use case if for non-critical or temporary workloads. Everything
-is tunable though.
-
-## Security-relevant manifest attributes with defaults
-
-```commandline
-public_ip_address: true
-postgresql:
-  admin_is_superuser: true
-  admin_user: ''  # Meaning only local access possible
-  admin_user_password: ''
-  pg_hba_lines:  # Defaults allow non-postgres world access
-    - "host all postgres 0.0.0.0/0 reject"
-    - "hostssl all all 0.0.0.0/0 scram-sha-256"
-aws:
-  security_group_ids: []  # By default VPC "default" SG is used
-```
-
-PS! Note that if no `admin_user` is set, there will be also no public connect string generated as remote `postgres` user
-access is forbidden by default. One can enable remote "postgres" access (but can't be recommended of course) by setting
-the `admin_user` accordingly + specifying custom `pg_hba` rules.
-
-## Relevant ports / EC2 Security Group permissions
-
-* **22** - SSH. For direct Ansible SSH access to set up Postgres.
-* **5432** - Postgres. For client / app access.
-* **3000** - Grafana. Relevant if `monitoring.grafana.externally_accessible` set
-* **9100** - VM Prometheus node_exporter. Relevant if `monitoring.prometheus_node_exporter.externally_accessible` set
-
-For non-public (`public_ip_address=false`) instances, which are also launched from within the SG, default SG inbound rules
-are enough. But for public access, one needs to open up the listed ports, at least for SSH and Postgres. 
-
-PS Ports are not changeable in the Community Edition! And changing ports to non-defaults doesn't provide any real security
-anyways ...
-
-PS Note that for Ansible SSH access to work the default SSH key on the engine node is expected to be passwordless!
-
-## Opening up a port via the AWS CLI
-
-To open port 22 for the engine node/workstation IP only, for Ansible setup to work, one could run:
-
-```
-MYPUBIP=$(curl -s whatismyip.akamai.com)
-
-aws ec2 authorize-security-group-ingress \
-  --group-name default \
-  --ip-permissions IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges="[{CidrIp=${MYPUBIP}/32}]" \
-  --region eu-north-1
-```
-
-Some AWS documentation on the topic:
-
-* https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html
-* https://docs.aws.amazon.com/cli/latest/reference/ec2/authorize-security-group-ingress.html
 
 # Backups
 
