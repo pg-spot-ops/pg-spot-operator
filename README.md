@@ -210,11 +210,35 @@ docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
 By default, security is not super trimmed down, as the experience is geared towards more casual or temporary workloads.
 Everything is tunable though.
 
-**PS** For all public Spot Operator managed instances it is very much recommended to create a new special
-purpose VPC, isolated from the rest of the account! Especially as this is as simple as running a `terraform apply` for
-example from [here](https://github.com/terraform-aws-modules/terraform-aws-vpc/tree/master/examples/simple) - just replace
-*private_subnets* with *public_subnets*, plus the *locals.region* of course.
+**ATTENTION** For all public Spot Operator managed instances it is very much **recommended to create a new special
+purpose VPC**, isolated from the rest of the account!
 
+Especially as this is as simple as running a `terraform apply` for
+example from [here](https://github.com/terraform-aws-modules/terraform-aws-vpc/tree/master/examples/simple) - just replace
+*private_subnets* with *public_subnets*, and your region of choice in *locals.region*. This concrete Terraform example
+doesn't add any Security group rules though, so that you might want to add some SG rules like below for the freshly created VPC
+(tuning the CIDR according to your needs / location).
+
+```commandline
+SG_ID=mysgid
+REGION=myregion
+PORTS_TO_OPEN="22 5432 3000"  # See below for a description of all used ports
+
+for x in $PORTS_TO_OPEN ; do ;
+  aws ec2 authorize-security-group-ingress \
+      --group-id $SG_ID \
+      --protocol tcp \
+      --port $x \
+      --cidr "0.0.0.0/0" \
+      --region $REGION
+done
+
+aws ec2 authorize-security-group-egress \
+    --group-id $SG_ID \
+    --protocol "-1" \
+    --cidr "0.0.0.0/0" \
+    --region $REGION
+```
 
 ## Security-relevant attributes with defaults
 
