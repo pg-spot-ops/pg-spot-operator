@@ -57,7 +57,7 @@ class SectionPostgresql(BaseModel):
     admin_user_password: str | None = None
     admin_is_superuser: bool = False
     app_db_name: str | None = None
-    config_lines: list[str] = field(default_factory=list)
+    config_lines: dict = field(default_factory=dict)
     extensions: list[str] = field(default_factory=list)
     pg_hba_lines: list[str] = field(default_factory=list)
     initdb_opts: list[str] = field(default_factory=list)
