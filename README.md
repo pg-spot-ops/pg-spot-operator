@@ -435,3 +435,8 @@ As crazy as it might sound, the math and initial interviewings indicate that, su
 would be commercially very much viable, and we're going to give it a try. To speed up the development though, we'd also
 be interested in VC dollars - thus feel free to reach out to info@pgspotops.com if you happen to possess some and find
 the niche interesting.
+
+# Other topics
+
+* [Features](https://github.com/pg-spot-ops/pg-spot-operator/blob/docs-reorg/docs/README_features.md)
+* [Integrating with user applications](https://github.com/pg-spot-ops/pg-spot-operator/blob/docs-reorg/docs/README_integration.md)
