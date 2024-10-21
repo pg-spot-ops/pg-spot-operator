@@ -1,7 +1,6 @@
 # Security
 
-By default, security is not super trimmed down, as main use case if for non-critical or temporary workloads. Everything
-is tunable though.
+The defaults are geared towards user experience i.e. public access, but everything is tunable.
 
 ## Security-relevant manifest attributes with defaults
 
