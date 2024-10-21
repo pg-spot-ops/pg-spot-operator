@@ -1,27 +1,29 @@
 
-# Postgres Spot Operator [Community Edition]
+# PG Spot Operator [Community Edition]
 
-Maintains stateful Postgres on AWS Spot VMs. Think of it as RDS, but at a fraction of the cost! Typical [savings](https://aws.amazon.com/ec2/spot/pricing/)
-are around 5x compared to [RDS](https://aws.amazon.com/rds/postgresql/pricing/).
+Think of it as RDS, but at a fraction of the cost! Typical [savings](https://aws.amazon.com/ec2/spot/pricing/) are around
+5x compared to [RDS](https://aws.amazon.com/rds/postgresql/pricing/).
 
-Obviously for non-critical projects only, as utilizing Spot instances means one can be interrupted by AWS at any time,
-and it takes a few minutes to restore the state. But at the same time - the Spot eviction rates are insanely good for the price!
-The average frequency of interruption across all Regions and instance types is ~5% per month according to AWS [data](https://aws.amazon.com/ec2/spot/instance-advisor/).
-Meaning one can expect to run a few months uninterrupted, i.e. still in the **99.9+% uptime range**!
+Obviously not mean for all projects as a general RDS replacement, as utilizing Spot instances means one can be interrupted
+by AWS at any time, and it takes a few minutes to restore the state.
 
-Not a "real" K8s operator (yet, at least) - but based on similar concepts - user describes a desired state and there's a
+But on the other hand - eviction rates are insanely good for the price! The average frequency of interruption is only
+around 5% per month according to AWS [data](https://aws.amazon.com/ec2/spot/instance-advisor/), meaning - one **can expect
+to run a few months uninterrupted**, i.e. still in the 99.9+% uptime range!
+
+Based on concepts familiar from the Kubernetes world - user describes a desired state and there's a
 reconciliation loop of sorts.
 
-A typical Postgres setup/restore takes a few minutes on network storage, and proportional to the DB size for instance
-storage + restore from S3 via pgBackRest.
+A typical Postgres setup/restore takes a few minutes on network storage, and is proportional to the DB size when using
+volatile instance storage + restore from S3 (via pgBackRest).
 
 ## Project status
 
 **Working Beta**
 
-* Manifest API not yet fully fixed, not relevant though when using Docker or the CLI.
-* No guarantees on the internal configuration being kept backwards compatible - thus might need to clean up `~/.pg-spot-operator`
-  if getting weird errors after an update.
+* Manifest API not yet fully fixed (not relevant though when using Docker or the CLI).
+* No guarantees on internal configuration being kept backwards compatible - thus might need to clean up `~/.pg-spot-operator`
+  if getting weird errors after a version update.
 
 # Quickstart
 
