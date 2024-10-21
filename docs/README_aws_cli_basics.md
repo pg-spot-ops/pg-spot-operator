@@ -5,6 +5,7 @@ really handy - so here some basics to get you started.
 
 ## Prerequisites
 
+* Creating an AWS account - https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-creating.html
 * Installing the CLI - https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 * User / credentials setup - https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html
 
