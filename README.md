@@ -440,3 +440,9 @@ the niche interesting.
 
 * [Features](https://github.com/pg-spot-ops/pg-spot-operator/blob/docs-reorg/docs/README_features.md)
 * [Integrating with user applications](https://github.com/pg-spot-ops/pg-spot-operator/blob/docs-reorg/docs/README_integration.md)
+* [Security](https://github.com/pg-spot-ops/pg-spot-operator/blob/docs-reorg/docs/README_security.md)
+* [Monitoring](https://github.com/pg-spot-ops/pg-spot-operator/blob/docs-reorg/docs/README_monitoring.md)
+* [Backups](https://github.com/pg-spot-ops/pg-spot-operator/blob/docs-reorg/docs/README_backups.md)
+* [Development](https://github.com/pg-spot-ops/pg-spot-operator/blob/docs-reorg/docs/README_development.md)
+* [Advanced features](https://github.com/pg-spot-ops/pg-spot-operator/blob/docs-reorg/docs/README_advanced_features.md)
+* [AWS CLI basics](https://github.com/pg-spot-ops/pg-spot-operator/blob/docs-reorg/docs/README_aws_cli_basics.md)
