@@ -15,6 +15,14 @@ reconciliation loop of sorts.
 A typical Postgres setup/restore takes a few minutes on network storage, and proportional to the DB size for instance
 storage + restore from S3 via pgBackRest.
 
+## Project status
+
+**Working Beta**
+
+* Manifest API not yet fully fixed, not relevant though when using Docker or the CLI.
+* No guarantees on the internal configuration being kept backwards compatible - thus might need to clean up `~/.pg-spot-operator`
+  if getting weird errors after an update.
+
 # Quickstart
 
 Let's say we're Data Scientists (sexiest job of 21st century, remember?) and need to perform some advanced ad-hoc
