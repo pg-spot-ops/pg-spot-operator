@@ -3,8 +3,14 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from statistics import mean
 
+import os
 import requests
-from botocore.exceptions import EndpointConnectionError
+import json
+import re
+import urllib.parse
+import boto3
+from botocore.exceptions import ClientError, EndpointConnectionError
+from datetime import date
 
 from pg_spot_operator.cloud_impl.aws_client import get_client
 from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
@@ -18,6 +24,7 @@ from pg_spot_operator.constants import (
 )
 from pg_spot_operator.instance_type import InstanceType
 from pg_spot_operator.util import timed_cache
+from pg_spot_operator.constants import DEFAULT_CONFIG_DIR
 
 MAX_SKUS_FOR_SPOT_PRICE_COMPARE = 10
 SPOT_HISTORY_LOOKBACK_DAYS = 1
@@ -137,21 +144,147 @@ def get_current_hourly_spot_price(
     return 0
 
 
+def get_cached_pricing_dict(cache_file: str) -> dict:
+    cache_dir  = os.path.expanduser(f"{DEFAULT_CONFIG_DIR}/tmp/price_cache")
+    cache_path = f"{cache_dir}/{cache_file}"
+    if os.path.exists(cache_path):
+        with open(cache_path, 'r') as f:
+            meta_json = json.loads(f.read())
+        logger.info(f"Reading AWS pricing info from daily cache: {cache_path}")
+        return meta_json
+    return {}
+
+def cache_pricing_dict(cache_file:str, pricing_info: dict) -> None:
+    cache_dir  = os.path.expanduser(f"{DEFAULT_CONFIG_DIR}/tmp/price_cache")
+    cache_path = f"{cache_dir}/{cache_file}"
+    os.makedirs(cache_dir, exist_ok=True)
+    with open(cache_path, 'w') as f:
+        json.dump(pricing_info, f)
+
+
+def get_amazon_pricing_metadata_via_http() -> dict:
+    logger.info("Fetching AWS pricing metadata via HTTP")
+    url = 'https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/metadata.json'
+    f = requests.get(
+        url, headers={"Content-Type": "application/json"}, timeout=5
+        )
+    if f.status_code != 200:
+        logger.error(f"Failed to retrieve AWS pricing metadata")
+        return {}
+    metadata = f.json()
+    service_id = metadata.get('manifest', {}).get('serviceId')
+    currency_code = metadata.get('manifest', {}).get('currencyCode')
+    source = metadata.get('manifest', {}).get('source')
+    primary_selectors = metadata.get('primarySelectors', [])
+    value_attrs = metadata.get('valueAttributes', {})
+    if not service_id \
+        or not currency_code \
+        or not source \
+        or not primary_selectors \
+        or not value_attrs:
+        logger.error('The pricing metadata is missing required info; returning empty data')
+        return {}
+    return {
+        'service_id': service_id,
+        'currency_code': currency_code,
+        'source': source,
+        'primary_selectors': primary_selectors,
+        'value_attrs': value_attrs
+    }
+
+
+def get_amazon_pricing_metadata() -> dict:
+    today = date.today()
+    cache_file = f"aws_meta_{today.year}{today.month}{today.day}.json"
+    meta_data = get_cached_pricing_dict(cache_file)
+    if not meta_data:
+        meta_data = get_amazon_pricing_metadata_via_http()
+        if meta_data:
+            cache_pricing_dict(cache_file, meta_data)
+    return meta_data
+
+
+def get_aws_region_city(region:str) -> str:
+    param_name = f"/aws/service/global-infrastructure/regions/{region}/longName"
+    session = boto3.Session()
+    ssm_client = session.client('ssm')
+    try:
+        response = ssm_client.get_parameter(Name=param_name, WithDecryption=False)
+        param_value = response.get('Parameter',{}).get('Value', '')
+        city_match = re.findall(r'\((.+)\)', param_value)
+        return city_match[0].lower() if city_match else ''
+    except ClientError as e:
+        logger.error(f"Error fetching parameter: {e}")
+        return ''
+
+
+def get_pricing_info_via_http(region: str, instance_type: str) -> dict:
+    city = get_aws_region_city(region)
+    logger.info(f"Looking up AWS pricing info for [type={instance_type}] in [city={city}] ...")
+    meta_data = get_amazon_pricing_metadata()
+    if not meta_data:
+        return 0
+    service_id = meta_data.get('service_id', 'oops')
+    currency_code = meta_data.get('currency_code', 'oops')
+    source = meta_data.get('source', 'oops')
+    primary_selectors = meta_data.get('primary_selectors', [])
+    value_attrs = meta_data.get('value_attrs', {})
+    base_url = f"https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/{service_id}/{currency_code}/current/{source}"
+    selector_list = []
+    location_name = ''
+    for selector in primary_selectors:
+        if selector.lower() == 'plc:operatingsystem':
+            os_list = value_attrs.get(selector,[])
+            os_name = ''
+            # select a linux-y OS
+            for os in os_list:
+                if 'linux' in os.lower():
+                    selector_list.append(os)
+                    break
+        if selector.lower() == 'location':
+            loca_list = value_attrs.get(selector, [])
+            # select a location with the city's name
+            for loca in loca_list:
+                if city in loca.lower():
+                    location_name = loca
+                    selector_list.append(loca)
+                    break
+    url = f"{base_url}/{'/'.join(selector_list)}/index.json"
+    sanitized_url = urllib.parse.quote(url, safe=':/')
+    f = requests.get(
+        sanitized_url, headers={"Content-Type": "application/json"}, timeout=5
+        )
+    if f.status_code != 200:
+        logger.error(f"Failed to retrieve AWS pricing info for [type={instance_type}] in [city={city}]")
+        return {}
+    pricing_info = f.json()
+    pricing_info['location_name'] = location_name
+    return pricing_info
+
+
+def get_location_instance_type_pricing_from_info(instance_type:str, pricing_info: dict) -> float:
+    price = 0
+    location_name = pricing_info.get('location_name', '')
+    region_info = pricing_info.get('regions', {}).get(location_name, {})
+    for key in region_info:
+        info = region_info[key]
+        if instance_type == info.get('Instance Type'):
+            return info.get('price', 0)
+    return price
+
+
 def get_current_hourly_ondemand_price(
     region: str,
     instance_type: str,
 ) -> float:
-    """Uses an external service for now"""
-    URL = f"https://ec2.shop/?region={region}&filter={instance_type}"
-    f = requests.get(
-        URL, headers={"Content-Type": "application/json"}, timeout=5
-    )
-    if f.status_code != 200:
-        return 0
-    pd = f.json()
-    if not pd["Prices"]:
-        return 0
-    return round(pd["Prices"][0]["Cost"], 6)
+    today = date.today()
+    cache_file = f"aws_{region}_{today.year}{today.month}{today.day}.json"
+    pricing_info = get_cached_pricing_dict(cache_file)
+    if not pricing_info:
+        pricing_info = get_pricing_info_via_http(region, instance_type)
+        if pricing_info:
+            cache_pricing_dict(cache_file, pricing_info)
+    return get_location_instance_type_pricing_from_info(instance_type, pricing_info)
 
 
 def filter_instance_types_by_hw_req(
