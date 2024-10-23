@@ -502,6 +502,11 @@ def resolve_manifest_and_display_price(
         "MiB" if sku.ram_mb < 1024 else "GB",
         sku.instance_storage,
     )
+    logger.info(
+        "Current monthly Spot price in AZ %s: $%s",
+        sku.availability_zone,
+        sku.monthly_spot_price,
+    )
     if not sku.monthly_ondemand_price:
         sku.monthly_ondemand_price = (
             cloud_api.try_get_monthly_ondemand_price_for_sku(
