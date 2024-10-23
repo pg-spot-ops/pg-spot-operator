@@ -476,6 +476,7 @@ def get_instance_connect_strings(m: InstanceManifest) -> tuple[str, str]:
             )
 
     connstr_private = util.get_local_postgres_connstr()
+    connstr_public = ""
     if m.postgresql.admin_user and m.postgresql.admin_user_password:
         connstr_private = util.compose_postgres_connstr_uri(
             vm.ip_private if vm else m.vm.host,
@@ -483,7 +484,6 @@ def get_instance_connect_strings(m: InstanceManifest) -> tuple[str, str]:
             m.postgresql.admin_user_password,
             dbname=m.postgresql.app_db_name or "postgres",
         )
-        connstr_public = ""
         if m.assign_public_ip and vm and vm.ip_public and m:
             connstr_public = util.compose_postgres_connstr_uri(
                 vm.ip_public if vm.ip_public else m.vm.host,
@@ -501,32 +501,6 @@ def get_ssh_connstr(m: InstanceManifest) -> str:
     if m.ansible.private_key:
         return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=1 -l {vm.login_user} -i {m.ansible.private_key} {vm.ip_public or vm.ip_private}"
     return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=1 -l {vm.login_user} {vm.ip_public or vm.ip_private}"
-
-
-def finalize_instance_setup(m: InstanceManifest):
-    logger.info("Instance %s setup completed", m.instance_name)
-
-    m.decrypt_secrets_if_any()
-
-    connstr_private, connstr_public = get_instance_connect_strings(m)
-    if connstr_private:
-        logger.info(
-            "*** PRIVATE Postgres connect string *** - '%s'", connstr_private
-        )
-    if connstr_public:
-        logger.info(
-            "*** PUBLIC Postgres connect string *** - '%s'", connstr_public
-        )
-
-    logger.info("*** SSH connect string *** - '%s'", get_ssh_connstr(m))
-
-    if m.monitoring.grafana.enabled:
-        vm = get_latest_vm_by_uuid(m.uuid)
-        primary_ip = "localhost"
-        if vm and m.monitoring.grafana.externally_accessible:
-            primary_ip = vm.ip_public or vm.ip_private
-        grafana_url = f"{m.monitoring.grafana.protocol}://{primary_ip}:3000/"
-        logger.info("*** GRAFANA URL *** - '%s'", grafana_url)
 
 
 def finalize_ensure_vm(
