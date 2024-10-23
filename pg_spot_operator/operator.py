@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import os
@@ -6,9 +7,9 @@ import signal
 import stat
 import subprocess
 import time
-from datetime import datetime
 
 import yaml
+from dateutil.parser import isoparse
 
 from pg_spot_operator import cloud_api, cmdb, constants, manifests
 from pg_spot_operator.cloud_impl import aws_client
@@ -59,6 +60,7 @@ ACTION_MAX_DURATION = 600
 VM_KEEPALIVE_SCANNER_INTERVAL_S = 60
 ACTION_HANDLER_TEMP_SPACE_ROOT = "~/.pg-spot-operator/tmp"
 ANSIBLE_DEFAULT_ROOT_PATH = "./ansible"
+DEFAULT_CONFIG_DIR = "~/.pg-spot-operator"
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +68,7 @@ default_vault_password_file: str = ""
 dry_run: bool = False
 operator_startup_time = time.time()
 ansible_root_path: str = ANSIBLE_DEFAULT_ROOT_PATH
+operator_config_dir: str = DEFAULT_CONFIG_DIR
 
 
 class NoOp(Exception):
@@ -256,7 +259,7 @@ def populate_temp_workdir_for_action_exec(
     Also the original manifest + override one will be placed at "input/instance_manifest.yml",
     and for runnables additionally the manifest will be split into flat key-value files under "input"
     """
-    now = datetime.utcnow().replace(microsecond=0)
+    now = datetime.datetime.utcnow().replace(microsecond=0)
     now_str = str(now).replace(" ", "_").replace(":", "")
     temp_workdir = os.path.join(
         os.path.expanduser(temp_workdir_root),
@@ -341,7 +344,8 @@ def run_ansible_handler(
     temp_workdir: str,
     executable_full_path: str,
     m: InstanceManifest,
-) -> dict:
+) -> tuple[int, dict]:
+    """Returns Ansible process retcode + output params if any"""
     p: subprocess.Popen
     stdout = None
 
@@ -379,7 +383,7 @@ def run_ansible_handler(
             "Handler at %s failed",
             executable_full_path,
         )
-        return {}
+        return p.returncode, {}
 
     logging.debug(
         "Handler %s finished - retcode: %s", executable_full_path, p.returncode
@@ -394,7 +398,7 @@ def run_ansible_handler(
 
     register_results_in_cmdb(action, merged_output_params, m)
 
-    return merged_output_params
+    return p.returncode, merged_output_params
 
 
 def generate_ansible_run_script_for_action(
@@ -520,6 +524,37 @@ def apply_postgres_config_tuning_to_manifest(
             m.session_vars["postgresql"]["config_lines"] = merged_config_lines
 
 
+def clean_up_old_logs_if_any(
+    config_dir: str = operator_config_dir, old_threshold_days: int = 7
+):
+    """Leaves empty instance_name/action folders in place though to indicate what operations have happened
+    on which instances
+    """
+    tmp_path = os.path.expanduser(os.path.join(config_dir, "tmp"))
+    logger.debug(
+        "Cleaning up old tmp Ansible action logs from %s if any ...", tmp_path
+    )
+    for dirpath, dirs, files in os.walk(tmp_path):
+        for (
+            d
+        ) in (
+            dirs
+        ):  # /home/krl/.pg-spot-operator/tmp/pg1/single_instance_setup/2024-10-02_093928/ansible.log
+            if not (d.startswith("20") and "-" in d):  # 2024-10-02_113800
+                continue
+            dt = isoparse(d)
+            if dt < (
+                datetime.datetime.utcnow()
+                - datetime.timedelta(days=old_threshold_days)
+            ):
+                expired_path = os.path.expanduser(os.path.join(dirpath, d))
+                logger.debug(
+                    "Removing expired action handler tmp files from %s ...",
+                    expired_path,
+                )
+                shutil.rmtree(expired_path, ignore_errors=True)
+
+
 def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
     """Returns: (OK, action outputs)
     Steps:
@@ -562,11 +597,13 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
         os.path.join(temp_workdir, "ansible.log"),
     )
 
-    outputs = run_ansible_handler(
+    rc, outputs = run_ansible_handler(
         action, temp_workdir, executable_full_path, m
     )
+    if rc == 0:
+        clean_up_old_logs_if_any(old_threshold_days=0)  # To avoid possibility of unencrypted secrets hanging around for too long
 
-    return True, outputs
+    return rc == 0, outputs
 
 
 def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
