@@ -190,7 +190,7 @@ Currently the callback be a self-contained executable which gets following 4 inp
 
 - Instance name
 - Private full connect string a la `postgresql://postgres@localhost:5432/postgres`
-- Public full connect string, when `public_ip_address: true` is set, else an empty string
+- Public full connect string, when `assign_public_ip: true` is set, else an empty string
 - User provided tags as JSON, if any
 
 Example usage:
@@ -244,7 +244,7 @@ aws ec2 authorize-security-group-egress \
 
 When using Docker / CLI:
 
-* --public-ip (Defaults to true)
+* --assign-public-ip (Defaults to true)
 * --aws-vpc-id (Default VPC used if not set)
 * --aws-subnet-id (Default Subnet used if not set)
 * --aws-security-group-ids (Default Security Group used if not set)
@@ -257,7 +257,7 @@ Note that not all attributes can be set via single params, for full customizatio
 When using manifests:
 
 ```commandline
-public_ip_address: true
+assign_public_ip: true
 postgresql:
   admin_is_superuser: true
   admin_user: ''  # Meaning only local access possible
@@ -281,7 +281,7 @@ the `admin_user` accordingly + specifying custom `pg_hba` rules.
 * **3000** - Grafana. Relevant if `monitoring.grafana.externally_accessible` set
 * **9100** - VM Prometheus node_exporter. Relevant if `monitoring.prometheus_node_exporter.externally_accessible` set
 
-For non-public (`public_ip_address=false`) instances, which are also launched from within the SG, default SG inbound rules
+For non-public (`assign_public_ip=false`) instances, which are also launched from within the SG, default SG inbound rules
 are enough. But for public access, one needs to open up the listed ports, at least for SSH and Postgres. 
 
 PS Ports are not changeable in the Community Edition! And changing ports to non-defaults doesn't provide any real security

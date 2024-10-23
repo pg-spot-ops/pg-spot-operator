@@ -97,7 +97,9 @@ class ArgumentParser(Tap):
     self_terminate: bool = str_to_bool(
         os.getenv("PGSO_SELF_TERMINATE", "false")
     )
-    public_ip: bool = str_to_bool(os.getenv("PGSO_PUBLIC_IP", "true"))
+    assign_public_ip: bool = str_to_bool(
+        os.getenv("PGSO_ASSIGN_PUBLIC_IP", "true")
+    )
     cpu_architecture: str = os.getenv("PGSO_CPU_ARCHITECTURE", "")
     ssh_keys: str = os.getenv("PGSO_SSH_KEYS", "")  # Comma separated
     tuning_profile: str = os.getenv("PGSO_TUNING_PROFILE", "default")
@@ -193,7 +195,7 @@ def compile_manifest_from_cmdline_params(
     m.region = args.region
     m.availability_zone = args.zone
     m.expiration_date = args.expiration_date
-    m.assign_public_ip = args.public_ip
+    m.assign_public_ip = args.assign_public_ip
     m.setup_finished_callback = args.setup_finished_callback
     m.vm.cpu_architecture = args.cpu_architecture
     m.vm.cpu_min = args.cpu_min
