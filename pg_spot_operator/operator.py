@@ -601,7 +601,9 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
         action, temp_workdir, executable_full_path, m
     )
     if rc == 0:
-        clean_up_old_logs_if_any(old_threshold_days=0)  # To avoid possibility of unencrypted secrets hanging around for too long
+        clean_up_old_logs_if_any(
+            old_threshold_days=0
+        )  # To avoid possibility of unencrypted secrets hanging around for too long
 
     return rc == 0, outputs
 

@@ -291,7 +291,7 @@ def get_location_instance_type_pricing_from_info(
         if instance_type == info.get("Instance Type"):
             price = info.get("price", 0)
             break
-    return price
+    return float(price)
 
 
 def get_current_hourly_ondemand_price(
