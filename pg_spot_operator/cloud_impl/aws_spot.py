@@ -149,8 +149,10 @@ def get_cached_pricing_dict(cache_file: str) -> dict:
     if os.path.exists(cache_path):
         with open(cache_path, "r") as f:
             meta_json = json.loads(f.read())
-        logger.info(f"Reading AWS pricing info from daily cache: {cache_path}")
-        return meta_json
+            logger.info(
+                f"Reading AWS pricing info from daily cache: {cache_path}"
+            )
+            return meta_json
     return {}
 
 
@@ -279,10 +281,16 @@ def get_location_instance_type_pricing_from_info(
     price = 0
     location_name = pricing_info.get("location_name", "")
     region_info = pricing_info.get("regions", {}).get(location_name, {})
+    if not region_info:
+        logger.error(
+            "Failed to get region info from pricing dict; returning 0 price"
+        )
+        return price
     for key in region_info:
         info = region_info[key]
         if instance_type == info.get("Instance Type"):
-            return info.get("price", 0)
+            price = info.get("price", 0)
+            break
     return price
 
 
@@ -297,6 +305,11 @@ def get_current_hourly_ondemand_price(
         pricing_info = get_pricing_info_via_http(region, instance_type)
         if pricing_info:
             cache_pricing_dict(cache_file, pricing_info)
+        else:
+            logger.error(
+                f"Failed to retrieve AWS pricing info for [type={instance_type}] in [region={region}]"
+            )
+            return 0
     return get_location_instance_type_pricing_from_info(
         instance_type, pricing_info
     )
