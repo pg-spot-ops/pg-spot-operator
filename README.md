@@ -1,19 +1,29 @@
 
-# Postgres Spot Operator [Community Edition]
+# PG Spot Operator [Community Edition]
 
-Maintains stateful Postgres on AWS Spot VMs. Think of it as RDS, but at a fraction of the cost! Typical [savings](https://aws.amazon.com/ec2/spot/pricing/)
-are around 5x compared to [RDS](https://aws.amazon.com/rds/postgresql/pricing/).
+Think of it as RDS, but at a fraction of the cost! Typical [savings](https://aws.amazon.com/ec2/spot/pricing/) are around
+5x compared to [RDS](https://aws.amazon.com/rds/postgresql/pricing/).
 
-Obviously for non-critical projects only, as utilizing Spot instances means one can be interrupted by AWS at any time,
-and it takes a few minutes to restore the state. But at the same time - the Spot eviction rates are insanely good for the price!
-The average frequency of interruption across all Regions and instance types is ~5% per month according to AWS [data](https://aws.amazon.com/ec2/spot/instance-advisor/).
-Meaning one can expect to run a few months uninterrupted, i.e. still in the **99.9+% uptime range**!
+Obviously not mean for all projects as a general RDS replacement, as utilizing Spot instances means one can be interrupted
+by AWS at any time, and it takes a few minutes to restore the state.
 
-Not a "real" K8s operator (yet, at least) - but based on similar concepts - user describes a desired state and there's a
+But on the other hand - eviction rates are insanely good for the price! The average frequency of interruption is only
+around 5% per month according to AWS [data](https://aws.amazon.com/ec2/spot/instance-advisor/), meaning - one **can expect
+to run a few months uninterrupted**, i.e. still in the 99.9+% uptime range!
+
+Based on concepts familiar from the Kubernetes world - user describes a desired state and there's a
 reconciliation loop of sorts.
 
-A typical Postgres setup/restore takes a few minutes on network storage, and proportional to the DB size for instance
-storage + restore from S3 via pgBackRest.
+A typical Postgres setup/restore takes a few minutes on network storage, and is proportional to the DB size when using
+volatile instance storage + restore from S3 (via pgBackRest).
+
+## Project status
+
+**Working Beta**
+
+* Manifest API not yet fully fixed (not relevant though when using Docker or the CLI).
+* No guarantees on internal configuration being kept backwards compatible - thus might need to clean up `~/.pg-spot-operator`
+  if getting weird errors after a version update.
 
 # Quickstart
 
@@ -36,7 +46,7 @@ docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 \
 2024-10-14 14:33:01,730 INFO Current Spot discount rate in AZ eu-north-1b: -70.7% (spot $205.2 vs on-demand $700.4)
 ```
 
-Incredible, an 8h work day on a pretty beefy private DB will cost us less than a cup of coffee, specifically $2.3 - let's go for it!
+Incredible, an 8h work day will cost us less than a cup of coffee, specifically $2.3 - let's go for it!
 
 PS Note that the displayed 3.4x discount is calculated from the normal on-demand EC2 instance cost, RDS adds a ~50%
 premium on top of that + EBS storage costs.
@@ -190,7 +200,7 @@ Currently the callback be a self-contained executable which gets following 4 inp
 
 - Instance name
 - Private full connect string a la `postgresql://postgres@localhost:5432/postgres`
-- Public full connect string, when `assign_public_ip: true` is set, else an empty string
+- Public full connect string, when `public_ip_address: true` is set, else an empty string
 - User provided tags as JSON, if any
 
 Example usage:
@@ -205,110 +215,7 @@ docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
   pgspotops/pg-spot-operator:latest
 ```
 
-# Security
-
-By default, security is not super trimmed down, as the experience is geared towards more casual or temporary workloads.
-Everything is tunable though.
-
-**ATTENTION** For all public IP Spot Operator managed instances it is very much **recommended to create a new special
-purpose VPC**, isolated from the rest of the account!
-
-Especially as this is as simple as running a `terraform apply` for
-example from [here](https://github.com/terraform-aws-modules/terraform-aws-vpc/tree/master/examples/simple) - just replace
-*private_subnets* with *public_subnets*, and your region of choice in *locals.region*. This concrete Terraform example
-doesn't add any Security group rules though, so that you might want to add some SG rules like below for the freshly created VPC
-(tuning the CIDR according to your needs / location).
-
-```commandline
-SG_ID=mysgid
-REGION=myregion
-PORTS_TO_OPEN="22 5432 3000"  # See below for a description of all used ports
-
-for x in $PORTS_TO_OPEN ; do ;
-  aws ec2 authorize-security-group-ingress \
-      --group-id $SG_ID \
-      --protocol tcp \
-      --port $x \
-      --cidr "0.0.0.0/0" \
-      --region $REGION
-done
-
-aws ec2 authorize-security-group-egress \
-    --group-id $SG_ID \
-    --protocol "-1" \
-    --cidr "0.0.0.0/0" \
-    --region $REGION
-```
-
-## Security-relevant attributes with defaults
-
-When using Docker / CLI:
-
-* --assign-public-ip (Defaults to true)
-* --aws-vpc-id (Default VPC used if not set)
-* --aws-subnet-id (Default Subnet used if not set)
-* --aws-security-group-ids (Default Security Group used if not set)
-* --admin-user
-* --admin-user-password
-* --admin-is-superuser (Defaults to false)
-
-Note that not all attributes can be set via single params, for full customization one needs to compile a manifest.
-
-When using manifests:
-
-```commandline
-assign_public_ip: true
-postgresql:
-  admin_is_superuser: true
-  admin_user: ''  # Meaning only local access possible
-  admin_user_password: ''
-  pg_hba_lines:  # Defaults allow non-postgres world access
-    - "host all postgres 0.0.0.0/0 reject"
-    - "hostssl all all 0.0.0.0/0 scram-sha-256"
-aws:
-  vpc_id: ''  # "default" VPC used by default
-  security_group_ids: []  # By default VPC "default" SG is used
-```
-
-PS! Note that if no `admin_user` is set, there will be also no public connect string generated as remote `postgres` user
-access is forbidden by default. One can enable remote "postgres" access (but can't be recommended of course) by setting
-the `admin_user` accordingly + specifying custom `pg_hba` rules.
-
-## Relevant ports / EC2 Security Group permissions
-
-* **22** - SSH. For direct Ansible SSH access to set up Postgres.
-* **5432** - Postgres. For client / app access.
-* **3000** - Grafana. Relevant if `monitoring.grafana.externally_accessible` set
-* **9100** - VM Prometheus node_exporter. Relevant if `monitoring.prometheus_node_exporter.externally_accessible` set
-
-For non-public (`assign_public_ip=false`) instances, which are also launched from within the SG, default SG inbound rules
-are enough. But for public access, one needs to open up the listed ports, at least for SSH and Postgres. 
-
-PS Ports are not changeable in the Community Edition! And changing ports to non-defaults doesn't provide any real security
-anyways ...
-
-PS Note that for Ansible SSH access to work the default SSH key on the engine node is expected to be passwordless!
-
-## Opening up a port via the AWS CLI
-
-To open port 22 for the engine node/workstation IP only, for Ansible setup to work, one could run:
-
-```
-MYPUBIP=$(curl -s whatismyip.akamai.com)
-
-aws ec2 authorize-security-group-ingress \
-  --group-name default \
-  --ip-permissions IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges="[{CidrIp=${MYPUBIP}/32}]" \
-  --region eu-north-1
-```
-
-Some AWS documentation on the topic:
-
-* https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html
-* https://docs.aws.amazon.com/cli/latest/reference/ec2/authorize-security-group-ingress.html
-
-
-# Cleanup of all operator created objects
+## Cleanup of all operator created objects
 
 After some work/testing one can clean up all operator created cloud resources via `PGSO_TEARDOWN_REGION` or only a
 single instance via the `PGSO_TEARDOWN` flag.
@@ -364,6 +271,63 @@ make fmt && make lint && make test
 
 git commit
 ```
+
+# Security
+
+By default, security is not super trimmed down, as main use case if for non-critical or temporary workloads. Everything
+is tunable though.
+
+## Security-relevant manifest attributes with defaults
+
+```commandline
+public_ip_address: true
+postgresql:
+  admin_is_superuser: true
+  admin_user: ''  # Meaning only local access possible
+  admin_user_password: ''
+  pg_hba_lines:  # Defaults allow non-postgres world access
+    - "host all postgres 0.0.0.0/0 reject"
+    - "hostssl all all 0.0.0.0/0 scram-sha-256"
+aws:
+  security_group_ids: []  # By default VPC "default" SG is used
+```
+
+PS! Note that if no `admin_user` is set, there will be also no public connect string generated as remote `postgres` user
+access is forbidden by default. One can enable remote "postgres" access (but can't be recommended of course) by setting
+the `admin_user` accordingly + specifying custom `pg_hba` rules.
+
+## Relevant ports / EC2 Security Group permissions
+
+* **22** - SSH. For direct Ansible SSH access to set up Postgres.
+* **5432** - Postgres. For client / app access.
+* **3000** - Grafana. Relevant if `monitoring.grafana.externally_accessible` set
+* **9100** - VM Prometheus node_exporter. Relevant if `monitoring.prometheus_node_exporter.externally_accessible` set
+
+For non-public (`public_ip_address=false`) instances, which are also launched from within the SG, default SG inbound rules
+are enough. But for public access, one needs to open up the listed ports, at least for SSH and Postgres. 
+
+PS Ports are not changeable in the Community Edition! And changing ports to non-defaults doesn't provide any real security
+anyways ...
+
+PS Note that for Ansible SSH access to work the default SSH key on the engine node is expected to be passwordless!
+
+## Opening up a port via the AWS CLI
+
+To open port 22 for the engine node/workstation IP only, for Ansible setup to work, one could run:
+
+```
+MYPUBIP=$(curl -s whatismyip.akamai.com)
+
+aws ec2 authorize-security-group-ingress \
+  --group-name default \
+  --ip-permissions IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges="[{CidrIp=${MYPUBIP}/32}]" \
+  --region eu-north-1
+```
+
+Some AWS documentation on the topic:
+
+* https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html
+* https://docs.aws.amazon.com/cli/latest/reference/ec2/authorize-security-group-ingress.html
 
 # Backups
 
@@ -479,4 +443,16 @@ Most import features of the Enterprise Edition:
 
 As crazy as it might sound, the math and initial interviewings indicate that, such a solution (in a more polished form)
 would be commercially very much viable, and we're going to give it a try. To speed up the development though, we'd also
-be interested in VC dollars - thus feel free to reach out to info@pgspotops.com if you happen to possess some.
+be interested in VC dollars - thus feel free to reach out to info@pgspotops.com if you happen to possess some and find
+the niche interesting.
+
+# Other topics
+
+* [Features](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_features.md)
+* [Integrating with user applications](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_integration.md)
+* [Security](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_security.md)
+* [Monitoring](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_monitoring.md)
+* [Backups](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_backups.md)
+* [Development](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_development.md)
+* [Advanced features](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_advanced_features.md)
+* [AWS CLI basics](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_aws_cli_basics.md)
