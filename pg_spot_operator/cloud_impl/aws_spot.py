@@ -291,6 +291,10 @@ def get_location_instance_type_pricing_from_info(
         if instance_type == info.get("Instance Type"):
             price = info.get("price", 0)
             break
+    else:
+        logger.info(
+            f"Found no pricing info for [instance-type={instance_type}] in [location={location_name}]"
+        )
     return float(price)
 
 
