@@ -60,7 +60,8 @@ def try_get_monthly_ondemand_price_for_sku(
         if cloud == CLOUD_AWS:
             hourly = aws_spot.get_current_hourly_ondemand_price(region, sku)
         return round(hourly * 24 * 30, 1)
-    except Exception:
+    except Exception as e:
+        logger.error(f"Failed to get ondemand sku price: {e}")
         return 0
 
 
