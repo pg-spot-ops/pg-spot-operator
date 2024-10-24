@@ -35,8 +35,8 @@ exactly be a lot of fun...what about tapping into the power of cloud instead? Le
 analytics would cost our company, given we want at least 128GB of RAM for feedback to remain interactive:
 
 ```
-docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 \
-  -e PGSO_RAM_MIN=128 -e PGSO_STORAGE_MIN=500 -e PGSO_STORAGE_TYPE=local -e PGSO_CHECK_PRICE=y \
+docker run --rm -e PGSO_REGION=eu-north-1 -e PGSO_CHECK_PRICE=y \
+  -e PGSO_RAM_MIN=128 -e PGSO_STORAGE_MIN=500 -e PGSO_STORAGE_TYPE=local \
   -v ~/.aws:/root/.aws:ro -v ~/.ssh:/root/.ssh:ro \
   pgspotops/pg-spot-operator:latest
 
