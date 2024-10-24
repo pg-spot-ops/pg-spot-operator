@@ -328,6 +328,32 @@ def collect_output_params_from_handler_temp_dir(
     return out_params
 
 
+def display_connect_strings(m: InstanceManifest):
+    logger.info("Instance %s setup completed", m.instance_name)
+
+    m.decrypt_secrets_if_any()
+
+    connstr_private, connstr_public = cmdb.get_instance_connect_strings(m)
+    if connstr_private:
+        logger.info(
+            "*** PRIVATE Postgres connect string *** - '%s'", connstr_private
+        )
+    if connstr_public:
+        logger.info(
+            "*** PUBLIC Postgres connect string *** - '%s'", connstr_public
+        )
+
+    logger.info("*** SSH connect string *** - '%s'", get_ssh_connstr(m))
+
+    if m.monitoring.grafana.enabled:
+        vm = cmdb.get_latest_vm_by_uuid(m.uuid)
+        primary_ip = "localhost"
+        if vm and m.monitoring.grafana.externally_accessible:
+            primary_ip = vm.ip_public or vm.ip_private
+        grafana_url = f"{m.monitoring.grafana.protocol}://{primary_ip}:3000/"
+        logger.info("*** GRAFANA URL *** - '%s'", grafana_url)
+
+
 def register_results_in_cmdb(
     action: str, output_params_merged: dict, m: InstanceManifest
 ) -> None:
@@ -335,7 +361,6 @@ def register_results_in_cmdb(
         cmdb.finalize_destroy_instance(m)
         cmdb.mark_manifest_snapshot_as_succeeded(m)
     elif action == constants.ACTION_INSTANCE_SETUP:
-        cmdb.finalize_instance_setup(m)
         cmdb.mark_manifest_snapshot_as_succeeded(m)
 
 
@@ -600,8 +625,14 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
     rc, outputs = run_ansible_handler(
         action, temp_workdir, executable_full_path, m
     )
+
     if rc == 0:
-        clean_up_old_logs_if_any(old_threshold_days=0)  # To avoid possibility of unencrypted secrets hanging around for too long
+
+        display_connect_strings(m)
+
+        clean_up_old_logs_if_any(
+            old_threshold_days=0
+        )  # To avoid possibility of unencrypted secrets hanging around for too long
 
     return rc == 0, outputs
 
