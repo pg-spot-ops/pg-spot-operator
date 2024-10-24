@@ -24,32 +24,23 @@ def run_process_with_output(
     return p.returncode, stdout
 
 
-def pg_config_lines_to_dict(extra_config_lines: list[str]) -> dict:
-    ret = {}
-    for line in extra_config_lines:
-        splits = line.split("=")
-        ret[splits[0].strip()] = line
-    return ret
-
-
 def merge_user_and_tuned_non_conflicting_config_params(
-    config_lines_tuned: list[str], config_lines_user: list[str]
-) -> list[str]:
+    config_lines_tuned: list[str], config_lines_user: dict
+) -> dict:
     """User input wins over tuned config lines
     Input lines are ready-to-use PG conf lines a la: work_mem='64MB'
     """
-    if not config_lines_user:
-        return config_lines_tuned
 
     merged = config_lines_user.copy()
 
-    user_set_params = pg_config_lines_to_dict(config_lines_user)
-
     for tuned_line in config_lines_tuned:
-        splits = tuned_line.split("=")
-        if splits[0].strip() in user_set_params:
-            continue
-        merged.append(tuned_line)
+        tuned_line = tuned_line.strip()
+        if not tuned_line.startswith("#"):
+            splits = tuned_line.partition("=")
+            key = splits[0].strip()
+            if key in config_lines_user or len(splits) < 2:
+                continue
+            merged[key] = splits[2].strip()
     return merged
 
 
