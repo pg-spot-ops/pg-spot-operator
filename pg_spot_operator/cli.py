@@ -568,10 +568,12 @@ def main():  # pragma: no cover
         exit(0)
 
     env_manifest: InstanceManifest | None = None
-    if args.manifest or args.instance_name:
+    if args.manifest or (args.instance_name or args.check_price):
         if args.manifest:
             env_manifest = try_load_manifest(args.manifest)
         else:
+            if args.check_price and not args.instance_name:
+                args.instance_name = "price-check"
             env_manifest = get_manifest_from_args(args)
         if not env_manifest:
             logger.exception("Failed to load manifest from CLI args")
