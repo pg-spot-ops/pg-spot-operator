@@ -4,6 +4,84 @@ Changelog
 
 (unreleased)
 ------------
+- README - remove instance name from the quickstart price check example.
+  [Kaarel Moppel]
+
+  As not required since prev commit
+- Don't require --instance-name input in --check-price mode. [Kaarel
+  Moppel]
+- Don't store user provided secrets in plain-text in the CMDB (#64)
+  [Kaarel Moppel]
+
+  * Don't store any user secrets in the CMDB
+
+  As per user feedack. Carries some risk still although mostly a dev tool
+
+  * Refactor the connect string printing to a more logical place
+
+  As per PR review https://github.com/pg-spot-ops/pg-spot-operator/pull/64
+
+  * Rebase
+- In --check-price mode show the spot price in any case. [Kaarel Moppel]
+
+  Even if can't get the On-Demand price for a discount comparison
+- Docs reorg - split the README (#66) [Kaarel Moppel]
+
+  * Add a short primer on AWS CLI basics
+
+  * Split main README into smaller ones by topic
+
+  * Check linking
+
+  * Link all sections
+
+  * Add a note on project status
+
+  * Make 1st lines of README more light to read
+
+  Plus don't downplay the security posture, as still accounted for
+
+  * AWS basics - add a link to account creation
+
+  * Change docs base path from reorg branch to main
+- Delete tmp Ansible folder after success (#65) [Kaarel Moppel]
+
+  To lower the likelyhood of leaking any passwords
+- Allow using non-default VPCs (#60) [Kaarel Moppel]
+
+  * New manifest attribute / CLI flag --aws-vpc-id
+
+  To be able to use non-default VPCs more conveniently. Previously once
+  could already do it by specifying a Subnet ID - but this assumes also
+  the AZ is set correctly by the user. Now we select the subnet according
+  to the cheapest AZ found if just VPC ID specified
+
+  * README - add information on the new --aws-vpc-id flag
+
+  Plus move the whole Security section higher, as obviously a topic
+  nowadays
+
+  * README - recommend a new VPC for all operator instances
+
+  * README - add example information how to create a new play VPC
+
+  Toghether with SG rules opening up ports used by the operator
+
+  * Rename --public-ip to --assign-public-ip
+
+  As per PR feedback
+
+  * Specify what a public instance means
+- Increase after-VM-create sleep from 5s to 10s. [Kaarel Moppel]
+
+  Seems reducing after-VM-create sleep from 30s to 5s was too optimistic
+  still
+- Update README.md. [Evans Akai Bekoe]
+
+
+0.8.2 (2024-10-17)
+------------------
+- Release: version 0.8.2 🚀 [Kaarel Moppel]
 - README - Add info on Python installation via pipx (#59) [Kaarel
   Moppel]
 
