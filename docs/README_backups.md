@@ -5,6 +5,10 @@ by default - which is good only of course for throwaway testing/analytics etc. T
 support for `pgBackRest` with S3 storage. Backups could of course configured for network storage also, for the usual extra
 safety and (manual) PITR reasons.
 
+A typical restore takes a few minutes on network storage, and is proportional to the DB size when using
+volatile instance storage + restore from S3 (via pgBackRest). A 100GB DB size S3 restore takes about 10min on lower-end
+hardware.
+
 Note though that enabling backup still means a small data loss in case of VM eviction, assuming data is constantly written.
 The default average data loss window is around 1min (`backup.wal_archiving_max_interval=2min`) and for larger databases
 (100GB+), restoring in case of an eviction will take 10min+ and the operational side will suffer, so network storage

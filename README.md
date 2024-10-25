@@ -1,7 +1,7 @@
 
 # PG Spot Operator [Community Edition]
 
-Think of it as RDS, but at a fraction of the cost! Typical [savings](https://aws.amazon.com/ec2/spot/pricing/) are around
+Think of it as one-liner RDS, but at a fraction of the cost! Typical [savings](https://aws.amazon.com/ec2/spot/pricing/) are around
 5x compared to [RDS](https://aws.amazon.com/rds/postgresql/pricing/).
 
 Obviously not mean for all projects as a general RDS replacement, as utilizing Spot instances means one can be interrupted
@@ -11,11 +11,8 @@ But on the other hand - eviction rates are insanely good for the price! The aver
 around 5% per month according to AWS [data](https://aws.amazon.com/ec2/spot/instance-advisor/), meaning - one **can expect
 to run a few months uninterrupted**, i.e. still in the 99.9+% uptime range!
 
-Based on concepts familiar from the Kubernetes world - user describes a desired state and there's a
-reconciliation loop of sorts.
-
-A typical Postgres setup/restore takes a few minutes on network storage, and is proportional to the DB size when using
-volatile instance storage + restore from S3 (via pgBackRest).
+Based on concepts familiar from the Kubernetes world - user describes a desired state (min. hardware specs, Postgres version,
+extensions, admin user password etc) and there's a reconciliation loop of sorts.
 
 ## Project status
 
@@ -27,44 +24,28 @@ volatile instance storage + restore from S3 (via pgBackRest).
 
 # Quickstart
 
-Let's say we're Data Scientists (sexiest job of 21st century, remember?) and need to perform some advanced ad-hoc
-exploration/analytics on a medium-size dataset of a few hundred GB.
+Let's say we're a Data Scientists (sexiest job of 21st century, remember?) and need to perform some advanced ad-hoc
+exploration/analytics on a medium-size dataset of a few hundred GB. Sadly all the available development DBs are not much
+better than our shiny new MacBook Pro - seems our data exploration quest might not exactly be a lot of fun...
 
-Although we have a new and shiny MacBook Pro, it still has only 16GB of RAM and our data exploration quest might not
-exactly be a lot of fun...what about tapping into the power of cloud instead? Let's check how much a day of fast SSD-backed
-analytics would cost our company, given we want at least 128GB of RAM for feedback to remain interactive:
+Wait, what about tapping into the power of cloud instead? Let's just spin up a private high-end analytics DB for an
+as-low-as-it-gets cost!
 
 ```
-docker run --rm -e PGSO_REGION=eu-north-1 -e PGSO_CHECK_PRICE=y \
-  -e PGSO_RAM_MIN=128 -e PGSO_STORAGE_MIN=500 -e PGSO_STORAGE_TYPE=local \
+psql $(docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 \
+  -e PGSO_RAM_MIN=128 -e PGSO_STORAGE_MIN=500 -e PGSO_STORAGE_TYPE=local -e PGSO_CONNSTR_OUTPUT_ONLY=y \
+  -e PGSO_ADMIN_USER=pgspotops -e PGSO_ADMIN_USER_PASSWORD=topsecret123 \
   -v ~/.aws:/root/.aws:ro -v ~/.ssh:/root/.ssh:ro \
-  pgspotops/pg-spot-operator:latest
+  pgspotops/pg-spot-operator:latest)
 
 2024-10-14 14:32:57,530 INFO Resolving HW requirements to actual instance types / prices ...
 2024-10-14 14:33:01,408 INFO Cheapest instance type found: r6gd.4xlarge (arm)
 2024-10-14 14:33:01,409 INFO Main specs - vCPU: 16, RAM: 128 GB, instance storage: 950
 2024-10-14 14:33:01,730 INFO Current Spot discount rate in AZ eu-north-1b: -70.7% (spot $205.2 vs on-demand $700.4)
-```
-
-Incredible, an 8h work day will cost us less than a cup of coffee, specifically $2.3 - let's go for it!
-
-PS Note that the displayed 3.4x discount is calculated from the normal on-demand EC2 instance cost, RDS adds a ~50%
-premium on top of that + EBS storage costs.
-
-```
-docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 \
-  -e PGSO_RAM_MIN=128 -e PGSO_STORAGE_MIN=500 -e PGSO_STORAGE_TYPE=local -e PGSO_CONNSTR_OUTPUT_ONLY=y \
-  -e PGSO_ADMIN_USER=pgspotops -e PGSO_ADMIN_USER_PASSWORD=topsecret123 \
-  -v ~/.aws:/root/.aws:ro -v ~/.ssh:/root/.ssh:ro pgspotops/pg-spot-operator:latest
 ...
-postgresql://pgspotops:topsecret123@13.60.208.195:5432/postgres?sslmode=require
-```
-
-Nice, we have our instance, let's load up the dataset and get to work...
-PS Note that the instance is tuned according to the hardware already!
-
-```
-$ psql "postgresql://pgspotops:topsecret123@13.60.208.195:5432/postgres?sslmode=require"
+psql (17.0 (Ubuntu 17.0-1.pgdg24.04+1), server 16.4 (Debian 16.4-1.pgdg120+2))
+SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off, ALPN: none)
+Type "help" for help.
 
 postgres=# show shared_buffers ;
  shared_buffers
@@ -77,11 +58,16 @@ postgres=# \i my_dataset.sql
 postgres=# SELECT ...
 ```
 
-Wow, that went smooth, other people's computers can be really useful sometimes...OK time to call it a day and shut down
+Incredible! As hinted in the log output - an 8h work day will cost us less than a cup of coffee, specifically $2.3.
+
+PS Note that the displayed 3.4x discount is calculated from the normal on-demand EC2 instance cost, RDS adds a ~50%
+premium on top of that + EBS storage costs. Also note that the instance is tuned according to the hardware already!
+
+Wow, that task went smooth, other people's computers can be really useful sometimes...OK time to call it a day and shut down
 the instance ...
 
 ```
-docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 -e PGSO_REGION=eu-north-1 -e PGSO_TEARDOWN=y \
+docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 -e PGSO_TEARDOWN=y \
   -v ~/.aws:/root/.aws:ro -v ~/.ssh:/root/.ssh:ro \
   pgspotops/pg-spot-operator:latest
 
