@@ -5,7 +5,7 @@ set -e
 
 export PAGER=
 
-REGIONS=$(aws ec2 describe-regions --no-all-regions --query "Regions[*].[RegionName]" --output text)
+REGIONS=$(aws ec2 describe-regions --no-all-regions --query "Regions[*].[RegionName]" --output text | sort)
 WET_RUN=
 
 if [ -n "$1" ]; then
