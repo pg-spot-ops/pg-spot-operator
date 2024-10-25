@@ -112,11 +112,16 @@ docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 -e PGS
 
 # Usage
 
+There are a [lot](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/pg_spot_operator/cli.py#L31) of parameters one
+can specify, to shape the look of hardware and Postgres instance. Common usage though might look something like below.
+Note that by default we're in "daemon mode" - checking continuously for the instance health and re-building if needed.
+
 ## Via Docker
 
 ```bash
 docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
-  -e PGSO_STORAGE_MIN=100 -e PGSO_STORAGE_TYPE=local -e PGSO_CPU_MIN=2 \
+  -e PGSO_STORAGE_MIN=100 -e PGSO_STORAGE_TYPE=local -e PGSO_CPU_MIN=2 -e PGSO_POSTGRESQL_VERSION=16 \
+  -e PGSO_EXTENSIONS=pgvector,pg_stat_statements -e PGSO_OS_EXTRA_PACKAGES=postgresql-16-pgvector \
   -v ~/.aws:/root/.aws:ro -v ~/.ssh:/root/.ssh:ro \
   pgspotops/pg-spot-operator:latest
 ```
