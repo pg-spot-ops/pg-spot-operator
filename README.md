@@ -4,23 +4,15 @@
 Think of it as one-liner RDS, but at a fraction of the cost! Typical [savings](https://aws.amazon.com/ec2/spot/pricing/) are around
 5x compared to [RDS](https://aws.amazon.com/rds/postgresql/pricing/).
 
-Obviously not mean for all projects as a general RDS replacement, as utilizing Spot instances means one can be interrupted
+Obviously not meant for all projects as a general RDS replacement, as utilizing Spot instances means one can be interrupted
 by AWS at any time, and it takes a few minutes to restore the state.
 
-But on the other hand - eviction rates are insanely good for the price! The average frequency of interruption is only
-around 5% per month according to AWS [data](https://aws.amazon.com/ec2/spot/instance-advisor/), meaning - one **can expect
-to run a few months uninterrupted**, i.e. still in the 99.9+% uptime range!
+On the other hand - Spot eviction rates are insanely good for the price! The average frequency of interruption is only
+around 5% per month according to AWS [data](https://aws.amazon.com/ec2/spot/instance-advisor/), meaning - one **can expect to run a few months uninterrupted**, i.e.
+still in the 99.9+% uptime range!
 
 Based on concepts familiar from the Kubernetes world - user describes a desired state (min. hardware specs, Postgres version,
 extensions, admin user password etc) and there's a reconciliation loop of sorts.
-
-## Project status
-
-**Working Beta**
-
-* Manifest API not yet fully fixed (not relevant though when using Docker or the CLI).
-* No guarantees on internal configuration being kept backwards compatible - thus might need to clean up `~/.pg-spot-operator`
-  if getting weird errors after a version update.
 
 # Quickstart
 
@@ -80,7 +72,7 @@ docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 -e PGS
 # General idea
 
 * The user:
-  - Specifies a set of few key parameters like region, minimum CPUs/RAM and storage size and type (network EBS volumes
+  - Specifies a few key parameters like region, minimum CPUs/RAM and storage size and type (network EBS volumes
     or local volatile storage) and maybe also the Postgres version (defaults to latest stable). User input can come in 3 forms:
     - CLI/Env parameters a la `--instance-name`, `--region`, `--cpu-min`, `--storage-min`. Note that in CLI mode not all
       features can be configured and some common choices are made for the user
@@ -149,13 +141,12 @@ synchronization / consensus store to keep things simple.
 
 # Enterprise Edition
 
-Although the Community Edition works and is free to use also for businesses, it's taking the simplest approach to persistent Spot
-instances really, so that some aspects of the solution are "best-efforty" and one could do much more to ensure better
-uptimes.
+Although the Community Edition works and is free to use also for all non-compete business purposes, it's taking the simplest
+approach to persistent Spot instances really, so that some aspects of the solution are "best-efforty" and one could do
+much more to ensure better uptimes and usability.
 
 If you'd be interested in massive cost saving also for more critical Postgres databases, please register your email address
-via this form [https://tinyurl.com/pgspotops](https://tinyurl.com/pgspotops) to get notified once the upcoming Enterprise Edition
-is released.
+via this form [https://tinyurl.com/pgspotops](https://tinyurl.com/pgspotops) to get notified once the upcoming Enterprise Edition is released.
 
 Most import features of the Enterprise Edition:
 
@@ -170,12 +161,20 @@ Most import features of the Enterprise Edition:
   * More security, e.g. certificate access
   * A CLI for ad-hoc DBA operations
 
-## VC inquiries
+## Sustainable Open Source / VC info
 
-As crazy as it might sound, the math and initial interviewings indicate that, such a solution (in a more polished form)
-would be commercially very much viable, and we're going to give it a try. To speed up the development though, we'd also
-be interested in VC dollars - thus feel free to reach out to info@pgspotops.com if you happen to possess some and find
-the niche interesting.
+As crazy as it might sound, we believe that such a solution (in a more polished form) would be a great addition to the
+Postgres ecosystem and also commercially viable, so we're going to give it a try. To speed up the development though,
+we'd also be interested in VC dollars - thus feel free to reach out to info@pgspotops.com if you happen to possess some
+and find the niche interesting.
+
+# Project status
+
+**Working Beta**
+
+* Manifest API not yet fully fixed (not relevant though when using Docker or the CLI).
+* No guarantees on internal configuration being kept backwards compatible - thus might need to clean up `~/.pg-spot-operator`
+  if getting weird errors after a version update.
 
 # Other topics
 
