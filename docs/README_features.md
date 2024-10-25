@@ -3,6 +3,7 @@
 * Uses cheap (3-10x compared to on-demand pricing) AWS Spot VMs to run Postgres
 * Installs Postgres from official PGDG repos, meaning you get instant minor version updates
 * Supports Postgres versions v14-v17 (defaults to v16 currently if not specified)
+* Supports all extensions available from the official repos
 * Two instance selection strategies - "cheapest" and "random"
   - Note that `--selection-strategy=random` can produce better eviction rates as cheaper instance types are in more danger
   of being overbooked. For the same reason burstable instances are not recommended at all for real work.

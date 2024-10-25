@@ -181,6 +181,7 @@ and find the niche interesting.
 * [Features](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_features.md)
 * [Integrating with user applications](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_integration.md)
 * [Security](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_security.md)
+* [Extensions](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_extensions.md)
 * [Monitoring](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_monitoring.md)
 * [Backups](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_backups.md)
 * [Development](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_development.md)
