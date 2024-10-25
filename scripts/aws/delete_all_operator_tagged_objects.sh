@@ -1,25 +1,36 @@
 #!/bin/bash
 
+if [ -z "$1" ]; then
+  echo "Usage: delete_all_operator_tagged_objects.sh  yes/no (DRY RUN MODE)  ['eu-west-1 eu-north-1' OPTIONAL EXPLICIT REGION LIST]"
+  exit 0
+fi
+
 echo "Starting at `date`"
 set -e
 
 export PAGER=
 
-REGIONS=$(aws ec2 describe-regions --no-all-regions --query "Regions[*].[RegionName]" --output text | sort)
-WET_RUN=
+WET_RUN=0
 
-if [ -n "$1" ]; then
-  WET_RUN=t
+if [ "${1:0:1}" == "y" ]; then
+  WET_RUN=1
 fi
 
-if [ -z "$WET_RUN" ]; then
-  echo "Running in DRY RUN mode ! Add any argument to actually delete"
+if [ -n "$2" ]; then
+  REGIONS="$2"
 else
+  REGIONS=$(aws ec2 describe-regions --no-all-regions --query "Regions[*].[RegionName]" --output text | sort)
+fi
+
+
+
+if [ "$WET_RUN" -gt 0 ]; then
   echo "WARNING - Deleting all 'pg-spot-operator-instance' tagged resources in regions $REGIONS"
   echo "sleep 5"
   sleep 5
+else
+  echo "Running in DRY RUN mode - just listing operator resources!"
 fi
-
 
 
 
@@ -42,7 +53,7 @@ INSTANCES=$(aws ec2 describe-instances --region $reg --filters Name=tag-key,Valu
 
 for x in $INSTANCES ; do
   echo "Terminating VM $x ..."
-  if [ -n "$WET_RUN" ]; then
+  if [ "$WET_RUN" -gt 0 ]; then
     aws ec2 terminate-instances --region $reg --instance-ids $x >/dev/null
     REGION_TERMINATED=$((REGION_TERMINATED+1))
     TOTAL_TERMINATED=$((TOTAL_TERMINATED+1))
@@ -66,7 +77,7 @@ fi
 
 for vol in $VOLUMES ; do
   echo "Terminating Volume $vol ..."
-  if [ -n "$WET_RUN" ]; then
+  if [ "$WET_RUN" -gt 0 ]; then
     vol_state=$(aws ec2 describe-volumes --region $reg --volume-id $vol --query "Volumes[*].State" --output text)
     echo "vol_state: $vol_state"
     if [ "$vol_state" != "available" ]; then
@@ -93,7 +104,7 @@ ADDRESSES=$(aws ec2 describe-addresses --region $reg --filters Name=tag-key,Valu
 
 for aid in $ADDRESSES ; do
   echo "Terminating address $aid ..."
-  if [ -n "$WET_RUN" ]; then
+  if [ "$WET_RUN" -gt 0 ]; then
     aws ec2 release-address --region $reg --allocation-id $aid >/dev/null
     EIPS_TERMINATED=$((EIPS_TERMINATED+1))
   fi
@@ -113,14 +124,14 @@ NICS=$(aws ec2 describe-network-interfaces --region $reg --filters Name=tag-key,
 
 for nic in $NICS ; do
   echo "Terminating NIC $nic ..."
-  if [ -n "$WET_RUN" ]; then
+  if [ "$WET_RUN" -gt 0 ]; then
     echo "aws ec2 delete-network-interface --region $reg --network-interface-id $nic >/dev/null"
     aws ec2 delete-network-interface --region $reg --network-interface-id $nic >/dev/null
     NICS_TERMINATED=$((NICS_TERMINATED+1))
   fi
 done
 
-echo -e "Done. NICs terminated: ${NICS_TERMINATED}"
+echo -e "\nDone. NICs terminated: ${NICS_TERMINATED}"
 
 
 
@@ -130,6 +141,7 @@ echo -e "\nDone with region ${reg}\n"
 
 done  # reg
 
+echo -e "All regions processed"
 echo "Total VMs deleted: $TOTAL_TERMINATED"
 
-echo "Finished at `date`"
+echo -e "\nFinished at `date`"
