@@ -22,14 +22,19 @@ fi
 
 
 
-### VMs ###
 
-echo -e "\n*** Deleting AWS VMs ***"
-
-TERMINATED=0
+TOTAL_TERMINATED=0
 
 for reg in $REGIONS ; do
-echo -e "\nProcessing region: $reg\n"
+
+echo ""
+echo "*******************"
+echo "Processing region: $reg"
+echo "*******************"
+
+REGION_TERMINATED=0
+
+echo -e "\n*** Deleting AWS VMs ***"
 
 INSTANCES=$(aws ec2 describe-instances --region $reg --filters Name=tag-key,Values=pg-spot-operator-instance \
   Name=instance-state-name,Values=running,pending,stopped,stopping,shutting-down \
@@ -39,29 +44,25 @@ for x in $INSTANCES ; do
   echo "Terminating VM $x ..."
   if [ -n "$WET_RUN" ]; then
     aws ec2 terminate-instances --region $reg --instance-ids $x >/dev/null
-    TERMINATED=$((TERMINATED+1))
+    REGION_TERMINATED=$((REGION_TERMINATED+1))
+    TOTAL_TERMINATED=$((TOTAL_TERMINATED+1))
   fi
 done
 
-done  # reg
-echo -e "\nDone. VMs terminated: ${TERMINATED}"
+echo -e "\nDone. VMs terminated in region: ${REGION_TERMINATED}"
 
-if [ "$TERMINATED" -gt 0 ]; then
+
+echo -e "\n*** Deleting AWS volumes ***"
+
+REGION_VOLUMES_TERMINATED=0
+
+VOLUMES=$(aws ec2 describe-volumes --region $reg --filters Name=tag-key,Values=pg-spot-operator-instance --query 'Volumes[*].VolumeId' --output text)
+
+if [ "$REGION_TERMINATED" -gt 0 ] && [ -n "$VOLUMES" ] ; then
   echo "Sleeping 5min before deleting volumes to give time to detach ..."
   sleep 300
 fi
 
-
-### VOLUMES ###
-
-echo -e "\n*** Deleting AWS volumes ***"
-
-TERMINATED=0
-
-for reg in $REGIONS ; do
-echo -e "\nProcessing region: $reg\n"
-
-VOLUMES=$(aws ec2 describe-volumes --region $reg --filters Name=tag-key,Values=pg-spot-operator-instance --query 'Volumes[*].VolumeId' --output text)
 
 for vol in $VOLUMES ; do
   echo "Terminating Volume $vol ..."
@@ -74,22 +75,19 @@ for vol in $VOLUMES ; do
     fi
     echo "aws ec2 delete-volume --region $reg --volume-id $vol >/dev/null"
     aws ec2 delete-volume --region $reg --volume-id $vol >/dev/null
-    TERMINATED=$((TERMINATED+1))
+    REGION_VOLUMES_TERMINATED=$((REGION_VOLUMES_TERMINATED+1))
   fi
 done
 
-done
-echo -e "\nDone. Volumes terminated: ${TERMINATED}"
+echo -e "\nDone. Volumes terminated: ${REGION_VOLUMES_TERMINATED}"
 
 
-### Elastic Public IPs
+
+
 
 echo -e "\n*** Deleting AWS Elastic IP Addresses ***"
 
-TERMINATED=0
-
-for reg in $REGIONS ; do
-echo -e "\nProcessing region: $reg\n"
+EIPS_TERMINATED=0
 
 ADDRESSES=$(aws ec2 describe-addresses --region $reg --filters Name=tag-key,Values=pg-spot-operator-instance --query 'Addresses[*].AllocationId' --output text)
 
@@ -97,23 +95,18 @@ for aid in $ADDRESSES ; do
   echo "Terminating address $aid ..."
   if [ -n "$WET_RUN" ]; then
     aws ec2 release-address --region $reg --allocation-id $aid >/dev/null
-    TERMINATED=$((TERMINATED+1))
+    EIPS_TERMINATED=$((EIPS_TERMINATED+1))
   fi
 done
 
-done
-echo -e "\nDone. Addresses terminated: ${TERMINATED}"
+echo -e "\nDone. Addresses terminated: ${EIPS_TERMINATED}"
 
 
 
-### NICs
 
 echo -e "\n*** Deleting AWS network interfaces ***"
 
-TERMINATED=0
-
-for reg in $REGIONS ; do
-echo -e "\nProcessing region: $reg\n"
+NICS_TERMINATED=0
 
 NICS=$(aws ec2 describe-network-interfaces --region $reg --filters Name=tag-key,Values=pg-spot-operator-instance \
    Name=interface-type,Values=interface --query 'NetworkInterfaces[*].NetworkInterfaceId' --output text)
@@ -123,11 +116,20 @@ for nic in $NICS ; do
   if [ -n "$WET_RUN" ]; then
     echo "aws ec2 delete-network-interface --region $reg --network-interface-id $nic >/dev/null"
     aws ec2 delete-network-interface --region $reg --network-interface-id $nic >/dev/null
-    TERMINATED=$((TERMINATED+1))
+    NICS_TERMINATED=$((NICS_TERMINATED+1))
   fi
 done
 
-done
-echo -e "Done. NICs terminated: ${TERMINATED}"
+echo -e "Done. NICs terminated: ${NICS_TERMINATED}"
+
+
+
+
+
+echo -e "\nDone with region ${reg}\n"
+
+done  # reg
+
+echo "Total VMs deleted: $TOTAL_TERMINATED"
 
 echo "Finished at `date`"
