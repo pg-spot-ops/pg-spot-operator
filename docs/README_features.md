@@ -20,6 +20,7 @@
   given the daemon is running
 * Fire-and-forget/self-terminating mode for the VM to expire itself automatically on expiration date
 * Optional on-the-VM detailed hardware monitoring support via node_exporter + Grafana
+* Supports Ansible Vault encrypted secrets in the manifests
 
 ## Non-features
 

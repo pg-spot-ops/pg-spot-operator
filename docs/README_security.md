@@ -15,6 +15,7 @@ postgresql:
     - "hostssl all all 0.0.0.0/0 scram-sha-256"
 aws:
   security_group_ids: []  # By default VPC "default" SG is used
+vault_password_file:  # Ansible Vault key file accessible on the engine, to handle encrypted secrets (if any used) 
 ```
 
 PS! Note that if no `admin_user` is set, there will be also no public connect string generated as remote `postgres` user
