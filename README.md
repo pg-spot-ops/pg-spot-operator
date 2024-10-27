@@ -90,7 +90,7 @@ docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 -e PGS
 
 # Usage
 
-There are a [lot](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/pg_spot_operator/cli.py#L31) of parameters one
+There are a [lot](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_env_options.md) of parameters one
 can specify, to shape the look of hardware and Postgres instance. Common usage though might look something like below.
 Note that by default we're in "daemon mode" - checking continuously for the instance health and re-building if needed.
 
@@ -180,6 +180,7 @@ and find the niche interesting.
 
 * [Features](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_features.md)
 * [Integrating with user applications](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_integration.md)
+* [CLI/ENV parameters](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_env_options.md)
 * [Security](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_security.md)
 * [Extensions](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_extensions.md)
 * [Monitoring](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_monitoring.md)
