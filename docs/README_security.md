@@ -2,6 +2,9 @@
 
 The defaults are geared towards user experience i.e. public access, but everything is tunable.
 
+WARNING - it is very much recommended to use a new, isolated VPC for running the Spot Operator! Official AWS documentation
+on creating one: https://docs.aws.amazon.com/vpc/latest/userguide/create-vpc.html#create-vpc-cli
+
 ## Security-relevant manifest attributes with defaults
 
 ```commandline
