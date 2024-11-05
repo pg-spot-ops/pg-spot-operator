@@ -4,6 +4,65 @@ Changelog
 
 (unreleased)
 ------------
+- Don't display the main loop sleep message in dry-run mode. [Kaarel
+  Moppel]
+- Auto-download ansible setup scripts from GitHub if missing (#76)
+  [Kaarel Moppel]
+
+  * Auto-download the Ansible setup scripts from Github
+
+  If not found locally and --ansible-path not set. To make pipx usage
+  more user-friendly
+
+  * More Github downloading to util.py
+- Security readme - recommend a new isolated VPC for running the
+  operator. [Kaarel Moppel]
+- Add a separate Readme for CLI options (#70) [Kaarel Moppel]
+
+  * Add a new help doc on CLI / ENV input parameters
+
+  * Move to "definition list" format for readability
+
+  * Revert "Move to "definition list" format for readability"
+
+  This reverts commit 93397a0935e6d772b77d61ac209bae5dbf9d6850.
+
+  As seems Github does not support Markdown definition lists yet :(
+
+  * Fix a line
+- README - mention the support for Ansible Vault secrets. [Kaarel
+  Moppel]
+- README - add a section on extensions usage. [Kaarel Moppel]
+- README typos + minor wording. [Kaarel Moppel]
+
+  Move the project status section to footer
+- README update - more compact quickstart. [Kaarel Moppel]
+- Mask long and ugly AWS API timeout errors in non-verbose mode. [Kaarel
+  Moppel]
+
+  When listing active VMs. As quite common actually on flaky network.
+- README usage section - link to all options. [Kaarel Moppel]
+
+  And add an example parameter to enable the pgvector extension
+- Refactor cleanup helper (#68) [Kaarel Moppel]
+
+  * Clean up resources region by region
+
+  More logical so
+
+  * Loop regions by sorted region name
+
+  * Dont run the script without any parameters
+
+  Show usage instead if no params given
+- Remove some noise from the README. [Kaarel Moppel]
+
+  Some sections actually linked in footer
+
+
+0.8.5 (2024-10-24)
+------------------
+- Release: version 0.8.5 🚀 [Kaarel Moppel]
 - README - remove instance name from the quickstart price check example.
   [Kaarel Moppel]
 
