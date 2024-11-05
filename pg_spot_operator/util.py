@@ -2,9 +2,13 @@ import functools
 import json
 import logging
 import os
+import shutil
 import subprocess
 import urllib.request
+import zipfile
 from datetime import datetime, timedelta
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -205,3 +209,54 @@ def check_ssh_ping_ok(
 def read_file(file_path: str) -> str:
     with open(os.path.expanduser(file_path)) as f:
         return f.read()
+
+
+def try_download_ansible_from_github(
+    zip_url: str, config_dir: str, ansible_subdir: str = "ansible"
+) -> bool:
+    """Returns True on success"""
+    TMP_ZIP_LOC = "/tmp/pg-spot-operator_main.zip"
+    TMP_UNPACKED_PATH = "/tmp/pg-spot-operator-main"
+    try:
+        ansible_storage_path = os.path.expanduser(
+            os.path.join(config_dir, "ansible")
+        )
+        logger.info(
+            "Downloading the Ansible setup files from %s to %s ...",
+            zip_url,
+            ansible_storage_path,
+        )
+
+        os.makedirs(os.path.expanduser(config_dir), exist_ok=True)
+
+        # Download master ZIP. TODO embed exact Git version somehow
+        r = requests.get(zip_url, allow_redirects=True)
+        open(TMP_ZIP_LOC, "wb").write(r.content)
+
+        # Unpack
+        with zipfile.ZipFile(TMP_ZIP_LOC) as zip_ref:
+            zip_ref.extractall("/tmp")
+
+        # Copy only the ansible folder to ansible_storage_path
+        shutil.copytree(
+            os.path.join(TMP_UNPACKED_PATH, "ansible"),
+            ansible_storage_path,
+            dirs_exist_ok=True,
+        )
+
+        # Clean up
+        try:
+            logger.debug(
+                "Cleaning up the temp locations %s",
+                (TMP_ZIP_LOC, TMP_UNPACKED_PATH),
+            )
+            os.unlink(TMP_ZIP_LOC)
+            shutil.rmtree(TMP_UNPACKED_PATH, ignore_errors=True)
+        except Exception:
+            logger.exception("Failed to clean up properly")
+    except Exception:
+        logger.exception(
+            f"Failed to download the repo from Github URL: {zip_url}"
+        )
+        return False
+    return True

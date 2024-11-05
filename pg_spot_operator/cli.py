@@ -10,6 +10,7 @@ from pg_spot_operator.cloud_impl.aws_client import set_access_keys
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.operator import clean_up_old_logs_if_any
+from pg_spot_operator.util import try_download_ansible_from_github
 
 SQLITE_DBNAME = "pgso.db"
 
@@ -529,6 +530,42 @@ def resolve_manifest_and_display_price(
         )
 
 
+def download_ansible_from_github_if_not_set_locally(
+    args: ArgumentParser,
+) -> None:
+    if (
+        not args.ansible_path
+        and not (
+            args.check_price
+            or args.check_manifest
+            or args.teardown
+            or args.teardown_region
+        )
+        and not os.path.exists("./ansible")
+    ):
+        if not os.path.exists(
+            os.path.expanduser(
+                os.path.join(
+                    args.config_dir, "ansible/v1/single_instance_setup.yml"
+                )
+            )
+        ):
+            dl_ok = try_download_ansible_from_github(
+                "https://github.com/pg-spot-ops/pg-spot-operator/archive/refs/heads/main.zip",
+                args.config_dir,
+            )
+            if not dl_ok:
+                logger.error(
+                    "--ansible-path not set and also failed to download from Github, cannot proceed"
+                )
+                exit(1)
+        logger.debug(
+            "Setting --ansible-path to %s",
+            os.path.join(args.config_dir, "ansible"),
+        )
+        args.ansible_path = os.path.join(args.config_dir, "ansible")
+
+
 def main():  # pragma: no cover
 
     global args
@@ -597,6 +634,9 @@ def main():  # pragma: no cover
     if not (args.dry_run or args.check_price or args.check_manifest):
         operator.operator_config_dir = args.config_dir
         clean_up_old_logs_if_any()
+
+    # Download the Ansible scripts if missing and in some "real" mode, as not bundled to PyPI currently
+    download_ansible_from_github_if_not_set_locally(args)
 
     logger.info("Entering main loop")
 
