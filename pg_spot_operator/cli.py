@@ -1,7 +1,10 @@
 import fcntl
 import logging
 import os.path
+import shutil
+import zipfile
 
+import requests
 import yaml
 from tap import Tap
 
@@ -287,6 +290,54 @@ def get_manifest_from_args(args: ArgumentParser) -> InstanceManifest | None:
     raise Exception("Could not find / compile a manifest string")
 
 
+def try_download_ansible_from_github(config_dir: str) -> bool:
+    """Returns True on success"""
+    GH_MASTER_ZIP_URL = "https://github.com/pg-spot-ops/pg-spot-operator/archive/refs/heads/main.zip"
+    TMP_ZIP_LOC = "/tmp/pg-spot-operator_main.zip"
+    TMP_UNPACKED_PATH = "/tmp/pg-spot-operator-main"
+    try:
+        ansible_storage_path = os.path.expanduser(
+            os.path.join(config_dir, "ansible")
+        )
+        logger.info(
+            "Downloading the Ansible setup files from Github to %s ...",
+            ansible_storage_path,
+        )
+
+        # Download master ZIP. TODO embed exact Git version somehow
+        url = GH_MASTER_ZIP_URL
+        r = requests.get(url, allow_redirects=True)
+        open(TMP_ZIP_LOC, "wb").write(r.content)
+
+        # Unpack
+        with zipfile.ZipFile(TMP_ZIP_LOC) as zip_ref:
+            zip_ref.extractall("/tmp")
+
+        # Copy only the ansible folder to ansible_storage_path
+        shutil.copytree(
+            os.path.join(TMP_UNPACKED_PATH, "ansible"),
+            ansible_storage_path,
+            dirs_exist_ok=True,
+        )
+
+        # Clean up
+        try:
+            logger.debug(
+                "Cleaning up the temp locations %s",
+                (TMP_ZIP_LOC, TMP_UNPACKED_PATH),
+            )
+            os.unlink(TMP_ZIP_LOC)
+            shutil.rmtree(TMP_UNPACKED_PATH, ignore_errors=True)
+        except Exception:
+            logger.exception("Failed to clean up properly")
+    except Exception:
+        logger.exception(
+            f"Failed to download the repo from Github URL: {GH_MASTER_ZIP_URL}"
+        )
+        return False
+    return True
+
+
 def check_cli_args_valid(args: ArgumentParser):
     fixed_vm = bool(args.vm_login_user and args.vm_host)
     if args.instance_name and not fixed_vm:
@@ -548,6 +599,36 @@ def main():  # pragma: no cover
         exit(0)
 
     check_cli_args_valid(args)
+
+    # Download the Ansible scripts if missing and in some "real" mode, as not bundled to PyPI currently
+    if (
+        not args.ansible_path
+        and not (
+            args.check_price
+            or args.check_manifest
+            or args.teardown
+            or args.teardown_region
+        )
+        and not os.path.exists("./ansible")
+    ):
+        if not os.path.exists(
+            os.path.expanduser(
+                os.path.join(
+                    args.config_dir, "ansible/v1/single_instance_setup.yml"
+                )
+            )
+        ):
+            dl_ok = try_download_ansible_from_github(args.config_dir)
+            if not dl_ok:
+                logger.error(
+                    "--ansible-path not set and also failed to download from Github, cannot proceed"
+                )
+                exit(1)
+        logger.debug(
+            "Setting --ansible-path to %s",
+            os.path.join(args.config_dir, "ansible"),
+        )
+        args.ansible_path = os.path.join(args.config_dir, "ansible")
 
     if args.check_manifest:
         check_manifest_and_exit(args)
