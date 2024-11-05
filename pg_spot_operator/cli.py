@@ -116,6 +116,7 @@ class ArgumentParser(Tap):
     extensions: str = os.getenv("PGSO_EXTENSIONS", "pg_stat_statements")
     aws_access_key_id: str = os.getenv("PGSO_AWS_ACCESS_KEY_ID", "")
     aws_secret_access_key: str = os.getenv("PGSO_AWS_SECRET_ACCESS_KEY", "")
+    aws_key_pair_name: str = os.getenv("PGSO_AWS_KEY_PAIR_NAME", "")
     aws_security_group_ids: str = os.getenv(
         "PGSO_AWS_SECURITY_GROUP_IDS", ""
     )  # SG rules are "merged" if multiple provided
@@ -220,6 +221,7 @@ def compile_manifest_from_cmdline_params(
     m.aws.subnet_id = args.aws_subnet_id
     m.aws.access_key_id = args.aws_access_key_id
     m.aws.secret_access_key = args.aws_secret_access_key
+    m.aws.key_pair_name = args.aws_key_pair_name
     m.self_terminate = args.self_terminate
     if args.self_terminate:
         m.aws.self_terminate_access_key_id = args.self_terminate_access_key_id
