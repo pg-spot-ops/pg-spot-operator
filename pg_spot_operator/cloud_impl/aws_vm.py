@@ -247,18 +247,21 @@ def ensure_public_elastic_ip_attached(
 
 
 def get_key_pair_pubkey_if_any(region: str, ssh_key_pair_name: str) -> str:
-    """Throws an exception if can't read out the actual pubkey"""
+    """Swallows the exception if can't read out the actual pubkey as there are ways to specify keys"""
     if not ssh_key_pair_name:
         return ""
     client = get_client("ec2", region)
-    response = client.describe_key_pairs(
-        KeyNames=[
-            ssh_key_pair_name,
-        ],
-        IncludePublicKey=True,
-    )
-    if response and "KeyPairs" in response:
-        return response["KeyPairs"][0]["PublicKey"].rstrip()
+    try:
+        response = client.describe_key_pairs(
+            KeyNames=[
+                ssh_key_pair_name,
+            ],
+            IncludePublicKey=True,
+        )
+        if response and "KeyPairs" in response:
+            return response["KeyPairs"][0]["PublicKey"].rstrip()
+    except Exception:
+        logger.exception(f"Failed to describe key pair {ssh_key_pair_name}")
     return ""
 
 
