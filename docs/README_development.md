@@ -23,6 +23,17 @@ make fmt && make lint && make test
 git commit
 ```
 
+## Local Docker version
+
+```commandline
+docker build -f Containerfile -t pg-spot-operator:latest .
+
+docker run --rm -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
+  -e PGSO_CPU_MIN=1 -e PGSO_STORAGE_MIN=10 -e PGSO_STORAGE_TYPE=local \
+  -e PGSO_ADMIN_USER=pgspotops -e PGSO_ADMIN_USER_PASSWORD=topsecret123 \
+  -v ~/.aws:/root/.aws:ro -v ~/.ssh:/root/.ssh:ro \
+  pg-spot-operator:latest
+```
 
 ## Cleanup of all operator created cloud resources
 

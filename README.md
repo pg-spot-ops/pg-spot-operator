@@ -27,7 +27,7 @@ as-low-as-it-gets cost!
 psql $(docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 \
   -e PGSO_RAM_MIN=128 -e PGSO_STORAGE_MIN=500 -e PGSO_STORAGE_TYPE=local -e PGSO_CONNSTR_OUTPUT_ONLY=y \
   -e PGSO_ADMIN_USER=pgspotops -e PGSO_ADMIN_USER_PASSWORD=topsecret123 \
-  -v ~/.aws:/root/.aws:ro -v ~/.ssh:/root/.ssh:ro \
+  -e PGSO_AWS_ACCESS_KEY_ID=abcdef -e PGSO_AWS_SECRET_ACCESS_KEY=qwerty \
   pgspotops/pg-spot-operator:latest)
 
 2024-10-14 14:32:57,530 INFO Resolving HW requirements to actual instance types / prices ...
