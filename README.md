@@ -60,7 +60,7 @@ the instance ...
 
 ```
 docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 -e PGSO_TEARDOWN=y \
-  -v ~/.aws:/root/.aws:ro -v ~/.ssh:/root/.ssh:ro \
+  -e PGSO_AWS_ACCESS_KEY_ID=abcdef -e PGSO_AWS_SECRET_ACCESS_KEY=qwerty \
   pgspotops/pg-spot-operator:latest
 
 ...
@@ -97,9 +97,10 @@ Note that by default we're in "daemon mode" - checking continuously for the inst
 ## Via Docker
 
 ```bash
-docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
+docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 -e PGSO_AWS_KEY_PAIR_NAME=mykey \
   -e PGSO_STORAGE_MIN=100 -e PGSO_STORAGE_TYPE=local -e PGSO_CPU_MIN=2 -e PGSO_POSTGRESQL_VERSION=16 \
   -e PGSO_EXTENSIONS=pgvector,pg_stat_statements -e PGSO_OS_EXTRA_PACKAGES=postgresql-16-pgvector \
+  -e PGSO_AWS_ACCESS_KEY_ID=abcdef -e PGSO_AWS_SECRET_ACCESS_KEY=qwerty \
   -v ~/.aws:/root/.aws:ro -v ~/.ssh:/root/.ssh:ro \
   pgspotops/pg-spot-operator:latest
 ```
