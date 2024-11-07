@@ -24,11 +24,11 @@ Wait, what about tapping into the power of cloud instead? Let's just spin up a p
 as-low-as-it-gets cost!
 
 ```
-psql $(docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 \
-  -e PGSO_RAM_MIN=128 -e PGSO_STORAGE_MIN=500 -e PGSO_STORAGE_TYPE=local -e PGSO_CONNSTR_OUTPUT_ONLY=y \
-  -e PGSO_ADMIN_USER=pgspotops -e PGSO_ADMIN_USER_PASSWORD=topsecret123 \
-  -e PGSO_AWS_ACCESS_KEY_ID=abcdef -e PGSO_AWS_SECRET_ACCESS_KEY=qwerty \
-  pgspotops/pg-spot-operator:latest)
+# Assuming we already have a working AWS CLI (`~/.aws/credentials`) set up
+pipx install pg-spot-operator
+psql $(pg_spot_operator --region=eu-north-1 --ram-min=128 --storage-min=500 --storage-type=local \
+  --instance-name=analytics --connstr-output-only \
+  --admin-user=pgspotops --admin-user-password=topsecret123)
 
 2024-10-14 14:32:57,530 INFO Resolving HW requirements to actual instance types / prices ...
 2024-10-14 14:33:01,408 INFO Cheapest instance type found: r6gd.4xlarge (arm)
@@ -59,10 +59,7 @@ Wow, that task went smooth, other people's computers can be really useful someti
 the instance ...
 
 ```
-docker run --rm -e PGSO_INSTANCE_NAME=analytics -e PGSO_REGION=eu-north-1 -e PGSO_TEARDOWN=y \
-  -e PGSO_AWS_ACCESS_KEY_ID=abcdef -e PGSO_AWS_SECRET_ACCESS_KEY=qwerty \
-  pgspotops/pg-spot-operator:latest
-
+pg_spot_operator --region=eu-north-1 --instance-name=analytics --teardown
 ...
 2024-10-14 14:57:03,201 INFO Destroying cloud resources if any for instance analytics ...
 ...
@@ -121,15 +118,10 @@ PS The SSH key is optional, to access the VM directly for potential troubleshoot
 ## Via Python
 
 ```bash
-git clone https://github.com/pg-spot-ops/pg-spot-operator.git /tmp/pg-spot-operator
+pipx install pg-spot-operator
 # PS Assuming local AWS CLI is configured!
-python3 -m pg_spot_operator --region=eu-north-1 --ram-min=16 --storage-min=1000 --storage-type=local \
-  --instance-name pg1 --check-price
+pg_spot_operator --region=eu-north-1 --ram-min=16 --storage-min=1000 --storage-type=local --check-price
 ```
-
-PS One could also install via PyPI, a la `pipx install pg-spot-operator`, but currently the project must be still cloned
-since the Ansible files have not been uploaded to PyPY. If not in the project directory use `--ansible-path` to point to
-the "ansible" folder.
 
 # Integrating with user applications
 
