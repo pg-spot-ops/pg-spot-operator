@@ -66,6 +66,9 @@ pg_spot_operator --region=eu-north-1 --instance-name=analytics --teardown
 2024-10-14 14:59:09,293 INFO OK - cloud resources for instance analytics cleaned-up
 ```
 
+PS If you don't yet have a safe AWS playground / credentials - start with a bit of Terraform [here](https://github.com/pg-spot-ops/pg-spot-operator/tree/main/scripts/terraform)
+and feed the output into `--aws-vpc-id`, `--aws-access-key-id` and `--aws-secret-access-key` CLI params.
+
 # General idea
 
 * The user:
