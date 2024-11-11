@@ -12,6 +12,8 @@ really handy - so here some basics to get you started.
 As IAM / authentication is a fairly complex topic with many options for various levels of security, we won't re-write the
 docs here - we just assume that the CLI just works transparently.
 
+For an example VPC + IAM user + credentials Terraform setup one could look [here](https://github.com/pg-spot-ops/pg-spot-operator/tree/main/scripts/terraform) though.
+
 ## Listing all operator VMs
 
 PS If working with a non-default region add `--region=X` to all commands.
