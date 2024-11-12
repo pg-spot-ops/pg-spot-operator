@@ -25,7 +25,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/pg-spot-operator:latest .
+          docker build -f Containerfile -t ${{ secrets.DOCKER_USERNAME }}/pg-spot-operator:latest .
 
       - name: Push Docker image
         run: |
