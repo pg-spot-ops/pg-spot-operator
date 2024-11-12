@@ -1132,6 +1132,7 @@ def do_main_loop(
                     logger.info(
                         "*** SSH connect string *** - '%s'", get_ssh_connstr(m)
                     )
+                    cmdb.mark_manifest_snapshot_as_succeeded(m)
                 else:
                     run_action(constants.ACTION_INSTANCE_SETUP, m)
 
