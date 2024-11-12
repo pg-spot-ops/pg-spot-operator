@@ -1,3 +1,6 @@
+[![Release](https://img.shields.io/github/v/release/pg-spot-ops/pg-spot-operator?include_prereleases)](https://github.com/pg-spot-ops/pg-spot-operator/releases)
+[![Docker Pulls](https://img.shields.io/docker/pulls/pgspotops/pg-spot-operator)](https://hub.docker.com/r/pgspotops/pg-spot-operator)
+[![Tests passing](https://github.com/pg-spot-ops/pg-spot-operator/actions/workflows/main.yml/badge.svg)](https://github.com/pg-spot-ops/pg-spot-operator/actions)
 
 # PG Spot Operator [Community Edition]
 
