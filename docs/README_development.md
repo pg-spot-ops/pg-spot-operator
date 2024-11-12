@@ -53,8 +53,8 @@ or by running a helper script from the "scripts" folders (by default just lists 
 ./scripts/aws/delete_all_operator_tagged_objects.sh yes
 ```
 
-A third option for local Docker convenience, to avoid a restart with different env. inputs, is to create a dummy "destroy
-file" in the container that signals instance shutdown:
+A third option for local Docker convenience, to avoid a restart with different inputs, is to create a dummy "destroy file"
+inside the container that signals instance shutdown:
 
 ```commandline
 docker run ...
@@ -65,4 +65,7 @@ docker exec -it pg1 touch /tmp/destroy-pg1
 # On the next loop the resources will be cleaned up and the container shuts down
 ```
 
-PS The operator tags all created object with special `pg-spot-operator-instance` tags, thus uses those also for the cleanup.
+PS The operator tags all created object with special `pg-spot-operator-instance` tags, thus teardown uses those also for the cleanup.
+
+For an AWS side view on all the tagged resources one could run a query in the [AWS Resource Explorer](https://aws.amazon.com/resourceexplorer/),
+looking something like:
