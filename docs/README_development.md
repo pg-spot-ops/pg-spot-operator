@@ -69,3 +69,5 @@ PS The operator tags all created object with special `pg-spot-operator-instance`
 
 For an AWS side view on all the tagged resources one could run a query in the [AWS Resource Explorer](https://aws.amazon.com/resourceexplorer/),
 looking something like:
+
+![AWS Resource Explorer tag search](img/aws_resource_explorer_tag_search.png)
