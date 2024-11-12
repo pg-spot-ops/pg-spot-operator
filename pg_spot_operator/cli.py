@@ -569,6 +569,18 @@ def download_ansible_from_github_if_not_set_locally(
         args.ansible_path = os.path.join(args.config_dir, "ansible")
 
 
+def init_cmdb_and_apply_schema_migrations_if_needed(
+    args: ArgumentParser,
+) -> None:
+    cmdb.init_engine_and_check_connection(
+        os.path.join(args.config_dir, SQLITE_DBNAME)
+    )
+    applied_count = schema_manager.do_ddl_rollout_if_needed(
+        os.path.join(args.config_dir, SQLITE_DBNAME)
+    )
+    logger.debug("%s schema migration applied", applied_count)
+
+
 def main():  # pragma: no cover
 
     global args
@@ -598,6 +610,13 @@ def main():  # pragma: no cover
         ensure_single_instance_running(args.instance_name)
 
     if args.teardown_region:
+        if not args.dry_run:
+            try:
+                init_cmdb_and_apply_schema_migrations_if_needed(args)
+            except Exception:
+                logger.error(
+                    "Could not initialize CMDB, can't mark instances as deleted"
+                )
         operator.teardown_region(
             args.region,
             args.aws_access_key_id,
@@ -625,14 +644,7 @@ def main():  # pragma: no cover
         resolve_manifest_and_display_price(env_manifest, args.manifest_path)
         exit(0)
 
-    cmdb.init_engine_and_check_connection(
-        os.path.join(args.config_dir, SQLITE_DBNAME)
-    )
-
-    applied_count = schema_manager.do_ddl_rollout_if_needed(
-        os.path.join(args.config_dir, SQLITE_DBNAME)
-    )
-    logger.debug("%s schema migration applied", applied_count)
+    init_cmdb_and_apply_schema_migrations_if_needed(args)
 
     if not (args.dry_run or args.check_price or args.check_manifest):
         operator.operator_config_dir = args.config_dir

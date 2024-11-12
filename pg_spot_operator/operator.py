@@ -843,6 +843,12 @@ def teardown_region(
                     release_address_by_allocation_id_in_region(
                         region, alloc_id
                     )
+
+            if not dry_run:
+                try:
+                    cmdb.finalize_destroy_region(region)
+                except Exception:
+                    logger.error("Could not mark instances as deleted in CMDB")
             break
         except Exception:
             logger.exception(f"Failed to complete cleanup loop {i}")

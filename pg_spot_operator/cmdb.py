@@ -592,6 +592,31 @@ def finalize_destroy_instance(m: InstanceManifest):
         session.commit()
 
 
+def finalize_destroy_region(region: str) -> None:
+    with Session(engine) as session:
+        now = datetime.utcnow()
+        stmt_vm = (
+            update(Vm)
+            .where(Vm.region == region)
+            .where(Vm.deleted_on.is_(None))
+            .values(deleted_on=now)
+        )
+        session.execute(stmt_vm)
+        stmt_instance = (
+            update(Instance)
+            .where(Instance.region == region)
+            .where(Instance.deleted_on.is_(None))
+            .values(deleted_on=now)
+        )
+        session.execute(stmt_instance)
+
+        logger.info(
+            "All instance in region %s marked as deleted in CMDB",
+            region,
+        )
+        session.commit()
+
+
 def mark_manifest_snapshot_as_succeeded(m: InstanceManifest) -> None:
     with Session(engine) as session:
         now = datetime.utcnow()
