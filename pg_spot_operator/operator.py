@@ -765,7 +765,7 @@ def destroy_instance(
         "OK - cloud resources for instance %s cleaned-up", m.instance_name
     )
 
-    if m.backup.destroy_backups:
+    if m.backup.destroy_backups and m.backup.s3_bucket:
         destroy_backups_if_any(m)
 
     cmdb.finalize_destroy_instance(m)
