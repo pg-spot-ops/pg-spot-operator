@@ -622,7 +622,9 @@ def get_addresses(region: str, instance_name: str = "") -> list[str]:
     return []
 
 
-def get_network_interfaces(region: str, instance_name: str = "") -> list[str]:
+def get_non_self_terminating_network_interfaces(
+    region: str, instance_name: str = ""
+) -> list[str]:
     client = get_client("ec2", region)
 
     if instance_name:
@@ -635,7 +637,11 @@ def get_network_interfaces(region: str, instance_name: str = "") -> list[str]:
         ]
     resp = client.describe_network_interfaces(Filters=filters)
     if resp and resp.get("NetworkInterfaces"):
-        return [x["NetworkInterfaceId"] for x in resp["NetworkInterfaces"]]
+        return [
+            x["NetworkInterfaceId"]
+            for x in resp["NetworkInterfaces"]
+            if not x.get("Attachment", {}).get("DeleteOnTermination")
+        ]
     return []
 
 

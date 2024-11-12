@@ -30,7 +30,7 @@ from pg_spot_operator.cloud_impl.aws_vm import (
     ensure_spot_vm,
     get_addresses,
     get_all_active_operator_instances_in_region,
-    get_network_interfaces,
+    get_non_self_terminating_network_interfaces,
     get_operator_volumes_in_region,
     release_address_by_allocation_id_in_region,
     terminate_instances_in_region,
@@ -737,25 +737,29 @@ def destroy_instance(
             logger.info("Deleting VolumeId %s (%s GB) ...", vol_id, size)
             delete_volume_in_region(m.region, vol_id)
 
+    logger.info("Looking for explicit NICs to delete ....")
+    nic_ids = get_non_self_terminating_network_interfaces(
+        m.region, m.instance_name
+    )
+    logger.info("NICs found: %s", nic_ids)
+    if not dry_run and nic_ids:
+        if not vol_ids_and_sizes:
+            logger.info("OK. Sleeping 60s before deleting NICs ...")
+            time.sleep(60)
+        for nic_id in nic_ids:
+            logger.info("Deleting NIC %s ...", nic_id)
+            delete_network_interface(m.region, nic_id)
+
     logger.info("Looking for Elastic IPs to delete ....")
-    eip_alloc_ids = get_addresses(m.region)
+    eip_alloc_ids = get_addresses(m.region, m.instance_name)
     logger.info("Elastic IP Addresses found: %s", eip_alloc_ids)
     if not dry_run and eip_alloc_ids:
+        if nic_ids:
+            logger.info("Sleeping 60s before deleting EIPs ...")
+            time.sleep(60)
         for alloc_id in eip_alloc_ids:
             logger.info("Releasing Address with AllocationId %s ...", alloc_id)
             release_address_by_allocation_id_in_region(m.region, alloc_id)
-
-    if not m.floating_ips:
-        logger.info("Looking for NICs to delete ....")
-        nic_ids = get_network_interfaces(m.region, m.instance_name)
-        logger.info("NICs found: %s", nic_ids)
-        if not dry_run and nic_ids:
-            if not vol_ids_and_sizes:
-                logger.info("OK. Sleeping 60s before deleting NICs ...")
-                time.sleep(60)
-            for nic_id in nic_ids:
-                logger.info("Deleting NIC %s ...", nic_id)
-                delete_network_interface(m.region, nic_id)
 
     logger.info(
         "OK - cloud resources for instance %s cleaned-up", m.instance_name
@@ -827,8 +831,8 @@ def teardown_region(
                         region, alloc_id
                     )
 
-            logger.info("Looking for NICs to delete ....")
-            nic_ids = get_network_interfaces(region)
+            logger.info("Looking for explicit NICs to delete ....")
+            nic_ids = get_non_self_terminating_network_interfaces(region)
             logger.info("NICs found: %s", nic_ids)
             if not dry_run and nic_ids:
                 for nic_id in nic_ids:
