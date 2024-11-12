@@ -454,7 +454,7 @@ def ec2_launch_instance(
         i = client.run_instances(
             BlockDeviceMappings=[
                 {
-                    "DeviceName": "/dev/sda1",
+                    "DeviceName": "/dev/xvda",
                     "Ebs": {
                         "DeleteOnTermination": True,
                         "VolumeSize": 20,
