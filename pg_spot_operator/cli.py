@@ -197,6 +197,7 @@ def compile_manifest_from_cmdline_params(
     m.expiration_date = args.expiration_date
     m.assign_public_ip = args.assign_public_ip
     m.setup_finished_callback = args.setup_finished_callback
+    m.vm_only = args.vm_only
     m.vm.cpu_architecture = args.cpu_architecture
     m.vm.cpu_min = args.cpu_min
     m.vm.cpu_max = args.cpu_max
@@ -648,7 +649,6 @@ def main():  # pragma: no cover
         cli_vault_password_file=args.vault_password_file,
         cli_user_manifest_path=args.manifest_path,
         cli_main_loop_interval_s=args.main_loop_interval_s,
-        cli_vm_only=args.vm_only,
         cli_destroy_file_base_path=args.destroy_file_base_path,
         cli_teardown=args.teardown,
         cli_connstr_output_only=args.connstr_output_only,

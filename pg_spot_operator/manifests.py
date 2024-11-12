@@ -185,6 +185,7 @@ class InstanceManifest(BaseModel):
     setup_finished_callback: str = ""  # An executable passed to Ansible
     expiration_date: str = ""  # now | '2024-06-11 10:40'
     self_terminate: bool = False
+    vm_only: bool = False  # No Postgres setup
     is_paused: bool = False
     # *Sections*
     postgresql: SectionPostgresql = field(default_factory=SectionPostgresql)
