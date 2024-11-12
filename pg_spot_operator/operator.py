@@ -891,7 +891,6 @@ def do_main_loop(
     cli_user_manifest_path: str = "",
     cli_vault_password_file: str = "",
     cli_main_loop_interval_s: int = 60,
-    cli_vm_only: bool = False,
     cli_destroy_file_base_path: str = "",
     cli_teardown: bool = False,
     cli_connstr_output_only: bool = False,
@@ -1128,8 +1127,8 @@ def do_main_loop(
                 if diff:
                     logging.info("Detected manifest changes: %s", diff)
 
-                if cli_vm_only:
-                    logger.info("Skipping Postgres setup as --vm-only set")
+                if m.vm_only:
+                    logger.info("Skipping Postgres setup as vm_only set")
                     logger.info(
                         "*** SSH connect string *** - '%s'", get_ssh_connstr(m)
                     )
