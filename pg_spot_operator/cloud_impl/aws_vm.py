@@ -563,6 +563,9 @@ def get_running_instance_by_tags(region: str, tags: dict) -> dict:
 
 
 def get_all_active_operator_instances_in_region(region: str) -> list[str]:
+    """Return all non-terminated instances. Instance state descriptions:
+    https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-lifecycle.html
+    """
     client = get_client("ec2", region)
 
     filters = [
@@ -578,10 +581,17 @@ def get_all_active_operator_instances_in_region(region: str) -> list[str]:
         },
         {"Name": "tag-key", "Values": [SPOT_OPERATOR_ID_TAG]},
     ]
-    resp = client.describe_instances(Filters=filters)
-    if resp and resp.get("Reservations"):
-        return [x["InstanceId"] for x in resp["Reservations"][0]["Instances"]]
-    return []
+
+    paginator = client.get_paginator("describe_instances")
+
+    page_iterator = paginator.paginate(Filters=filters)
+
+    instance_ids = []
+    for page in page_iterator:
+        for r in page.get("Reservations", []):
+            for i in r.get("Instances", []):
+                instance_ids.append(i["InstanceId"])
+    return instance_ids
 
 
 def get_operator_volumes_in_region(
