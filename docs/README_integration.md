@@ -23,6 +23,8 @@ Currently the callback be a self-contained executable which gets following 4 inp
 - Public full connect string, when `public_ip_address: true` is set, else an empty string
 - User provided tags as JSON, if any
 
+PS Note that the callback execution is **limited to 30 seconds!**
+
 Example usage:
 
 ```commandline
