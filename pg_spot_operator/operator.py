@@ -817,20 +817,6 @@ def teardown_region(
                     )
                     delete_volume_in_region(region, vol_id)
 
-            logger.info("Looking for EIPs to delete ....")
-            elastic_address_alloc_ids = get_addresses(region)
-            logger.info(
-                "Elastic Addresses found: %s", elastic_address_alloc_ids
-            )
-            if not dry_run and elastic_address_alloc_ids:
-                for alloc_id in elastic_address_alloc_ids:
-                    logger.info(
-                        "Releasein Address wiht AllocationId %s ...", alloc_id
-                    )
-                    release_address_by_allocation_id_in_region(
-                        region, alloc_id
-                    )
-
             logger.info("Looking for explicit NICs to delete ....")
             nic_ids = get_non_self_terminating_network_interfaces(region)
             logger.info("NICs found: %s", nic_ids)
@@ -839,6 +825,24 @@ def teardown_region(
                     logger.info("Deleting NIC %s ...", nic_id)
                     delete_network_interface(region, nic_id)
             logger.info("Cleanup loop completed")
+
+            logger.info("Looking for EIPs to delete ....")
+            elastic_address_alloc_ids = get_addresses(region)
+            logger.info(
+                "Elastic Addresses found: %s", elastic_address_alloc_ids
+            )
+            if not dry_run and elastic_address_alloc_ids:
+                if nic_ids:
+                    logger.info("Sleeping 60s before deleting EIPs ...")
+                    time.sleep(60)
+                for alloc_id in elastic_address_alloc_ids:
+                    logger.info(
+                        "Releasing Elastic Address with AllocationId %s ...",
+                        alloc_id,
+                    )
+                    release_address_by_allocation_id_in_region(
+                        region, alloc_id
+                    )
             break
         except Exception:
             logger.exception(f"Failed to complete cleanup loop {i}")
