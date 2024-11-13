@@ -499,8 +499,8 @@ def get_ssh_connstr(m: InstanceManifest) -> str:
     if not vm:
         return ""
     if m.ansible.private_key:
-        return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=1 -l {vm.login_user} -i {m.ansible.private_key} {vm.ip_public or vm.ip_private}"
-    return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=1 -l {vm.login_user} {vm.ip_public or vm.ip_private}"
+        return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -l {vm.login_user} -i {m.ansible.private_key} {vm.ip_public or vm.ip_private}"
+    return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -l {vm.login_user} {vm.ip_public or vm.ip_private}"
 
 
 def finalize_ensure_vm(
