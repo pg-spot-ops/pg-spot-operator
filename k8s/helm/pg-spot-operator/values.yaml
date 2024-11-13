@@ -32,6 +32,12 @@ resources:
      cpu: 100m
      memory: 128Mi
 
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 100Mi
+
 env:
   - name: PGSO_REGION
     value: eu-north-1

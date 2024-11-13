@@ -33,9 +33,16 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           {{- with .Values.volumeMounts }}
           volumeMounts:
-            {{- toYaml . | nindent 12 }}
+            - name: ssh-data
+              mountPath: /app/.ssh
           {{- end }}
       {{- with .Values.volumes }}
       volumes:
-        {{- toYaml . | nindent 8 }}
+        - name: ssh-data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "pg-spot-operator.fullname" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
       {{- end }}
