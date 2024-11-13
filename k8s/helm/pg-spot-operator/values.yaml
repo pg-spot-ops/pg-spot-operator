@@ -1,0 +1,40 @@
+# Default values for pg-spot-operator.
+
+# This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+replicaCount: 1
+
+# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+image:
+  repository: pgspotops/pg-spot-operator
+  # This sets the pull policy for images.
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+securityContext:
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+
+resources:
+   limits:
+     cpu: 250m
+     memory: 256Mi
+   requests:
+     cpu: 100m
+     memory: 128Mi
+
+env:
+  - name: PGSO_REGION
+    value: eu-north-1
+  - name: PGSO_STORAGE_MIN
+    value: 50
+  - name: PGSO_STORAGE_TYPE
+    value: local
+  - name: PGSO_CPU_MIN
+    value: 1
+  - name: PGSO_POSTGRESQL_VERSION
+    value: 16
+  - name: PGSO_AWS_ACCESS_KEY_ID
+    value: aaaa
+  - name: PGSO_AWS_SECRET_ACCESS_KEY
+    value: bbbb

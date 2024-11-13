@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-pg-spot-operator
+  labels:
+    app: {{ .Release.Name }}-pg-spot-operator
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-pg-spot-operator
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-pg-spot-operator
+    spec:
+      containers:
+        - name: pg-spot-operator
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: PGSO_INSTANCE_NAME
+              value: {{ .Release.Name }}
+            {{- range .Values.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
