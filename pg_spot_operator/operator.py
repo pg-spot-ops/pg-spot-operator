@@ -1167,7 +1167,10 @@ def do_main_loop(
             logger.exception("Exception on main loop")
 
         if cli_connstr_output_only:
-            print(get_instance_connect_string(m))
+            if m.vm_only:
+                print(get_ssh_connstr(m))
+            else:
+                print(get_instance_connect_string(m))
             exit(0)
 
         first_loop = False
