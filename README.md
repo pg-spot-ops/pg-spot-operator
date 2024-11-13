@@ -99,26 +99,20 @@ Note that by default we're in "daemon mode" - checking continuously for the inst
 
 ## Via Docker
 
-```bash
-docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 -e PGSO_AWS_KEY_PAIR_NAME=mykey \
-  -e PGSO_STORAGE_MIN=100 -e PGSO_STORAGE_TYPE=local -e PGSO_CPU_MIN=2 -e PGSO_POSTGRESQL_VERSION=16 \
-  -e PGSO_EXTENSIONS=pgvector,pg_stat_statements -e PGSO_OS_EXTRA_PACKAGES=postgresql-16-pgvector \
-  -v ~/.aws:/root/.aws:ro -v ~/.ssh:/root/.ssh:ro \
-  pgspotops/pg-spot-operator:latest
-```
-
-or passing the AWS credentials and the default SSH pubkey explicitly:
+An example Postgres v16 instance with a 1d lifetime and some extensions enabled:
 
 ```bash
-docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
+docker run --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
+  -e PGSO_EXPIRATION_DATE=$(date --utc --date="+1 day" +%Y-%m-%d) \
   -e PGSO_STORAGE_MIN=100 -e PGSO_STORAGE_TYPE=local -e PGSO_CPU_MIN=2 \
-  -e PGSO_SSH_KEYS="$(cat ~/.ssh/id_rsa.pub)" \
+  -e PGSO_EXTENSIONS=vector,pg_stat_statements -e PGSO_OS_EXTRA_PACKAGES=postgresql-16-pgvector \
+  -e PGSO_SSH_KEYS="$(cat ~/.ssh/id_rsa.pub)" -e PGSO_POSTGRESQL_VERSION=16 \
   -e PGSO_AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
   -e PGSO_AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
   pgspotops/pg-spot-operator:latest
 ```
 
-PS The SSH key is optional, to access the VM directly for potential troubleshooting etc.
+PS The SSH key is optional, to be able to access the cloud VM directly from your workstations for potential troubleshooting etc.
 
 ## Via Python
 
