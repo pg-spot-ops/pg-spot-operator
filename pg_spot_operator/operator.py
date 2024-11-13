@@ -447,8 +447,8 @@ EXTRA_ARGS="{extra_args}"
 
 ansible-galaxy install -r requirements.yml
 
-echo "ansible-playbook -i inventory $EXTRA_ARGS {action}.yml"
-ansible-playbook -i inventory $EXTRA_ARGS {action}.yml
+echo "ansible-playbook -i inventory --ssh-common-args '\\-o UserKnownHostsFile=/dev/null \\-o StrictHostKeyChecking=no' $EXTRA_ARGS {action}.yml"
+ansible-playbook -i inventory --ssh-common-args '\\-o UserKnownHostsFile=/dev/null \\-o StrictHostKeyChecking=no' $EXTRA_ARGS {action}.yml
 
 echo "Done at `date`"
 """
