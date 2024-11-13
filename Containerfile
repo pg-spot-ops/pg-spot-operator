@@ -12,7 +12,7 @@ RUN apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -qy curl
     ca-certificates gnupg lsb-release less vim openssh-client jq \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN chown -R nobody /app
+RUN ln -s /app /nonexistent && chown -R nobody /app
 
 USER nobody
 
