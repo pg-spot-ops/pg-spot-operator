@@ -22,7 +22,9 @@ serviceAccount:
 
 securityContext:
   readOnlyRootFilesystem: false
-  runAsNonRoot: false
+  runAsNonRoot: true
+  runAsUser: 5432
+  runAsGroup: 0
 
 resources:
    limits:
