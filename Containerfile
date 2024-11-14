@@ -1,5 +1,7 @@
 FROM python:3.12-slim
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 ENV HOME=/app
 
 WORKDIR /app
@@ -9,14 +11,15 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && pip install ansible
 
 RUN apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -qy curl unzip apt-transport-https \
-    ca-certificates gnupg lsb-release less vim openssh-client jq dumb-init \
+    ca-certificates gnupg lsb-release less openssh-client dumb-init \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-RUN ln -s /app /nonexistent && chown -R nobody /app
 
 COPY entrypoint.sh .
 
-USER nobody
+# Create a non-privileged user and group
+RUN useradd -u 5432 -g root -d /app -m -s /bin/bash app && chown -R app /app
+
+USER 5432
 
 ADD pg_spot_operator pg_spot_operator
 
