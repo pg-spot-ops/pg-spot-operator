@@ -17,7 +17,7 @@ RUN apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -qy curl
 COPY entrypoint.sh .
 
 # Create a non-privileged user and group
-RUN useradd -u 5432 -g root -d /app -m -s /bin/bash app && chown -R app /app
+RUN useradd -u 5432 -g root -d /app -m -s /bin/bash app && mkdir /app/.ssh && chown -R app /app
 
 USER 5432
 
