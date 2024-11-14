@@ -36,10 +36,12 @@ resources:
 
 persistence:
   enabled: true
-  storageClass: ""
+  storageClass: "standard"
   accessMode: ReadWriteOnce
   size: 10Mi
 
+# All ENV options described here:
+# https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_env_options.md
 env:
   - name: PGSO_REGION
     value: eu-north-1
