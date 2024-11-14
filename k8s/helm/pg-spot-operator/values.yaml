@@ -1,0 +1,57 @@
+replicaCount: 1
+
+# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+image:
+  repository: pgspotops/pg-spot-operator
+  # This sets the pull policy for images.
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+#This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+securityContext:
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 5432
+  runAsGroup: 0
+
+resources:
+   limits:
+     cpu: 250m
+     memory: 256Mi
+   requests:
+     cpu: 100m
+     memory: 128Mi
+
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 10Mi
+
+env:
+  - name: PGSO_REGION
+    value: eu-north-1
+  - name: PGSO_STORAGE_MIN
+    value: 50
+  - name: PGSO_STORAGE_TYPE
+    value: local
+  - name: PGSO_CPU_MIN
+    value: 1
+  - name: PGSO_POSTGRESQL_VERSION
+    value: 16
+  - name: PGSO_AWS_ACCESS_KEY_ID
+    value: aaaa
+  - name: PGSO_AWS_SECRET_ACCESS_KEY
+    value: bbbb
