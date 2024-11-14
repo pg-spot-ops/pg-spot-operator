@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pg-spot-operator-pg1
+  labels:
+    app: pg-spot-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      pgso-instance-name: pg1
+  template:
+    metadata:
+      labels:
+        app: pg-spot-operator
+        pgso-instance-name: pg1
+    spec:
+      containers:
+      - name: pg-spot-operator
+        image: pgspotops/pg-spot-operator:latest
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        env:
+          - name: PGSO_INSTANCE_NAME
+            value: pg1
+          - name: PGSO_REGION
+            value: "eu-north-1"
+          - name: PGSO_STORAGE_MIN
+            value: "50"
+          - name: PGSO_STORAGE_TYPE
+            value: "local"
+          - name: PGSO_CPU_MIN
+            value: "1"
+          - name: PGSO_POSTGRESQL_VERSION
+            value: "16"
+          - name: PGSO_AWS_ACCESS_KEY_ID
+            value: "aaaa"
+          - name: PGSO_AWS_SECRET_ACCESS_KEY
+            value: "bbbb"
