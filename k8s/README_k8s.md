@@ -8,7 +8,7 @@ The operator runs fine on K8s, as it's a pretty simple loop. A few things to be 
 * The `/app/.ssh` folder should be a persistent mount, otherwise if an unlucky situation happens where both the Spot VM
  and the pod get interrupted close to each other, the new pod will not have SSH / Ansible level access and can't re-try
  the Postgres setup. One can fix that with a manual VM termination / recycle though.
-* Nice if also the `/app/.pg-spot-operator` folder is persistent mount, otherwise some unnecessary work will be performed
+* Nice if also the `/app/.pg-spot-operator` folder is a persistent mount, otherwise some unnecessary work will be performed
   on pod recycle.
 * If possible one should not feed in AWS credentials anymore explicitly but use integrated / transparent auth, like
-  [IAM roles for service accounts](IAM roles for service accounts).
+  [IAM roles for service accounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html).
