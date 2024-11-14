@@ -8,6 +8,7 @@ spec:
   replicas: 1
   selector:
     matchLabels:
+      app: pg-spot-operator
       pgso-instance-name: pg1
   template:
     metadata:
@@ -24,6 +25,8 @@ spec:
             cpu: 100m
             memory: 128Mi
         env:
+          # All ENV options described here:
+          # https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_env_options.md
           - name: PGSO_INSTANCE_NAME
             value: pg1
           - name: PGSO_REGION
