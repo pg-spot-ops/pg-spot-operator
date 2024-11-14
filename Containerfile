@@ -1,5 +1,7 @@
 FROM python:3.12-slim
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 ENV HOME=/app
 
 WORKDIR /app
@@ -9,15 +11,15 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && pip install ansible
 
 RUN apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -qy curl unzip apt-transport-https \
-    ca-certificates gnupg lsb-release less vim openssh-client jq \
+    ca-certificates gnupg lsb-release less openssh-client dumb-init \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN ln -s /app /nonexistent && chown -R nobody /app
+COPY entrypoint.sh .
 
-USER nobody
+# Create a non-privileged user and group
+RUN useradd -u 5432 -g root -d /app -m -s /bin/bash app && mkdir /app/.ssh && chown -R app /app
 
-# Generate a default ssh key, but mostly probably want to bind local .ssh
-RUN mkdir /app/.ssh  ; if [ ! -f /app/.ssh/id_rsa ] ; then ssh-keygen -q -f /app/.ssh/id_rsa -t ed25519 -N '' ; fi
+USER 5432
 
 ADD pg_spot_operator pg_spot_operator
 
@@ -25,4 +27,4 @@ ADD ansible ansible
 
 ADD tuning_profiles tuning_profiles
 
-CMD ["python", "-m", "pg_spot_operator"]
+ENTRYPOINT ["dumb-init", "/app/entrypoint.sh"]
