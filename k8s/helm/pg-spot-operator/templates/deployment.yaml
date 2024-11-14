@@ -20,10 +20,6 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       serviceAccountName: {{ include "pg-spot-operator.serviceAccountName" . }}
       containers:
         - name: {{ .Chart.Name }}
@@ -31,12 +27,16 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- with .Values.volumeMounts }}
           volumeMounts:
             - name: ssh-data
               mountPath: /app/.ssh
-          {{- end }}
-      {{- with .Values.volumes }}
+          env:
+            - name: PGSO_INSTANCE_NAME
+              value: {{ .Release.Name }}
+            {{- range .Values.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
       volumes:
         - name: ssh-data
           {{- if .Values.persistence.enabled }}
@@ -45,4 +45,3 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
-      {{- end }}

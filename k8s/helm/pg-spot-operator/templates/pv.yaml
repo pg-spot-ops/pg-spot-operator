@@ -14,5 +14,5 @@ spec:
   storageClassName: {{ .Values.persistence.storageClass | quote }}
   # Define your storage backend here (e.g., hostPath, nfs, etc.)
   hostPath:
-    path: "/tmp/minikube-pv"
+    path: /data/{{ include "pg-spot-operator.fullname" . }}-pv
 {{- end }}

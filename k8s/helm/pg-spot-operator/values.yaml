@@ -22,7 +22,7 @@ serviceAccount:
 
 securityContext:
   readOnlyRootFilesystem: false
-  runAsNonRoot: true
+  runAsNonRoot: false
 
 resources:
    limits:
@@ -36,7 +36,7 @@ persistence:
   enabled: true
   storageClass: ""
   accessMode: ReadWriteOnce
-  size: 100Mi
+  size: 10Mi
 
 env:
   - name: PGSO_REGION
