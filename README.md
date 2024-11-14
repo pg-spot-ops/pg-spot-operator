@@ -180,3 +180,4 @@ and find the niche interesting.
 * [Development](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_development.md)
 * [Advanced features](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_advanced_features.md)
 * [AWS CLI basics](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_aws_cli_basics.md)
+* [Running on K8s](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/k8s/README_k8s.md)
