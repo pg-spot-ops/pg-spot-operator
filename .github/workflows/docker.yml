@@ -8,6 +8,9 @@ on:
       - '**.md'
       - 'docs/**'
       - 'tests/**'
+      - 'k8s/**'
+      - 'example_manifests/**'
+      - 'scripts/**'
 
 jobs:
   build:
