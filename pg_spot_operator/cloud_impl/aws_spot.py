@@ -144,59 +144,44 @@ def get_current_hourly_spot_price(
 
 
 def get_cached_pricing_dict(cache_file: str) -> dict:
-    cache_dir = os.path.expanduser(f"{DEFAULT_CONFIG_DIR}/tmp/price_cache")
-    cache_path = f"{cache_dir}/{cache_file}"
+    cache_dir = os.path.expanduser(
+        os.path.join(DEFAULT_CONFIG_DIR, "price_cache")
+    )
+    cache_path = os.path.join(cache_dir, cache_file)
     if os.path.exists(cache_path):
-        with open(cache_path, "r") as f:
-            meta_json = json.loads(f.read())
-            logger.info(
-                f"Reading AWS pricing info from daily cache: {cache_path}"
-            )
-            return meta_json
+        try:
+            with open(cache_path, "r") as f:
+                meta_json = json.loads(f.read())
+                logger.debug(
+                    "Reading AWS pricing info from daily cache: %s", cache_path
+                )
+                return meta_json
+        except Exception:
+            logger.error("Failed to read %s from AWS daily cache", cache_file)
     return {}
 
 
 def cache_pricing_dict(cache_file: str, pricing_info: dict) -> None:
-    cache_dir = os.path.expanduser(f"{DEFAULT_CONFIG_DIR}/tmp/price_cache")
-    cache_path = f"{cache_dir}/{cache_file}"
+    cache_dir = os.path.expanduser(
+        os.path.join(DEFAULT_CONFIG_DIR, "price_cache")
+    )
+    cache_path = os.path.join(cache_dir, cache_file)
     os.makedirs(cache_dir, exist_ok=True)
     with open(cache_path, "w") as f:
         json.dump(pricing_info, f)
 
 
-def get_amazon_pricing_metadata_via_http() -> dict:
-    logger.info("Fetching AWS pricing metadata via HTTP")
+def get_amazon_ec2_ondemand_pricing_metadata_via_http() -> dict:
     url = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/metadata.json"
+    logger.debug("Fetching AWS pricing metadata JSON via HTTP ...")
+    logger.debug("Metadata URL: %s", url)
     f = requests.get(
         url, headers={"Content-Type": "application/json"}, timeout=5
     )
     if f.status_code != 200:
         logger.error("Failed to retrieve AWS pricing metadata via HTTP")
         return {}
-    metadata = f.json()
-    service_id = metadata.get("manifest", {}).get("serviceId")
-    currency_code = metadata.get("manifest", {}).get("currencyCode")
-    source = metadata.get("manifest", {}).get("source")
-    primary_selectors = metadata.get("primarySelectors", [])
-    value_attrs = metadata.get("valueAttributes", {})
-    if (
-        not service_id
-        or not currency_code
-        or not source
-        or not primary_selectors
-        or not value_attrs
-    ):
-        logger.error(
-            "The pricing metadata is missing required info; returning empty data"
-        )
-        return {}
-    return {
-        "service_id": service_id,
-        "currency_code": currency_code,
-        "source": source,
-        "primary_selectors": primary_selectors,
-        "value_attrs": value_attrs,
-    }
+    return f.json()
 
 
 def get_amazon_pricing_metadata() -> dict:
@@ -204,13 +189,15 @@ def get_amazon_pricing_metadata() -> dict:
     cache_file = f"aws_meta_{today.year}{today.month}{today.day}.json"
     meta_data = get_cached_pricing_dict(cache_file)
     if not meta_data:
-        meta_data = get_amazon_pricing_metadata_via_http()
+        meta_data = get_amazon_ec2_ondemand_pricing_metadata_via_http()
         if meta_data:
             cache_pricing_dict(cache_file, meta_data)
     return meta_data
 
 
-def get_aws_region_city(region: str) -> str:
+def get_aws_region_city(
+    region: str,
+) -> str:  # TODO get rid of boto as wants auth
     param_name = (
         f"/aws/service/global-infrastructure/regions/{region}/longName"
     )
@@ -229,18 +216,33 @@ def get_aws_region_city(region: str) -> str:
 
 
 def get_pricing_info_via_http(region: str, instance_type: str) -> dict:
+    """AWS caches pricing info for public usage in static files like:
+    https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/EU%20(Stockholm)/Linux/index.json
+    """
     city = get_aws_region_city(region)
-    logger.info(
-        f"Looking up AWS pricing info for [type={instance_type}] in [city={city}] ..."
+    logger.debug(
+        f"Looking up AWS on-demand pricing info for instance type {instance_type} in {region} ({city}) ..."
     )
     meta_data = get_amazon_pricing_metadata()
     if not meta_data:
         return {}
-    service_id = meta_data.get("service_id", "oops")
-    currency_code = meta_data.get("currency_code", "oops")
-    source = meta_data.get("source", "oops")
-    primary_selectors = meta_data.get("primary_selectors", [])
-    value_attrs = meta_data.get("value_attrs", {})
+    service_id = meta_data.get("manifest", {}).get("serviceId")
+    currency_code = meta_data.get("manifest", {}).get("currencyCode")
+    source = meta_data.get("manifest", {}).get("source")
+    primary_selectors = meta_data.get("primarySelectors", [])
+    value_attrs = meta_data.get("valueAttributes", {})
+    if not (
+        service_id
+        and currency_code
+        and source
+        and primary_selectors
+        and value_attrs
+    ):
+        logger.error(
+            "AWS pricing metadata is missing required info to get on-demand pricing info"
+        )
+        return {}
+
     base_url = f"https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/{service_id}/{currency_code}/current/{source}"
     selector_list = []
     location_name = ""
@@ -267,7 +269,9 @@ def get_pricing_info_via_http(region: str, instance_type: str) -> dict:
     )
     if f.status_code != 200:
         logger.error(
-            f"Failed to retrieve AWS pricing info for [type={instance_type}] in [city={city}]"
+            "Failed to retrieve AWS pricing info - retcode: %s, URL: %s",
+            f.status_code,
+            url,
         )
         return {}
     pricing_info = f.json()
