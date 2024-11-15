@@ -283,6 +283,23 @@ def get_current_hourly_ondemand_price(
     )
 
 
+def get_current_hourly_ondemand_price_fallback(
+    region: str,
+    instance_type: str,
+) -> float:
+    """Use an external 3rd party web service as fallback if something changes in AWS static pricing JSONs"""
+    url = f"https://ec2.shop/?region={region}&filter={instance_type}"
+    f = requests.get(
+        url, headers={"Content-Type": "application/json"}, timeout=5
+    )
+    if f.status_code != 200:
+        return 0
+    pd = f.json()
+    if not pd["Prices"]:
+        return 0
+    return round(pd["Prices"][0]["Cost"], 6)
+
+
 def filter_instance_types_by_hw_req(
     instance_types: list[dict],
     cpu_min: int | None = 0,

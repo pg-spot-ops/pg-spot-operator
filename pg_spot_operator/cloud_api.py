@@ -1,7 +1,10 @@
 import logging
 
 from pg_spot_operator.cloud_impl import aws_spot
-from pg_spot_operator.cloud_impl.aws_spot import get_current_hourly_spot_price
+from pg_spot_operator.cloud_impl.aws_spot import (
+    get_current_hourly_ondemand_price_fallback,
+    get_current_hourly_spot_price,
+)
 from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
 from pg_spot_operator.constants import CLOUD_AWS, SPOT_OPERATOR_ID_TAG
 from pg_spot_operator.manifests import InstanceManifest
@@ -61,8 +64,17 @@ def try_get_monthly_ondemand_price_for_sku(
             hourly = aws_spot.get_current_hourly_ondemand_price(region, sku)
         return round(hourly * 24 * 30, 1)
     except Exception as e:
-        logger.error(f"Failed to get ondemand sku price: {e}")
-        return 0
+        logger.error(
+            "Failed to get ondemand instance pricing from AWS, trying ec2.shop fallback. Error: %s",
+            e,
+        )
+    try:
+        return get_current_hourly_ondemand_price_fallback(region, sku)
+    except Exception as e:
+        logger.error(
+            "Failed to get fallback pricing from ec2.shop. Error: %s", e
+        )
+    return 0
 
 
 def get_cheapest_instance_type_from_selection(
