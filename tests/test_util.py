@@ -48,3 +48,4 @@ def test_get_aws_region_code_to_name_mapping():
     mapping = get_aws_region_code_to_name_mapping()
     assert mapping
     assert mapping["eu-north-1"] == "EU (Stockholm)"
+    assert mapping["eu-north-1"] == "EU (Stockholm)"

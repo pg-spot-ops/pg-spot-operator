@@ -2,7 +2,6 @@ import functools
 import json
 import logging
 import os
-import re
 import shutil
 import subprocess
 import urllib.request
@@ -301,12 +300,14 @@ eu-central-2	Europe (Zurich)	Required
 il-central-1	Israel (Tel Aviv)	Required
 me-south-1	Middle East (Bahrain)	Required
 me-central-1	Middle East (UAE)	Required
-sa-east-1	South America (São Paulo)	Not required    
-    """
+sa-east-1	South America (São Paulo)	Not required
+"""
     ret: dict = {}
-    for line in raw:
+    for line in raw.splitlines():
+        if not line.strip():
+            continue
         splits = line.split("\t")
         if len(splits) < 2:
             continue
-        ret[splits[0]] = splits[1].replace("Europe", "EU")
+        ret[splits[0].strip()] = splits[1].replace("Europe", "EU").strip()
     return ret

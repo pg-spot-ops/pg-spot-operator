@@ -1,15 +1,13 @@
 import json
 import logging
 import os
-import re
 import urllib.parse
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from statistics import mean
 
-import boto3
 import requests
-from botocore.exceptions import ClientError, EndpointConnectionError
+from botocore.exceptions import EndpointConnectionError
 
 from pg_spot_operator.cloud_impl.aws_client import get_client
 from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
@@ -198,21 +196,15 @@ def get_amazon_pricing_metadata() -> dict:
     return meta_data
 
 
-def get_aws_region_city(
-    region: str,
-) -> str:
-    return get_aws_region_code_to_name_mapping().get(region)
-
-
 def get_pricing_info_via_http(region: str, instance_type: str) -> dict:
     """AWS caches pricing info for public usage in static files like:
     https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/EU%20(Stockholm)/Linux/index.json
     """
-    city = get_aws_region_city(region)
-    if not city:
-        raise Exception("Could not map region code to location name")
+    region_location = get_aws_region_code_to_name_mapping().get(region, "")
+    if not region_location:
+        raise Exception(f"Could not map region code {region} to location name")
     logger.debug(
-        f"Looking up AWS on-demand pricing info for instance type {instance_type} in {region} ({city}) ..."
+        f"Looking up AWS on-demand pricing info for instance type {instance_type} in {region} ({region_location}) ..."
     )
     meta_data = get_amazon_pricing_metadata()
     if not meta_data:
@@ -236,20 +228,7 @@ def get_pricing_info_via_http(region: str, instance_type: str) -> dict:
 
     base_url = f"https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/{service_id}/{currency_code}/current/{source}"
 
-    selector_list = []
-    for selector in primary_selectors:
-        if selector.lower() == "location":
-            loca_list = value_attrs.get(selector, [])
-            # select a location with the city's name
-            for loca in loca_list:
-                if "(" + city.lower() + ")" in loca.lower():
-                    selector_list.append(loca)
-    if not selector_list:
-        logger.error("Failed to convert region to location name")
-        return {}
-    selector_list.append("Linux")
-
-    url = f"{base_url}/{'/'.join(selector_list)}/index.json"
+    url = f"{base_url}/{region_location}/Linux/index.json"
     sanitized_url = urllib.parse.quote(url, safe=":/")
     logger.debug("requests.get: %s", sanitized_url)
     f = requests.get(
