@@ -23,7 +23,10 @@ from pg_spot_operator.constants import (
     SPOT_OPERATOR_ID_TAG,
 )
 from pg_spot_operator.instance_type import InstanceType
-from pg_spot_operator.util import timed_cache
+from pg_spot_operator.util import (
+    get_aws_region_code_to_name_mapping,
+    timed_cache,
+)
 
 MAX_SKUS_FOR_SPOT_PRICE_COMPARE = 10
 SPOT_HISTORY_LOOKBACK_DAYS = 1
@@ -197,22 +200,8 @@ def get_amazon_pricing_metadata() -> dict:
 
 def get_aws_region_city(
     region: str,
-) -> str:  # TODO get rid of boto as wants auth
-    param_name = (
-        f"/aws/service/global-infrastructure/regions/{region}/longName"
-    )
-    session = boto3.Session()
-    ssm_client = session.client("ssm")
-    try:
-        response = ssm_client.get_parameter(
-            Name=param_name, WithDecryption=False
-        )
-        param_value = response.get("Parameter", {}).get("Value", "")
-        city_match = re.findall(r"\((.+)\)", param_value)
-        return city_match[0].lower() if city_match else ""
-    except ClientError as e:
-        logger.error(f"Error fetching parameter: {e}")
-        return ""
+) -> str:
+    return get_aws_region_code_to_name_mapping().get(region)
 
 
 def get_pricing_info_via_http(region: str, instance_type: str) -> dict:
@@ -220,6 +209,8 @@ def get_pricing_info_via_http(region: str, instance_type: str) -> dict:
     https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/EU%20(Stockholm)/Linux/index.json
     """
     city = get_aws_region_city(region)
+    if not city:
+        raise Exception("Could not map region code to location name")
     logger.debug(
         f"Looking up AWS on-demand pricing info for instance type {instance_type} in {region} ({city}) ..."
     )
@@ -305,7 +296,7 @@ def get_current_hourly_ondemand_price(
             cache_pricing_dict(cache_file, pricing_info)
         else:
             logger.error(
-                f"Failed to retrieve AWS pricing info for [type={instance_type}] in [region={region}]"
+                f"Failed to retrieve AWS ondemand pricing info for instance type {instance_type} in region {region}"
             )
             return 0
     return get_ondemand_price_for_instance_type_from_aws_regional_pricing_info(
