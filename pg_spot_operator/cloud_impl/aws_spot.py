@@ -244,26 +244,23 @@ def get_pricing_info_via_http(region: str, instance_type: str) -> dict:
         return {}
 
     base_url = f"https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/{service_id}/{currency_code}/current/{source}"
+
     selector_list = []
-    location_name = ""
     for selector in primary_selectors:
-        if selector.lower() == "plc:operatingsystem":
-            os_list = value_attrs.get(selector, [])
-            # select a linux-y OS
-            for os_name in os_list:
-                if "linux" in os_name.lower():
-                    selector_list.append(os_name)
-                    break
         if selector.lower() == "location":
             loca_list = value_attrs.get(selector, [])
             # select a location with the city's name
             for loca in loca_list:
-                if "(" + city + ")" in loca.lower():
-                    location_name = loca
+                if "(" + city.lower() + ")" in loca.lower():
                     selector_list.append(loca)
-                    break
+    if not selector_list:
+        logger.error("Failed to convert region to location name")
+        return {}
+    selector_list.append("Linux")
+
     url = f"{base_url}/{'/'.join(selector_list)}/index.json"
     sanitized_url = urllib.parse.quote(url, safe=":/")
+    logger.debug("requests.get: %s", sanitized_url)
     f = requests.get(
         sanitized_url, headers={"Content-Type": "application/json"}, timeout=5
     )
@@ -274,32 +271,25 @@ def get_pricing_info_via_http(region: str, instance_type: str) -> dict:
             url,
         )
         return {}
-    pricing_info = f.json()
-    pricing_info["location_name"] = location_name
-    return pricing_info
+    return f.json()
 
 
-def get_location_instance_type_pricing_from_info(
-    instance_type: str, pricing_info: dict
+def get_ondemand_price_for_instance_type_from_aws_regional_pricing_info(
+    region: str, instance_type: str, regional_pricing_info: dict
 ) -> float:
-    price = 0
-    location_name = pricing_info.get("location_name", "")
-    region_info = pricing_info.get("regions", {}).get(location_name, {})
-    if not region_info:
-        logger.error(
-            "Failed to get region info from pricing dict; returning 0 price"
-        )
-        return price
-    for key in region_info:
-        info = region_info[key]
-        if instance_type == info.get("Instance Type"):
-            price = info.get("price", 0)
-            break
-    else:
-        logger.info(
-            f"Found no pricing info for [instance-type={instance_type}] in [location={location_name}]"
-        )
-    return float(price)
+
+    for reg, reg_data in regional_pricing_info.get("regions", {}).items():
+        for _, sku_data in reg_data.items():
+
+            if sku_data.get("Instance Type") == instance_type:
+                return float(sku_data.get("price", 0))
+
+    logger.error(
+        "Failed to find ondemand pricing info from AWS regional data for region %s, instance type %s",
+        region,
+        instance_type,
+    )
+    return 0
 
 
 def get_current_hourly_ondemand_price(
@@ -318,8 +308,8 @@ def get_current_hourly_ondemand_price(
                 f"Failed to retrieve AWS pricing info for [type={instance_type}] in [region={region}]"
             )
             return 0
-    return get_location_instance_type_pricing_from_info(
-        instance_type, pricing_info
+    return get_ondemand_price_for_instance_type_from_aws_regional_pricing_info(
+        region, instance_type, pricing_info
     )
 
 
