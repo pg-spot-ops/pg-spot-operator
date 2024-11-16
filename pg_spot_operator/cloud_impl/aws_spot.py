@@ -152,13 +152,12 @@ def get_cached_pricing_dict(cache_file: str) -> dict:
     )
     cache_path = os.path.join(cache_dir, cache_file)
     if os.path.exists(cache_path):
+        logger.debug(
+            "Reading AWS pricing info from daily cache: %s", cache_path
+        )
         try:
             with open(cache_path, "r") as f:
-                meta_json = json.loads(f.read())
-                logger.debug(
-                    "Reading AWS pricing info from daily cache: %s", cache_path
-                )
-                return meta_json
+                return json.loads(f.read())
         except Exception:
             logger.error("Failed to read %s from AWS daily cache", cache_file)
     return {}
@@ -187,17 +186,6 @@ def get_amazon_ec2_ondemand_pricing_metadata_via_http() -> dict:
     return f.json()
 
 
-def get_amazon_pricing_metadata() -> dict:
-    today = date.today()
-    cache_file = f"aws_meta_{today.year}{today.month}{today.day}.json"
-    meta_data = get_cached_pricing_dict(cache_file)
-    if not meta_data:
-        meta_data = get_amazon_ec2_ondemand_pricing_metadata_via_http()
-        if meta_data:
-            cache_pricing_dict(cache_file, meta_data)
-    return meta_data
-
-
 def get_pricing_info_via_http(region: str, instance_type: str) -> dict:
     """AWS caches pricing info for public usage in static files like:
     https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/EU%20(Stockholm)/Linux/index.json
@@ -208,29 +196,9 @@ def get_pricing_info_via_http(region: str, instance_type: str) -> dict:
     logger.debug(
         f"Looking up AWS on-demand pricing info for instance type {instance_type} in {region} ({region_location}) ..."
     )
-    meta_data = get_amazon_pricing_metadata()
-    if not meta_data:
-        return {}
-    service_id = meta_data.get("manifest", {}).get("serviceId")
-    currency_code = meta_data.get("manifest", {}).get("currencyCode")
-    source = meta_data.get("manifest", {}).get("source")
-    primary_selectors = meta_data.get("primarySelectors", [])
-    value_attrs = meta_data.get("valueAttributes", {})
-    if not (
-        service_id
-        and currency_code
-        and source
-        and primary_selectors
-        and value_attrs
-    ):
-        logger.error(
-            "AWS pricing metadata is missing required info to get on-demand pricing info"
-        )
-        return {}
 
-    base_url = f"https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/{service_id}/{currency_code}/current/{source}"
+    url = f"https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/{region_location}/Linux/index.json"
 
-    url = f"{base_url}/{region_location}/Linux/index.json"
     sanitized_url = urllib.parse.quote(url, safe=":/")
     logger.debug("requests.get: %s", sanitized_url)
     f = requests.get(
@@ -265,15 +233,14 @@ def get_ondemand_price_for_instance_type_from_aws_regional_pricing_info(
 
 
 def clean_up_old_ondemad_pricing_cache_files(older_than_days: int) -> None:
-    """Delete both old "meta" and per region JSON files
-    ~/.pg-spot-operator/price_cache/aws_us-east-1_20241115.json
-    ~/.pg-spot-operator/price_cache/aws_meta_20241115.json
+    """Delete old per region JSON files
+    ~/.pg-spot-operator/price_cache/aws_ondemand_us-east-1_20241115.json
     """
     cache_dir = os.path.expanduser(
         os.path.join(DEFAULT_CONFIG_DIR, "price_cache")
     )
     epoch = time.time()
-    for pd in sorted(glob.glob(os.path.join(cache_dir, "aws_*"))):
+    for pd in sorted(glob.glob(os.path.join(cache_dir, "aws_ondemand_*"))):
         try:
             st = os.stat(pd)
             if epoch - st.st_mtime > 3600 * 24 * older_than_days:
@@ -287,7 +254,9 @@ def get_current_hourly_ondemand_price(
     instance_type: str,
 ) -> float:
     today = date.today()
-    cache_file = f"aws_{region}_{today.year}{today.month}{today.day}.json"
+    cache_file = (
+        f"aws_ondemand_{region}_{today.year}{today.month}{today.day}.json"
+    )
     pricing_info = get_cached_pricing_dict(cache_file)
     if not pricing_info:
         pricing_info = get_pricing_info_via_http(region, instance_type)
