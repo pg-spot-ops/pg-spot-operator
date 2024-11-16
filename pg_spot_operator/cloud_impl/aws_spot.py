@@ -1,6 +1,8 @@
+import glob
 import json
 import logging
 import os
+import time
 import urllib.parse
 from collections import defaultdict
 from datetime import date, datetime, timedelta
@@ -262,6 +264,24 @@ def get_ondemand_price_for_instance_type_from_aws_regional_pricing_info(
     return 0
 
 
+def clean_up_old_ondemad_pricing_cache_files(older_than_days: int) -> None:
+    """Delete both old "meta" and per region JSON files
+    ~/.pg-spot-operator/price_cache/aws_us-east-1_20241115.json
+    ~/.pg-spot-operator/price_cache/aws_meta_20241115.json
+    """
+    cache_dir = os.path.expanduser(
+        os.path.join(DEFAULT_CONFIG_DIR, "price_cache")
+    )
+    epoch = time.time()
+    for pd in sorted(glob.glob(os.path.join(cache_dir, "aws_*"))):
+        try:
+            st = os.stat(pd)
+            if epoch - st.st_mtime > 3600 * 24 * older_than_days:
+                os.unlink(pd)
+        except Exception:
+            logger.info("Failed to clean up old on-demand pricing JSON %s", pd)
+
+
 def get_current_hourly_ondemand_price(
     region: str,
     instance_type: str,
@@ -273,6 +293,7 @@ def get_current_hourly_ondemand_price(
         pricing_info = get_pricing_info_via_http(region, instance_type)
         if pricing_info:
             cache_pricing_dict(cache_file, pricing_info)
+            clean_up_old_ondemad_pricing_cache_files(older_than_days=7)
         else:
             logger.error(
                 f"Failed to retrieve AWS ondemand pricing info for instance type {instance_type} in region {region}"
