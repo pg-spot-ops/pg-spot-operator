@@ -9,6 +9,7 @@ from pg_spot_operator.cloud_impl.aws_spot import (
     get_current_hourly_ondemand_price,
     filter_instance_types_by_hw_req,
     resolve_instance_type_info,
+    get_ondemand_price_for_instance_type_from_aws_regional_pricing_info,
 )
 from pg_spot_operator.constants import MF_SEC_VM_STORAGE_TYPE_LOCAL
 
@@ -417,6 +418,53 @@ PRICING_DATA = [
     },
 ]
 
+REGIONAL_PRICING_INFO = {
+    "manifest": {
+        "serviceId": "ec2",
+        "accessType": "publish",
+        "hawkFilePublicationDate": "2024-11-14T21:50:09Z",
+        "ETLIngestionTriggerDate": "2024-11-14T21:50:09Z",
+        "currencyCode": "USD",
+        "source": "ec2-ondemand-without-sec-sel",
+    },
+    "regions": {
+        "EU (Stockholm)": {
+            "m6in large EU Stockholm Linux": {
+                "rateCode": "PEEZJDSDVW22Q4FW.JRTCKXETXF.6YS6EN2CT7",
+                "price": "0.1480000000",
+                "Location": "EU (Stockholm)",
+                "Instance Family": "General purpose",
+                "vCPU": "2",
+                "Instance Type": "m6in.large",
+                "Memory": "8 GiB",
+                "Storage": "EBS only",
+                "Network Performance": "Up to 25000 Megabit",
+                "plc:OperatingSystem": "Linux",
+                "plc:InstanceFamily": "General Purpose",
+                "Operating System": "Linux",
+                "Pre Installed S/W": "NA",
+                "License Model": "No License required",
+            },
+            "r7a 2xlarge EU Stockholm Linux": {
+                "rateCode": "PASVXMSYCTZND8W3.JRTCKXETXF.6YS6EN2CT7",
+                "price": "0.6472000000",
+                "Location": "EU (Stockholm)",
+                "Instance Family": "Memory optimized",
+                "vCPU": "8",
+                "Instance Type": "r7a.2xlarge",
+                "Memory": "64 GiB",
+                "Storage": "EBS only",
+                "Network Performance": "Up to 12500 Megabit",
+                "plc:OperatingSystem": "Linux",
+                "plc:InstanceFamily": "Memory Optimized",
+                "Operating System": "Linux",
+                "Pre Installed S/W": "NA",
+                "License Model": "No License required",
+            },
+        }
+    },
+}
+
 
 def test_filter_instances():
     assert len(INSTANCE_LISTING) == 4
@@ -464,3 +512,12 @@ def test_resolve_instance_type_info():
     assert i_info.ram_mb == 8192
     assert i_info.instance_storage == 59
     assert i_info.storage_speed_class == "ssd"
+
+
+def test_get_ondemand_price_for_instance_type_from_aws_regional_pricing_info():
+    assert (
+        get_ondemand_price_for_instance_type_from_aws_regional_pricing_info(
+            "eu-north-1", "r7a.2xlarge", REGIONAL_PRICING_INFO
+        )
+        > 0
+    )

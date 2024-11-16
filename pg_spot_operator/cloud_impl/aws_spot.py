@@ -1,6 +1,11 @@
+import glob
+import json
 import logging
+import os
+import time
+import urllib.parse
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from statistics import mean
 
 import requests
@@ -13,11 +18,15 @@ from pg_spot_operator.cloud_impl.cloud_util import (
 )
 from pg_spot_operator.constants import (
     CLOUD_AWS,
+    DEFAULT_CONFIG_DIR,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
     SPOT_OPERATOR_ID_TAG,
 )
 from pg_spot_operator.instance_type import InstanceType
-from pg_spot_operator.util import timed_cache
+from pg_spot_operator.util import (
+    get_aws_region_code_to_name_mapping,
+    timed_cache,
+)
 
 MAX_SKUS_FOR_SPOT_PRICE_COMPARE = 10
 SPOT_HISTORY_LOOKBACK_DAYS = 1
@@ -137,14 +146,141 @@ def get_current_hourly_spot_price(
     return 0
 
 
+def get_cached_pricing_dict(cache_file: str) -> dict:
+    cache_dir = os.path.expanduser(
+        os.path.join(DEFAULT_CONFIG_DIR, "price_cache")
+    )
+    cache_path = os.path.join(cache_dir, cache_file)
+    if os.path.exists(cache_path):
+        logger.debug(
+            "Reading AWS pricing info from daily cache: %s", cache_path
+        )
+        try:
+            with open(cache_path, "r") as f:
+                return json.loads(f.read())
+        except Exception:
+            logger.error("Failed to read %s from AWS daily cache", cache_file)
+    return {}
+
+
+def cache_pricing_dict(cache_file: str, pricing_info: dict) -> None:
+    cache_dir = os.path.expanduser(
+        os.path.join(DEFAULT_CONFIG_DIR, "price_cache")
+    )
+    cache_path = os.path.join(cache_dir, cache_file)
+    os.makedirs(cache_dir, exist_ok=True)
+    with open(cache_path, "w") as f:
+        json.dump(pricing_info, f)
+
+
+def get_amazon_ec2_ondemand_pricing_metadata_via_http() -> dict:
+    url = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/metadata.json"
+    logger.debug("Fetching AWS pricing metadata JSON via HTTP ...")
+    logger.debug("Metadata URL: %s", url)
+    f = requests.get(
+        url, headers={"Content-Type": "application/json"}, timeout=5
+    )
+    if f.status_code != 200:
+        logger.error("Failed to retrieve AWS pricing metadata via HTTP")
+        return {}
+    return f.json()
+
+
+def get_pricing_info_via_http(region: str, instance_type: str) -> dict:
+    """AWS caches pricing info for public usage in static files like:
+    https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/EU%20(Stockholm)/Linux/index.json
+    """
+    region_location = get_aws_region_code_to_name_mapping().get(region, "")
+    if not region_location:
+        raise Exception(f"Could not map region code {region} to location name")
+    logger.debug(
+        f"Looking up AWS on-demand pricing info for instance type {instance_type} in {region} ({region_location}) ..."
+    )
+
+    url = f"https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/{region_location}/Linux/index.json"
+
+    sanitized_url = urllib.parse.quote(url, safe=":/")
+    logger.debug("requests.get: %s", sanitized_url)
+    f = requests.get(
+        sanitized_url, headers={"Content-Type": "application/json"}, timeout=5
+    )
+    if f.status_code != 200:
+        logger.error(
+            "Failed to retrieve AWS pricing info - retcode: %s, URL: %s",
+            f.status_code,
+            url,
+        )
+        return {}
+    return f.json()
+
+
+def get_ondemand_price_for_instance_type_from_aws_regional_pricing_info(
+    region: str, instance_type: str, regional_pricing_info: dict
+) -> float:
+
+    for reg, reg_data in regional_pricing_info.get("regions", {}).items():
+        for _, sku_data in reg_data.items():
+
+            if sku_data.get("Instance Type") == instance_type:
+                return float(sku_data.get("price", 0))
+
+    logger.error(
+        "Failed to find ondemand pricing info from AWS regional data for region %s, instance type %s",
+        region,
+        instance_type,
+    )
+    return 0
+
+
+def clean_up_old_ondemad_pricing_cache_files(older_than_days: int) -> None:
+    """Delete old per region JSON files
+    ~/.pg-spot-operator/price_cache/aws_ondemand_us-east-1_20241115.json
+    """
+    cache_dir = os.path.expanduser(
+        os.path.join(DEFAULT_CONFIG_DIR, "price_cache")
+    )
+    epoch = time.time()
+    for pd in sorted(glob.glob(os.path.join(cache_dir, "aws_ondemand_*"))):
+        try:
+            st = os.stat(pd)
+            if epoch - st.st_mtime > 3600 * 24 * older_than_days:
+                os.unlink(pd)
+        except Exception:
+            logger.info("Failed to clean up old on-demand pricing JSON %s", pd)
+
+
 def get_current_hourly_ondemand_price(
     region: str,
     instance_type: str,
 ) -> float:
-    """Uses an external service for now"""
-    URL = f"https://ec2.shop/?region={region}&filter={instance_type}"
+    today = date.today()
+    cache_file = (
+        f"aws_ondemand_{region}_{today.year}{today.month}{today.day}.json"
+    )
+    pricing_info = get_cached_pricing_dict(cache_file)
+    if not pricing_info:
+        pricing_info = get_pricing_info_via_http(region, instance_type)
+        if pricing_info:
+            cache_pricing_dict(cache_file, pricing_info)
+            clean_up_old_ondemad_pricing_cache_files(older_than_days=7)
+        else:
+            logger.error(
+                f"Failed to retrieve AWS ondemand pricing info for instance type {instance_type} in region {region}"
+            )
+            return 0
+    return get_ondemand_price_for_instance_type_from_aws_regional_pricing_info(
+        region, instance_type, pricing_info
+    )
+
+
+def get_current_hourly_ondemand_price_fallback(
+    region: str,
+    instance_type: str,
+) -> float:
+    """Use an external 3rd party web service as fallback if something changes in AWS static pricing JSONs"""
+    url = f"https://ec2.shop/?region={region}&filter={instance_type}"
     f = requests.get(
-        URL, headers={"Content-Type": "application/json"}, timeout=5
+        url, headers={"Content-Type": "application/json"}, timeout=5
     )
     if f.status_code != 200:
         return 0

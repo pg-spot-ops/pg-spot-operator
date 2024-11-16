@@ -514,7 +514,7 @@ def resolve_manifest_and_display_price(
     if not sku.monthly_ondemand_price:
         sku.monthly_ondemand_price = (
             cloud_api.try_get_monthly_ondemand_price_for_sku(
-                m.cloud, m.region, sku.instance_type
+                m.region, sku.instance_type
             )
         )
 

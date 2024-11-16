@@ -6,6 +6,7 @@ from pg_spot_operator.util import (
     merge_action_output_params,
     decrypt_vault_secret,
     extract_region_from_az,
+    get_aws_region_code_to_name_mapping,
 )
 
 
@@ -41,3 +42,10 @@ def test_extract_region_from_az():
     assert extract_region_from_az("us-west-2-lax-1a") == "us-west-2"
     with pytest.raises(Exception):
         extract_region_from_az("us-west-2-lax-1a-asdasda")
+
+
+def test_get_aws_region_code_to_name_mapping():
+    mapping = get_aws_region_code_to_name_mapping()
+    assert mapping
+    assert mapping["eu-north-1"] == "EU (Stockholm)"
+    assert mapping["eu-north-1"] == "EU (Stockholm)"
