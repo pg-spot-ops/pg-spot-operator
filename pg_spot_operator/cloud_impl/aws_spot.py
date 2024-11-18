@@ -197,7 +197,7 @@ def get_current_hourly_ondemand_price_fallback(
 
 
 def filter_instance_types_by_hw_req(
-    instance_types: list[InstanceTypeInfo],
+    all_instance_types: list[InstanceTypeInfo],
     cpu_min: int | None = 0,
     cpu_max: int | None = 0,
     ram_min: int | None = 0,
@@ -206,11 +206,16 @@ def filter_instance_types_by_hw_req(
     storage_type: str = "network",
     allow_burstable: bool = True,
     storage_speed_class: str | None = "any",
+    instance_types: list[str] | None = None,
     instance_types_to_avoid: list[str] | None = None,
 ) -> list[InstanceTypeInfo]:
     """Returns qualified SKUs sorted by (CPU, RAM) or (CPU, Total instance storage DESC)"""
     ret: list[InstanceTypeInfo] = []
-    for ii in instance_types:
+    for ii in all_instance_types:
+
+        if instance_types and ii.instance_type not in instance_types:
+            continue
+
         if (
             instance_types_to_avoid
             and ii.instance_type in instance_types_to_avoid
@@ -363,6 +368,7 @@ def get_cheapest_sku_for_hw_reqs(
     storage_min: int = 0,
     allow_burstable: bool = True,
     storage_speed_class: str = "any",
+    instance_types: list[str] | None = None,
     instance_types_to_avoid: list[str] | None = None,
     instance_selection_strategy: str | None = None,
 ) -> list[InstanceTypeInfo]:
@@ -384,6 +390,7 @@ def get_cheapest_sku_for_hw_reqs(
         storage_type=storage_type,
         allow_burstable=allow_burstable,
         storage_speed_class=storage_speed_class,
+        instance_types=instance_types,
         instance_types_to_avoid=instance_types_to_avoid,
     )
 

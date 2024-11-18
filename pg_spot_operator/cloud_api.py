@@ -110,6 +110,7 @@ def get_cheapest_skus_for_hardware_requirements(
         storage_min=m.vm.storage_min,
         allow_burstable=m.vm.allow_burstable,
         storage_speed_class=m.vm.storage_speed_class,
+        instance_types=m.vm.instance_types,
         instance_types_to_avoid=skus_to_avoid,
         instance_selection_strategy=m.vm.instance_selection_strategy,
     )
