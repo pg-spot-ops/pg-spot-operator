@@ -390,6 +390,9 @@ def get_cheapest_sku_for_hw_reqs(
         "%s of them matching min HW reqs", len(filtered_instances_by_cpu)
     )
 
+    if not filtered_instances_by_cpu:
+        return []
+
     if len(filtered_instances_by_cpu) > MAX_SKUS_FOR_SPOT_PRICE_COMPARE:
         logger.debug(
             "Reducing to %s instance types by CPU count to reduce pricing history fetching",
