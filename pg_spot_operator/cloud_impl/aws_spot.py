@@ -15,6 +15,8 @@ from pg_spot_operator.cloud_impl.aws_client import get_client
 from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_cpu_arch_from_sku_desc,
+    extract_instance_storage_size_and_type_from_aws_pricing_storage_string,
+    infer_cpu_arch_from_aws_instance_type_name,
 )
 from pg_spot_operator.constants import (
     CLOUD_AWS,
@@ -613,42 +615,43 @@ def get_backing_vms_for_instances_if_any(
     return instances
 
 
-def get_static_spot_pricing_from_aws_s3_json(
-    region: str, instance_type: str
-) -> list[dict]:
-    instances = []
-    try:
-        logger.debug(
-            "Fetching all non-terminated/terminating instances for instance %s in AWS region %s ...",
-            instance_type,
-            region,
-        )
-        client = get_client("ec2", region)
-        filters = [
-            {
-                "Name": "instance-state-name",
-                "Values": ["pending", "running", "stopping", "stopped"],
-            },
-            {
-                "Name": f"tag:{SPOT_OPERATOR_ID_TAG}",
-                "Values": [instance_type],
-            },
-        ]
+def get_all_spot_instance_types_from_aws_regional_pricing_info(
+    region: str, regional_pricing_info: dict
+) -> list[ResolvedInstanceTypeInfo]:
+    instances: list[ResolvedInstanceTypeInfo] = []
 
-        paginator = client.get_paginator("describe_instances")
+    for reg, reg_data in regional_pricing_info.get("regions", {}).items():
+        for _, sku_data in reg_data.items():
+            try:
+                instances.append(
+                    ResolvedInstanceTypeInfo(
+                        instance_type=sku_data["Instance Type"],
+                        arch=infer_cpu_arch_from_aws_instance_type_name(
+                            sku_data["Instance Type"]
+                        ),
+                        cloud=CLOUD_AWS,
+                        region=region,
+                        monthly_ondemand_price=float(sku_data["price"]),
+                        cpu=int(sku_data["vCPU"]),
+                        ram_mb=int(float(sku_data["Memory"]) * 1024),
+                        instance_storage=extract_instance_storage_size_and_type_from_aws_pricing_storage_string(
+                            sku_data["Storage"]
+                        )[
+                            0
+                        ],
+                        storage_speed_class=extract_instance_storage_size_and_type_from_aws_pricing_storage_string(
+                            sku_data["Storage"]
+                        )[
+                            1
+                        ],
+                        provider_description=sku_data,
+                    )
+                )
+            except Exception as e:
+                logger.error(
+                    "Failed to parse instance info from: %s. Error: %s",
+                    sku_data,
+                    e,
+                )
 
-        page_iterator = paginator.paginate(Filters=filters)
-
-        for page in page_iterator:
-            for r in page.get("Reservations", []):
-                if r.get("Instances"):
-                    instances.extend(r["Instances"])
-    except EndpointConnectionError as e:
-        logger.debug(
-            "Failed to list VMs for instance %s in region %s due to: %s",
-            instance_type,
-            region,
-            e,
-        )
-        raise Exception("Failed to list VMs due to AWS connectivity problems")
     return instances

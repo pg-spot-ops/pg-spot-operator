@@ -1,4 +1,5 @@
 import logging
+import re
 
 from pg_spot_operator.constants import (
     CLOUD_AWS,
@@ -47,3 +48,121 @@ def extract_cpu_arch_from_sku_desc(cloud: str, i_desc: dict) -> str:
         return CPU_ARCH_ARM
     else:
         return CPU_ARCH_X86
+
+
+def infer_cpu_arch_from_aws_instance_type_name(instance_type: str) -> str:
+    if "g" in instance_type:
+        return CPU_ARCH_ARM
+    else:
+        return CPU_ARCH_X86
+
+
+def parse_aws_pricing_json_storage_string(
+    storage_string: str,
+) -> tuple[int, str]:
+    if "EBS only" in storage_string:
+        return 0, ""
+    if " x " in storage_string:
+        # "2 x 1900 NVMe SSD"
+        splits = storage_string.split(" x ")
+        if len(splits) != 2:
+            logger.error(
+                "Unexpected EC2 storage string, can't parse size / type, not assuming any local storage. %s",
+                storage_string,
+            )
+            return 0, ""
+        multiplier = int(splits[0])
+        m = re.match(r"^\s*(\d+)\s*(.*)$", splits[1])
+        if not m or len(m.groups()) != 2:
+            logger.error(
+                "Unexpected EC2 storage string, can't parse size / type, not assuming any local storage. %s",
+                storage_string,
+            )
+            return 0, ""
+        size = int(m.group(1)) if m.group(1) else 0
+        storage_speed_class = "hdd"
+        if m.group(2):
+            storage_speed_class = (
+                "nvme"
+                if "nvme" in m.group(2).lower()
+                else "ssd" if "ssd" in m.group(2).lower() else "hdd"
+            )
+        return multiplier * size, storage_speed_class
+    else:
+        # "125 GB NVMe SSD"
+        m = re.match(r"^\s*(\d+)\s*(.*)$", storage_string)
+        if not m or len(m.groups()) != 2:
+            logger.error(
+                "Unexpected EC2 storage string, can't parse size / type, not assuming any local storage. %s",
+                storage_string,
+            )
+            return 0, ""
+        size = int(m.group(1))
+        storage_speed_class = "hdd"
+        if m.group(2):
+            storage_speed_class = (
+                "nvme"
+                if "nvme" in m.group(2).lower()
+                else "ssd" if "ssd" in m.group(2).lower() else "hdd"
+            )
+        return size, storage_speed_class
+
+
+def extract_instance_storage_size_and_type_from_aws_pricing_storage_string(
+    storage_string: str,
+) -> tuple[int, str]:
+    r"""Storage strings look something like:
+    http "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/EU%20(Stockholm)/Linux/index.json" \
+      | jq | grep '"Storage":'  | sed 's/^[ \t]*\(.*[^ \t]\)[ \t]*$/\1/'  | sort | uniq
+    ...
+    "Storage": "8 x 7500 NVMe SSD",
+    "Storage": "8 x 940 NVMe SSD",
+    "Storage": "900 GB NVMe SSD",
+    "Storage": "EBS only",
+    """
+    if "EBS only" in storage_string:
+        return 0, ""
+    if " x " in storage_string:
+        # "2 x 1900 NVMe SSD"
+        splits = storage_string.split(" x ")
+        if len(splits) != 2:
+            logger.error(
+                "Unexpected EC2 storage string, can't parse size / type, not assuming any local storage. %s",
+                storage_string,
+            )
+            return 0, ""
+        multiplier = int(splits[0])
+        m = re.match(r"^\s*(\d+)\s*(.*)$", splits[1])
+        if not m or len(m.groups()) != 2:
+            logger.error(
+                "Unexpected EC2 storage string, can't parse size / type, not assuming any local storage. %s",
+                storage_string,
+            )
+            return 0, ""
+        size = int(m.group(1)) if m.group(1) else 0
+        storage_speed_class = "hdd"
+        if m.group(2):
+            storage_speed_class = (
+                "nvme"
+                if "nvme" in m.group(2).lower()
+                else "ssd" if "ssd" in m.group(2).lower() else "hdd"
+            )
+        return multiplier * size, storage_speed_class
+    else:
+        # "125 GB NVMe SSD"
+        m = re.match(r"^\s*(\d+)\s*(.*)$", storage_string)
+        if not m or not m.group(1):
+            logger.error(
+                "Unexpected EC2 storage string, can't parse size / type, not assuming any local storage. %s",
+                storage_string,
+            )
+            return 0, ""
+        size = int(m.group(1))
+        storage_speed_class = "hdd"
+        if m.group(2):
+            storage_speed_class = (
+                "nvme"
+                if "nvme" in m.group(2).lower()
+                else "ssd" if "ssd" in m.group(2).lower() else "hdd"
+            )
+        return size, storage_speed_class
