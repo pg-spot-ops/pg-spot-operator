@@ -201,7 +201,7 @@ def filter_instance_types_by_hw_req(
     cpu_min: int | None = 0,
     cpu_max: int | None = 0,
     ram_min: int | None = 0,
-    architecture: str | None = "any",
+    cpu_arch: str = "",
     storage_min: int | None = 0,
     storage_type: str = "network",
     allow_burstable: bool = True,
@@ -217,10 +217,11 @@ def filter_instance_types_by_hw_req(
         ):
             continue
 
-        if architecture and architecture.strip() and architecture != "any":
-            if (
-                architecture.strip() not in ii.arch
-            ):  # On AWS architectures are named x86_64 and arm64
+        if cpu_arch and cpu_arch.strip() and cpu_arch.strip().lower() != "any":
+            # On AWS architectures are named x86_64 and arm64, but we only look for arm / not-arm for now
+            if "arm" in cpu_arch.strip().lower() and "arm" not in ii.arch:
+                continue
+            if "arm" not in cpu_arch.strip().lower() and "arm" in ii.arch:
                 continue
 
         if allow_burstable is False and ii.is_burstable:
@@ -378,7 +379,7 @@ def get_cheapest_sku_for_hw_reqs(
         cpu_min=cpu_min,
         cpu_max=cpu_max,
         ram_min=ram_min,
-        architecture=architecture,
+        cpu_arch=architecture,
         storage_min=storage_min,
         storage_type=storage_type,
         allow_burstable=allow_burstable,
