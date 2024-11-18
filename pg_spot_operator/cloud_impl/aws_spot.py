@@ -611,3 +611,44 @@ def get_backing_vms_for_instances_if_any(
         )
         raise Exception("Failed to list VMs due to AWS connectivity problems")
     return instances
+
+
+def get_static_spot_pricing_from_aws_s3_json(
+    region: str, instance_type: str
+) -> list[dict]:
+    instances = []
+    try:
+        logger.debug(
+            "Fetching all non-terminated/terminating instances for instance %s in AWS region %s ...",
+            instance_type,
+            region,
+        )
+        client = get_client("ec2", region)
+        filters = [
+            {
+                "Name": "instance-state-name",
+                "Values": ["pending", "running", "stopping", "stopped"],
+            },
+            {
+                "Name": f"tag:{SPOT_OPERATOR_ID_TAG}",
+                "Values": [instance_type],
+            },
+        ]
+
+        paginator = client.get_paginator("describe_instances")
+
+        page_iterator = paginator.paginate(Filters=filters)
+
+        for page in page_iterator:
+            for r in page.get("Reservations", []):
+                if r.get("Instances"):
+                    instances.extend(r["Instances"])
+    except EndpointConnectionError as e:
+        logger.debug(
+            "Failed to list VMs for instance %s in region %s due to: %s",
+            instance_type,
+            region,
+            e,
+        )
+        raise Exception("Failed to list VMs due to AWS connectivity problems")
+    return instances

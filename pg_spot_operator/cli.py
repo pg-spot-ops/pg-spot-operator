@@ -485,18 +485,29 @@ def resolve_manifest_and_display_price(
         m.vm.instance_selection_strategy,
     )
 
-    # Set AWS creds
-    m.decrypt_secrets_if_any()
-    set_access_keys(
-        m.aws.access_key_id, m.aws.secret_access_key, m.aws.profile_name
-    )
+    # Set AWS creds if AZ set
+    if m.availability_zone and (
+        (m.aws.access_key_id and m.aws.secret_access_key) or m.aws.profile_name
+    ):
+        m.decrypt_secrets_if_any()
+        set_access_keys(
+            m.aws.access_key_id, m.aws.secret_access_key, m.aws.profile_name
+        )
 
-    cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(m)
+        cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
+            m
+        )
+    else:
+        cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
+            m
+        )
+
     if not cheapest_skus:
         logger.error(
             f"No SKUs matching HW requirements found for instance {m.instance_name} in region / zone {m.region or m.availability_zone}"
         )
         exit(1)
+
     sku = cheapest_skus[0]
     logger.info("Instance type selected: %s (%s)", sku.instance_type, sku.arch)
     logger.info(
