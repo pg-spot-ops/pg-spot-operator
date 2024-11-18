@@ -11,6 +11,7 @@ class InstanceTypeInfo:
     availability_zone: str = ""
     hourly_spot_price: float = 0
     monthly_spot_price: float = 0
+    hourly_ondemand_price: float = 0
     monthly_ondemand_price: float = 0
     cpu: int = 0
     ram_mb: int = 0

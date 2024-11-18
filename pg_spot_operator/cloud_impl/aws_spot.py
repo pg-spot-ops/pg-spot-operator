@@ -1,4 +1,5 @@
 import logging
+import re
 from collections import defaultdict
 from datetime import datetime, timedelta
 from statistics import mean
@@ -365,6 +366,13 @@ def get_cheapest_sku_for_hw_reqs(
     instance_selection_strategy: str | None = None,
 ) -> list[InstanceTypeInfo]:
     """Returns a price-sorted list"""
+    if not all_instances:
+        raise Exception("Need all_instances to select cheapest")
+
+    logger.debug(
+        "Filtering through %s instances types to mathc HW reqs ...",
+        len(all_instances),
+    )
     filtered_instances_by_cpu = filter_instance_types_by_hw_req(
         all_instances,
         cpu_min=cpu_min,
@@ -527,6 +535,24 @@ def get_backing_vms_for_instances_if_any(
     return instances
 
 
+def extract_memory_mb_from_aws_pricing_memory_string(
+    memory_string: str,
+) -> int:
+    if not memory_string:
+        return 0
+    matches = re.findall(r"^\s*(\d+)\s*(\w+)", memory_string)
+    if matches:
+        size = float(matches[0][0])
+        unit = matches[0][1]
+        if "G" in unit.upper():
+            return int(size * 1024)
+        elif "T" in unit.upper():
+            return int(size * 1024 * 1024)
+        else:
+            return int(size)
+    return 0
+
+
 def get_all_instance_types_from_aws_regional_pricing_info(
     region: str, regional_pricing_info: dict
 ) -> list[InstanceTypeInfo]:
@@ -543,9 +569,14 @@ def get_all_instance_types_from_aws_regional_pricing_info(
                         ),
                         cloud=CLOUD_AWS,
                         region=region,
-                        monthly_ondemand_price=float(sku_data["price"]),
+                        hourly_ondemand_price=float(sku_data["price"]),
+                        monthly_ondemand_price=float(sku_data["price"])
+                        * 24
+                        * 30,
                         cpu=int(sku_data["vCPU"]),
-                        ram_mb=int(float(sku_data["Memory"]) * 1024),
+                        ram_mb=extract_memory_mb_from_aws_pricing_memory_string(
+                            sku_data.get("Memory", "0")
+                        ),
                         instance_storage=extract_instance_storage_size_and_type_from_aws_pricing_storage_string(
                             sku_data["Storage"]
                         )[

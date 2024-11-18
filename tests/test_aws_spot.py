@@ -14,6 +14,7 @@ from pg_spot_operator.cloud_impl.aws_spot import (
     resolve_instance_type_info,
     get_ondemand_price_for_instance_type_from_aws_regional_pricing_info,
     get_spot_instance_types_with_price_from_s3_pricing_json,
+    extract_memory_mb_from_aws_pricing_memory_string,
 )
 from pg_spot_operator.constants import MF_SEC_VM_STORAGE_TYPE_LOCAL
 
@@ -586,3 +587,13 @@ def test_get_spot_instance_types_with_price_from_s3_pricing_json():
     )
     assert len(x) == 2
     assert x["m6g.xlarge"] > 0.01
+
+
+def test_extract_memory_mb_from_aws_pricing_memory_string():
+    assert extract_memory_mb_from_aws_pricing_memory_string("64 GiB") == int(
+        64 * 1024
+    )
+    assert extract_memory_mb_from_aws_pricing_memory_string("512 MiB") == 512
+    assert extract_memory_mb_from_aws_pricing_memory_string("1 TiB") == int(
+        1 * 1024 * 1024
+    )

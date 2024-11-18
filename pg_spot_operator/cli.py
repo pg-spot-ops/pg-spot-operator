@@ -485,22 +485,20 @@ def resolve_manifest_and_display_price(
         m.vm.instance_selection_strategy,
     )
 
-    # Set AWS creds if AZ set
-    if m.availability_zone and (
+    use_boto3: bool = False
+    # Set AWS creds if AZ set, AZ-specific pricing info not available over static API
+    if m.availability_zone or (
         (m.aws.access_key_id and m.aws.secret_access_key) or m.aws.profile_name
     ):
         m.decrypt_secrets_if_any()
         set_access_keys(
             m.aws.access_key_id, m.aws.secret_access_key, m.aws.profile_name
         )
+        use_boto3 = True
 
-        cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
-            m
-        )
-    else:
-        cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
-            m
-        )
+    cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
+        m, use_boto3=use_boto3
+    )
 
     if not cheapest_skus:
         logger.error(
@@ -517,18 +515,20 @@ def resolve_manifest_and_display_price(
         "MiB" if sku.ram_mb < 1024 else "GB",
         sku.instance_storage,
     )
+
     logger.info(
-        "Current monthly Spot price in AZ %s: $%s",
-        sku.availability_zone,
+        "Current monthly Spot price in %s %s: $%s",
+        "AZ" if m.availability_zone else "region",
+        m.availability_zone if m.availability_zone else m.region,
         sku.monthly_spot_price,
     )
+
     if not sku.monthly_ondemand_price:
         sku.monthly_ondemand_price = (
             cloud_api.try_get_monthly_ondemand_price_for_sku(
                 m.region, sku.instance_type
             )
         )
-
     if sku.monthly_ondemand_price and sku.monthly_spot_price:
         spot_discount = (
             100.0
@@ -536,11 +536,12 @@ def resolve_manifest_and_display_price(
             / sku.monthly_ondemand_price
         )
         logger.info(
-            "Current Spot discount rate in AZ %s: %s%% (spot $%s vs on-demand $%s)",
-            sku.availability_zone,
+            "Current Spot discount rate in %s %s: %s%% (spot $%s vs on-demand $%s)",
+            "AZ" if m.availability_zone else "region",
+            m.availability_zone if m.availability_zone else m.region,
             round(spot_discount, 1),
-            sku.monthly_spot_price,
-            sku.monthly_ondemand_price,
+            round(sku.monthly_spot_price, 1),
+            round(sku.monthly_ondemand_price, 1),
         )
 
 

@@ -22,14 +22,14 @@ def get_cached_pricing_dict(cache_file: str) -> dict:
     )
     cache_path = os.path.join(cache_dir, cache_file)
     if os.path.exists(cache_path):
-        logger.debug(
-            "Reading AWS pricing info from daily cache: %s", cache_path
-        )
+        logger.debug("Reading cached AWS pricing file: %s", cache_path)
         try:
             with open(cache_path, "r") as f:
                 return json.loads(f.read())
         except Exception:
-            logger.error("Failed to read %s from AWS daily cache", cache_file)
+            logger.error(
+                "Failed to read cached AWS pricing file from: %s", cache_path
+            )
     return {}
 
 
@@ -45,7 +45,7 @@ def write_pricing_cache_file_as_json(
         json.dump(pricing_info, f)
 
 
-def get_pricing_info_via_http(region: str) -> dict:
+def get_ondemand_pricing_info_via_http(region: str) -> dict:
     """AWS caches pricing info for public usage in static files like:
     https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/EU%20(Stockholm)/Linux/index.json
     """
@@ -73,7 +73,7 @@ def get_pricing_info_via_http(region: str) -> dict:
     return f.json()
 
 
-def clean_up_old_pricing_cache_files(older_than_days: int) -> None:
+def try_clean_up_old_pricing_cache_files(older_than_days: int) -> None:
     """Delete old per region JSON files
     ~/.pg-spot-operator/price_cache/aws_ondemand_us-east-1_20241115.json
     """
@@ -95,19 +95,21 @@ def get_aws_static_ondemand_pricing_info(region: str) -> dict:
     cache_file = (
         f"aws_ondemand_{region}_{today.year}{today.month}{today.day}.json"
     )
-    pricing_info = get_cached_pricing_dict(cache_file)
+    cached_pricing_info = get_cached_pricing_dict(cache_file)
+    if cached_pricing_info:
+        return cached_pricing_info
+
+    pricing_info = get_ondemand_pricing_info_via_http(region)
     if not pricing_info:
-        pricing_info = get_pricing_info_via_http(region)
-        if pricing_info:
-            write_pricing_cache_file_as_json(cache_file, pricing_info)
-            clean_up_old_pricing_cache_files(older_than_days=7)
-        else:
-            logger.error(
-                "Failed to retrieve AWS ondemand pricing info for region %s",
-                region,
-            )
-            return {}
-    return {}
+        logger.error(
+            "Failed to retrieve AWS ondemand pricing info for region %s",
+            region,
+        )
+        return {}
+
+    write_pricing_cache_file_as_json(cache_file, pricing_info)
+    try_clean_up_old_pricing_cache_files(older_than_days=7)
+    return pricing_info
 
 
 def get_latest_spot_pricing_json() -> dict:
@@ -190,7 +192,9 @@ def get_spot_pricing_from_public_json() -> dict:
         return spot_pricing_info
 
     url = "https://website.spot.ec2.aws.a2z.com/spot.json"
-    logger.debug("Fetching AWS spot pricing info from %s ...", url)
+    logger.debug(
+        "Fetching AWS spot pricing info from %s to %s ...", url, cache_file
+    )
     r = requests.get(
         url, headers={"Content-Type": "application/json"}, timeout=5
     )

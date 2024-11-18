@@ -3,6 +3,7 @@ import logging
 from pg_spot_operator.cloud_impl import aws_spot
 from pg_spot_operator.cloud_impl.aws_cache import (
     get_aws_static_ondemand_pricing_info,
+    get_spot_pricing_from_public_json,
 )
 from pg_spot_operator.cloud_impl.aws_spot import (
     get_all_ec2_spot_instance_types,
@@ -57,7 +58,7 @@ def get_cheapest_skus_for_hardware_requirements(
     m: InstanceManifest,
     max_skus_to_get: int = 1,
     skus_to_avoid: list[str] | None = None,
-    check_price: bool = False,
+    use_boto3: bool = True,
 ) -> list[InstanceTypeInfo]:
     """By default prefer to use the direct boto3 APIs to get the most fresh instance and pricing info.
     Use AWS static JSONs for unauthenticated price checks"""
@@ -65,27 +66,8 @@ def get_cheapest_skus_for_hardware_requirements(
         "Looking for Spot VMs for following HW reqs: %s",
         [x for x in m.vm.dict().items() if x[1] is not None],
     )
-    use_boto3: bool = True
-    if check_price and not (m.aws.access_key_id and m.aws.secret_access_key):
-        use_boto3 = False
-        all_instances_for_region = (
-            get_all_instance_types_from_aws_regional_pricing_info(
-                m.region, get_aws_static_ondemand_pricing_info(m.region)
-            )
-        )
-        all_spot_instances_for_region_with_price = (
-            get_spot_instance_types_with_price_from_s3_pricing_json(
-                m.region, get_aws_static_ondemand_pricing_info(m.region)
-            )
-        )
-        all_regional_spots = []
-        for x in all_instances_for_region:
-            if all_spot_instances_for_region_with_price.get(x.instance_type):
-                x.hourly_spot_price = all_spot_instances_for_region_with_price[
-                    x.instance_type
-                ]
-                all_regional_spots.append(x)
-    else:
+
+    if use_boto3:
         all_boto3_instance_types_for_region = get_all_ec2_spot_instance_types(
             m.region,
             with_local_storage_only=(
@@ -95,6 +77,25 @@ def get_cheapest_skus_for_hardware_requirements(
         all_regional_spots = boto3_api_instance_list_to_instance_type_info(
             m.region, all_boto3_instance_types_for_region
         )
+    else:
+        all_instances_for_region = (
+            get_all_instance_types_from_aws_regional_pricing_info(
+                m.region, get_aws_static_ondemand_pricing_info(m.region)
+            )
+        )
+        all_spot_instances_for_region_with_price = (
+            get_spot_instance_types_with_price_from_s3_pricing_json(
+                m.region, get_spot_pricing_from_public_json()
+            )
+        )
+        all_regional_spots = []
+        for x in all_instances_for_region:
+            if all_spot_instances_for_region_with_price.get(x.instance_type):
+                x.hourly_spot_price = all_spot_instances_for_region_with_price[
+                    x.instance_type
+                ]
+                all_regional_spots.append(x)
+
     return aws_spot.get_cheapest_sku_for_hw_reqs(
         all_regional_spots,
         m.region,
