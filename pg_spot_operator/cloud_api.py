@@ -63,7 +63,8 @@ def get_cheapest_skus_for_hardware_requirements(
     """By default prefer to use the direct boto3 APIs to get the most fresh instance and pricing info.
     Use AWS static JSONs for unauthenticated price checks"""
     logger.debug(
-        "Looking for Spot VMs for following HW reqs: %s",
+        "Looking for Spot VMs via %s for following HW reqs: %s",
+        "boto3" if use_boto3 else "S3 price listings",
         [x for x in m.vm.dict().items() if x[1] is not None],
     )
 
