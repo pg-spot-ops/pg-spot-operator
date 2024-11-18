@@ -7,6 +7,7 @@ import urllib
 from datetime import date, datetime
 
 import requests
+from unidecode import unidecode
 
 from pg_spot_operator.constants import DEFAULT_CONFIG_DIR
 from pg_spot_operator.util import get_aws_region_code_to_name_mapping
@@ -58,7 +59,7 @@ def get_ondemand_pricing_info_via_http(region: str) -> dict:
 
     url = f"https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/{region_location}/Linux/index.json"
 
-    sanitized_url = urllib.parse.quote(url, safe=":/")
+    sanitized_url = urllib.parse.quote(unidecode(url), safe=":/")
     logger.debug("requests.get: %s", sanitized_url)
     f = requests.get(
         sanitized_url, headers={"Content-Type": "application/json"}, timeout=5
@@ -67,7 +68,7 @@ def get_ondemand_pricing_info_via_http(region: str) -> dict:
         logger.error(
             "Failed to retrieve AWS pricing info - retcode: %s, URL: %s",
             f.status_code,
-            url,
+            sanitized_url,
         )
         return {}
     return f.json()
