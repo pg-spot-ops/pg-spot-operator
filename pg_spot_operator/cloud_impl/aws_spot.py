@@ -1,11 +1,6 @@
-import glob
-import json
 import logging
-import os
-import time
-import urllib.parse
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from statistics import mean
 
 import requests
@@ -23,15 +18,11 @@ from pg_spot_operator.cloud_impl.cloud_util import (
 )
 from pg_spot_operator.constants import (
     CLOUD_AWS,
-    DEFAULT_CONFIG_DIR,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
     SPOT_OPERATOR_ID_TAG,
 )
 from pg_spot_operator.instance_type import InstanceType
-from pg_spot_operator.util import (
-    get_aws_region_code_to_name_mapping,
-    timed_cache,
-)
+from pg_spot_operator.util import timed_cache
 
 MAX_SKUS_FOR_SPOT_PRICE_COMPARE = 10
 SPOT_HISTORY_LOOKBACK_DAYS = 1
@@ -205,7 +196,7 @@ def get_current_hourly_ondemand_price_fallback(
 
 
 def filter_instance_types_by_hw_req(
-    instance_types: list[dict],
+    instance_types: list[InstanceTypeInfo],
     cpu_min: int | None = 0,
     cpu_max: int | None = 0,
     ram_min: int | None = 0,
@@ -341,7 +332,7 @@ def get_avg_spot_price_from_pricing_history_data_by_sku_and_az(
 
 
 def get_cheapest_sku_for_hw_reqs(
-    all_instances_for_region: list[InstanceTypeInfo],
+    all_instances: list[InstanceTypeInfo],
     region: str,
     availability_zone: str | None = None,
     cpu_min: int = 0,
@@ -357,7 +348,7 @@ def get_cheapest_sku_for_hw_reqs(
 ) -> list[InstanceTypeInfo]:
     """Returns a price-sorted list"""
     filtered_instances = filter_instance_types_by_hw_req(
-        all_instances_for_region,
+        all_instances,
         cpu_min=cpu_min,
         cpu_max=cpu_max,
         ram_min=ram_min,
@@ -517,7 +508,7 @@ def get_backing_vms_for_instances_if_any(
     return instances
 
 
-def get_all_spot_instance_types_from_aws_regional_pricing_info(
+def get_all_instance_types_from_aws_regional_pricing_info(
     region: str, regional_pricing_info: dict
 ) -> list[InstanceTypeInfo]:
     instances: list[InstanceTypeInfo] = []
@@ -557,3 +548,64 @@ def get_all_spot_instance_types_from_aws_regional_pricing_info(
                 )
 
     return instances
+
+
+def get_spot_instance_types_with_price_from_s3_pricing_json(
+    region: str, spot_pricing_info: dict
+) -> dict:
+    """Info from: https://website.spot.ec2.aws.a2z.com/spot.json
+    {
+      "vers": 0.01,
+      "config": {
+        "rate": "perhr",
+        "valueColumns": [
+          "linux",
+          "mswin"
+        ],
+        "currencies": [
+          "USD"
+        ],
+        "regions": [
+          {
+            "region": "us-east-1",
+            "footnotes": {
+              "*": "notAvailableForCCorCGPU"
+            },
+            "instanceTypes": [
+              {
+                "type": "generalCurrentGen",
+                "sizes": [
+                  {
+                    "size": "m6i.xlarge",
+                    "valueColumns": [
+                      {
+                        "name": "linux",
+                        "prices": {
+                          "USD": "0.0615"
+                        }
+                      },
+                      {
+                        "name": "mswin",
+                        "prices": {
+                          "USD": "0.2032"
+                        }
+                      }
+                    ]
+                  },
+    """
+    ret = {}
+
+    for rd in spot_pricing_info.get("config", {}).get("regions", []):
+        if rd.get("region") != region:
+            continue
+        for ins_types in rd.get("instanceTypes", []):
+            for size in ins_types.get("sizes", []):
+                if not size.get("size"):
+                    continue
+                for vc in size.get("valueColumns", []):
+                    if vc.get("name") == "linux":
+                        ret[size["size"]] = float(
+                            vc.get("prices", {}).get("USD", 0)
+                        )
+
+    return ret

@@ -10,6 +10,7 @@ from pg_spot_operator.cloud_impl.aws_spot import (
     filter_instance_types_by_hw_req,
     resolve_instance_type_info,
     get_ondemand_price_for_instance_type_from_aws_regional_pricing_info,
+    get_spot_instance_types_with_price_from_s3_pricing_json,
 )
 from pg_spot_operator.constants import MF_SEC_VM_STORAGE_TYPE_LOCAL
 
@@ -466,6 +467,56 @@ REGIONAL_PRICING_INFO = {
 }
 
 
+# https://website.spot.ec2.aws.a2z.com/spot.json
+SPOT_PRICING_INFO_S3_JSON_SAMPLE = {
+    "vers": 0.01,
+    "config": {
+        "rate": "perhr",
+        "valueColumns": ["linux", "mswin"],
+        "currencies": ["USD"],
+        "regions": [
+            {
+                "region": "us-east-1",
+                "footnotes": {"*": "notAvailableForCCorCGPU"},
+                "instanceTypes": [
+                    {
+                        "type": "generalCurrentGen",
+                        "sizes": [
+                            {
+                                "size": "m6i.xlarge",
+                                "valueColumns": [
+                                    {
+                                        "name": "linux",
+                                        "prices": {"USD": "0.0615"},
+                                    },
+                                    {
+                                        "name": "mswin",
+                                        "prices": {"USD": "0.2032"},
+                                    },
+                                ],
+                            },
+                            {
+                                "size": "m6g.xlarge",
+                                "valueColumns": [
+                                    {
+                                        "name": "linux",
+                                        "prices": {"USD": "0.0378"},
+                                    },
+                                    {
+                                        "name": "mswin",
+                                        "prices": {"USD": "N/A*"},
+                                    },
+                                ],
+                            },
+                        ],
+                    }
+                ],
+            }
+        ],
+    },
+}
+
+
 def test_filter_instances():
     assert len(INSTANCE_LISTING) == 4
     filtered = filter_instance_types_by_hw_req(
@@ -521,3 +572,11 @@ def test_get_ondemand_price_for_instance_type_from_aws_regional_pricing_info():
         )
         > 0
     )
+
+
+def test_get_spot_instance_types_with_price_from_s3_pricing_json():
+    x = get_spot_instance_types_with_price_from_s3_pricing_json(
+        "us-east-1", SPOT_PRICING_INFO_S3_JSON_SAMPLE
+    )
+    assert len(x) == 2
+    assert x["m6g.xlarge"] > 0.01

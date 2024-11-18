@@ -4,19 +4,21 @@ import logging
 import os
 import time
 import urllib
-from datetime import date
+from datetime import date, datetime
 
 import requests
 
 from pg_spot_operator.constants import DEFAULT_CONFIG_DIR
 from pg_spot_operator.util import get_aws_region_code_to_name_mapping
 
+CONFIG_DIR_PRICE_CACHE_SUBDIR = "price_cache"
+
 logger = logging.getLogger(__name__)
 
 
 def get_cached_pricing_dict(cache_file: str) -> dict:
     cache_dir = os.path.expanduser(
-        os.path.join(DEFAULT_CONFIG_DIR, "price_cache")
+        os.path.join(DEFAULT_CONFIG_DIR, CONFIG_DIR_PRICE_CACHE_SUBDIR)
     )
     cache_path = os.path.join(cache_dir, cache_file)
     if os.path.exists(cache_path):
@@ -31,9 +33,11 @@ def get_cached_pricing_dict(cache_file: str) -> dict:
     return {}
 
 
-def cache_pricing_dict(cache_file: str, pricing_info: dict) -> None:
+def write_pricing_cache_file_as_json(
+    cache_file: str, pricing_info: dict
+) -> None:
     cache_dir = os.path.expanduser(
-        os.path.join(DEFAULT_CONFIG_DIR, "price_cache")
+        os.path.join(DEFAULT_CONFIG_DIR, CONFIG_DIR_PRICE_CACHE_SUBDIR)
     )
     cache_path = os.path.join(cache_dir, cache_file)
     os.makedirs(cache_dir, exist_ok=True)
@@ -69,15 +73,15 @@ def get_pricing_info_via_http(region: str) -> dict:
     return f.json()
 
 
-def clean_up_old_ondemad_pricing_cache_files(older_than_days: int) -> None:
+def clean_up_old_pricing_cache_files(older_than_days: int) -> None:
     """Delete old per region JSON files
     ~/.pg-spot-operator/price_cache/aws_ondemand_us-east-1_20241115.json
     """
     cache_dir = os.path.expanduser(
-        os.path.join(DEFAULT_CONFIG_DIR, "price_cache")
+        os.path.join(DEFAULT_CONFIG_DIR, CONFIG_DIR_PRICE_CACHE_SUBDIR)
     )
     epoch = time.time()
-    for pd in sorted(glob.glob(os.path.join(cache_dir, "aws_ondemand_*"))):
+    for pd in sorted(glob.glob(os.path.join(cache_dir, "aws_*"))):
         try:
             st = os.stat(pd)
             if epoch - st.st_mtime > 3600 * 24 * older_than_days:
@@ -95,12 +99,116 @@ def get_aws_static_ondemand_pricing_info(region: str) -> dict:
     if not pricing_info:
         pricing_info = get_pricing_info_via_http(region)
         if pricing_info:
-            cache_pricing_dict(cache_file, pricing_info)
-            clean_up_old_ondemad_pricing_cache_files(older_than_days=7)
+            write_pricing_cache_file_as_json(cache_file, pricing_info)
+            clean_up_old_pricing_cache_files(older_than_days=7)
         else:
             logger.error(
-                f"Failed to retrieve AWS ondemand pricing info for region %s",
+                "Failed to retrieve AWS ondemand pricing info for region %s",
                 region,
             )
             return {}
     return {}
+
+
+def get_latest_spot_pricing_json() -> dict:
+    """Return latest Spot JSON if any found.
+    Location: $config-dir/$price-cache/aws_spot_{now.year}{now.month}{now.day}_{now.hour}00.json
+    """
+    cache_dir = os.path.expanduser(
+        os.path.join(DEFAULT_CONFIG_DIR, CONFIG_DIR_PRICE_CACHE_SUBDIR)
+    )
+    g = glob.glob(os.path.join(cache_dir, "aws_spot_*"))
+    if g:
+        return json.load(open(sorted(g, reverse=True)[0]))
+    return {}
+
+
+def get_spot_pricing_from_public_json() -> dict:
+    """Via an AWS managed 2MB S3 JSON: https://website.spot.ec2.aws.a2z.com/spot.json
+    Caches locally into hourly aws_spot_* files
+    Response contains all regions and looks like:
+    {
+      "vers": 0.01,
+      "config": {
+        "rate": "perhr",
+        "valueColumns": [
+          "linux",
+          "mswin"
+        ],
+        "currencies": [
+          "USD"
+        ],
+        "regions": [
+          {
+            "region": "us-east-1",
+            "footnotes": {
+              "*": "notAvailableForCCorCGPU"
+            },
+            "instanceTypes": [
+              {
+                "type": "generalCurrentGen",
+                "sizes": [
+                  {
+                    "size": "m6i.xlarge",
+                    "valueColumns": [
+                      {
+                        "name": "linux",
+                        "prices": {
+                          "USD": "0.0615"
+                        }
+                      },
+                      {
+                        "name": "mswin",
+                        "prices": {
+                          "USD": "0.2032"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "size": "m6g.xlarge",
+                    "valueColumns": [
+                      {
+                        "name": "linux",
+                        "prices": {
+                          "USD": "0.0378"
+                        }
+                      },
+                      {
+                        "name": "mswin",
+                        "prices": {
+                          "USD": "N/A*"
+                        }
+                      }
+                    ]
+                  },
+    """
+    now = datetime.now()
+    cache_file = f"aws_spot_{now.year}{now.month}{now.day}_{now.hour}00.json"
+    spot_pricing_info = get_cached_pricing_dict(cache_file)
+    if spot_pricing_info:
+        return spot_pricing_info
+
+    url = "https://website.spot.ec2.aws.a2z.com/spot.json"
+    logger.debug("Fetching AWS spot pricing info from %s ...", url)
+    r = requests.get(
+        url, headers={"Content-Type": "application/json"}, timeout=5
+    )
+    if r.status_code != 200:
+        logger.error(
+            "Failed to retrieve AWS pricing info - retcode: %s, URL: %s",
+            r.status_code,
+            url,
+        )
+        latest_stored_spot_pricing_info = get_latest_spot_pricing_json()
+        if latest_stored_spot_pricing_info:
+            logger.warning(
+                "Using possibly outdated spot pricing from: %s",
+                latest_stored_spot_pricing_info,
+            )
+        return {}
+    spot_pricing_info = r.json()
+
+    write_pricing_cache_file_as_json(cache_file, spot_pricing_info)
+
+    return spot_pricing_info

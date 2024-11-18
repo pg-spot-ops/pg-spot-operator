@@ -6,10 +6,15 @@ from pg_spot_operator.cloud_impl.aws_cache import (
 )
 from pg_spot_operator.cloud_impl.aws_spot import (
     get_all_ec2_spot_instance_types,
+    get_all_instance_types_from_aws_regional_pricing_info,
     get_current_hourly_ondemand_price_fallback,
     get_current_hourly_spot_price,
+    get_spot_instance_types_with_price_from_s3_pricing_json,
 )
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
+from pg_spot_operator.cloud_impl.cloud_util import (
+    extract_cpu_arch_from_sku_desc,
+)
 from pg_spot_operator.constants import (
     CLOUD_AWS,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
@@ -18,6 +23,33 @@ from pg_spot_operator.constants import (
 from pg_spot_operator.manifests import InstanceManifest
 
 logger = logging.getLogger(__name__)
+
+
+def boto3_api_instance_list_to_instance_type_info(
+    region: str, boto3_instance_type_infos: list[dict]
+) -> list[InstanceTypeInfo]:
+    ret = []
+    for ii in boto3_instance_type_infos:
+        sku = InstanceTypeInfo(
+            region=region,
+            cloud=CLOUD_AWS,
+            instance_type=ii["InstanceType"],
+            arch=extract_cpu_arch_from_sku_desc(CLOUD_AWS, ii),
+        )
+        sku.cpu = ii["VCpuInfo"]["DefaultVCpus"]
+        sku.ram_mb = ii["MemoryInfo"]["SizeInMiB"]
+        if ii.get("InstanceStorageSupported"):
+            sku.instance_storage = ii.get("InstanceStorageInfo", {}).get(
+                "TotalSizeInGB", 0
+            )
+        if ii.get("InstanceStorageInfo", {}).get("Disks"):
+            sku.storage_speed_class = ii["InstanceStorageInfo"]["Disks"][0][
+                "Type"
+            ]
+        sku.provider_description = ii
+        ret.append(sku)
+
+    return ret
 
 
 def get_cheapest_skus_for_hardware_requirements(
@@ -32,19 +64,36 @@ def get_cheapest_skus_for_hardware_requirements(
         "Looking for Spot VMs for following HW reqs: %s",
         [x for x in m.vm.dict().items() if x[1] is not None],
     )
-    if m.check_price and not (m.aws.access_key_id and m.aws.secret_access_key):
-        all_instances_for_region = get_aws_static_ondemand_pricing_info(
-            m.region
+    if check_price and not (m.aws.access_key_id and m.aws.secret_access_key):
+        all_instances_for_region = (
+            get_all_instance_types_from_aws_regional_pricing_info(
+                m.region, get_aws_static_ondemand_pricing_info(m.region)
+            )
         )
+        all_spot_instances_for_region_with_price = (
+            get_spot_instance_types_with_price_from_s3_pricing_json(
+                m.region, get_aws_static_ondemand_pricing_info(m.region)
+            )
+        )
+        all_regional_spots = []
+        for x in all_instances_for_region:
+            if all_spot_instances_for_region_with_price.get(x.instance_type):
+                x.hourly_spot_price = all_spot_instances_for_region_with_price[
+                    x.instance_type
+                ]
+                all_regional_spots.append(x)
     else:
-        all_instances_for_region = get_all_ec2_spot_instance_types(
+        all_boto3_instance_types_for_region = get_all_ec2_spot_instance_types(
             m.region,
             with_local_storage_only=(
                 m.vm.storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
             ),
         )
+        all_regional_spots = boto3_api_instance_list_to_instance_type_info(
+            all_boto3_instance_types_for_region
+        )
     return aws_spot.get_cheapest_sku_for_hw_reqs(
-        all_instances_for_region,
+        all_regional_spots,
         m.region,
         availability_zone=m.availability_zone,
         cpu_min=m.vm.cpu_min,

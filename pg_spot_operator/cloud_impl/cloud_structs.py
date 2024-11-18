@@ -9,6 +9,7 @@ class InstanceTypeInfo:
     cloud: str
     region: str
     availability_zone: str = ""
+    hourly_spot_price: float = 0
     monthly_spot_price: float = 0
     monthly_ondemand_price: float = 0
     cpu: int = 0
