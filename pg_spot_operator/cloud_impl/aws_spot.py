@@ -206,68 +206,74 @@ def filter_instance_types_by_hw_req(
     allow_burstable: bool = True,
     storage_speed_class: str | None = "any",
     instance_types_to_avoid: list[str] | None = None,
-) -> list[dict]:
+) -> list[InstanceTypeInfo]:
     """Returns qualified SKUs sorted by (CPU, RAM) or (CPU, Total instance storage DESC)"""
-    ret = []
-    for i in instance_types:
+    ret: list[InstanceTypeInfo] = []
+    for ii in instance_types:
         if (
             instance_types_to_avoid
-            and i["InstanceType"] in instance_types_to_avoid
+            and ii.instance_type in instance_types_to_avoid
         ):
             continue
 
-        if architecture and architecture != "any":
-            if architecture not in ",".join(
-                i["ProcessorInfo"]["SupportedArchitectures"]
-            ):
-                # On AWS architectures are named x86_64 and arm64
+        if architecture and architecture.strip() and architecture != "any":
+            if (
+                architecture.strip() not in ii.arch
+            ):  # On AWS architectures are named x86_64 and arm64
                 continue
 
-        if allow_burstable is False and i["BurstablePerformanceSupported"]:
+        if allow_burstable is False and ii.is_burstable:
             continue
 
-        if cpu_min:
-            cpus = i["VCpuInfo"]["DefaultVCpus"]
-            if cpus < cpu_min:
-                continue
+        if cpu_min and ii.cpu < cpu_min:
+            continue
 
-        if cpu_max:
-            cpus = i["VCpuInfo"]["DefaultVCpus"]
-            if cpus > cpu_max:
-                continue
+        if cpu_max and ii.cpu > cpu_max:
+            continue
 
-        if ram_min:
-            ram_mb = i["MemoryInfo"]["SizeInMiB"]
-            if ram_mb < ram_min * 1000:
-                continue
-        if storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL and not i.get(
-            "InstanceStorageSupported"
+        if ram_min and ii.ram_mb / 1000 < ram_min:  # User input in GBs
+            continue
+
+        if (
+            storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
+            and ii.instance_storage == 0
         ):
             continue
+
         if storage_min and storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL:
-            if i["InstanceStorageInfo"]["TotalSizeInGB"] < storage_min:
+            if ii.instance_storage < storage_min:
                 continue
-            instance_storage_speed_class = i["InstanceStorageInfo"]["Disks"][
-                0
-            ]["Type"]
+
+        if (
+            storage_speed_class
+        ):  # PS storage_speed_class=ssd > SSD + NVME, storage_speed_class=nvme > nvme only
             if (
                 storage_speed_class == "hdd"
-                and instance_storage_speed_class != "hdd"
-            ):  # Consider SSD to be equal with NVME for AWS
+                and ii.storage_speed_class != "hdd"
+            ):
                 continue
-        ret.append(i)
-    if storage_min and storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL:
+            if (
+                storage_speed_class == "nvme"
+                and ii.storage_speed_class != "nvme"
+            ):
+                continue
+
+        ret.append(ii)
+
+    if (
+        storage_min and storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
+    ):  # Prefer bigger disks for local storage
         ret.sort(
             key=lambda x: (
-                x["VCpuInfo"]["DefaultVCpus"],
-                x["InstanceStorageInfo"]["TotalSizeInGB"],
+                x.cpu,
+                x.instance_storage,
             )
         )
     else:
         ret.sort(
             key=lambda x: (
-                x["VCpuInfo"]["DefaultVCpus"],
-                x["MemoryInfo"]["SizeInMiB"],
+                x.cpu,
+                x.ram_mb,
             )
         )
     return ret
@@ -312,7 +318,7 @@ def get_spot_pricing_data_for_skus_over_period(
 def get_avg_spot_price_from_pricing_history_data_by_sku_and_az(
     pricing_data: list[dict],
 ) -> list[tuple[str, str, float]]:
-    """Returns SKUs by region and price, cheapest first"""
+    """Returns SKUs by az and price, cheapest first"""
 
     per_sku_az_hist: dict[str, dict[str, list]] = defaultdict(
         lambda: defaultdict(list)
@@ -331,9 +337,21 @@ def get_avg_spot_price_from_pricing_history_data_by_sku_and_az(
     return sorted(ret, key=lambda x: x[2])
 
 
+def get_filtered_instances_by_price_no_az(
+    filtered_instances_by_cpu: list[InstanceTypeInfo],
+) -> list[tuple[str, str, float]]:
+    """Static S3 Spot JSONs show the price of the cheapest AZ sadly without mentioning it"""
+    by_cpu = [
+        (x.instance_type, "", x.hourly_spot_price)
+        for x in filtered_instances_by_cpu
+    ]
+    return sorted(by_cpu, key=lambda x: x[2])
+
+
 def get_cheapest_sku_for_hw_reqs(
     all_instances: list[InstanceTypeInfo],
     region: str,
+    use_boto3: bool = False,
     availability_zone: str | None = None,
     cpu_min: int = 0,
     cpu_max: int = 0,
@@ -347,7 +365,7 @@ def get_cheapest_sku_for_hw_reqs(
     instance_selection_strategy: str | None = None,
 ) -> list[InstanceTypeInfo]:
     """Returns a price-sorted list"""
-    filtered_instances = filter_instance_types_by_hw_req(
+    filtered_instances_by_cpu = filter_instance_types_by_hw_req(
         all_instances,
         cpu_min=cpu_min,
         cpu_max=cpu_max,
@@ -360,31 +378,46 @@ def get_cheapest_sku_for_hw_reqs(
         instance_types_to_avoid=instance_types_to_avoid,
     )
 
-    logger.debug("%s of them matching min HW reqs", len(filtered_instances))
+    logger.debug(
+        "%s of them matching min HW reqs", len(filtered_instances_by_cpu)
+    )
 
-    if len(filtered_instances) > MAX_SKUS_FOR_SPOT_PRICE_COMPARE:
+    if len(filtered_instances_by_cpu) > MAX_SKUS_FOR_SPOT_PRICE_COMPARE:
         logger.debug(
             "Reducing to %s instance types by CPU count to reduce pricing history fetching",
             MAX_SKUS_FOR_SPOT_PRICE_COMPARE,
         )
-        filtered_instances = filtered_instances[
+        filtered_instances_by_cpu = filtered_instances_by_cpu[
             :MAX_SKUS_FOR_SPOT_PRICE_COMPARE
         ]
 
-    filtered_instance_types = [x["InstanceType"] for x in filtered_instances]
-    hourly_pricing_data = get_spot_pricing_data_for_skus_over_period(
-        filtered_instance_types,
-        region,
-        timedelta(days=SPOT_HISTORY_LOOKBACK_DAYS),
-        availability_zone,
-    )
-    if not hourly_pricing_data:
-        raise Exception(
-            "Could not fetch pricing data, can't select SKU"
-        )  # TODO use last cached data
-    avg_by_sku_az = get_avg_spot_price_from_pricing_history_data_by_sku_and_az(
-        hourly_pricing_data
-    )
+    filtered_instance_types = [
+        x.instance_type for x in filtered_instances_by_cpu
+    ]
+    avg_by_sku_az: list[tuple[str, str, float]] = (
+        []
+    )  # [(i3.xlarge, eu-north-1, 0.0132),]
+
+    if use_boto3:
+        hourly_pricing_data = get_spot_pricing_data_for_skus_over_period(
+            filtered_instance_types,
+            region,
+            timedelta(days=SPOT_HISTORY_LOOKBACK_DAYS),
+            availability_zone,
+        )
+        if not hourly_pricing_data:
+            raise Exception(
+                "Could not fetch pricing data, can't select SKU"
+            )  # TODO use last cached data
+        avg_by_sku_az = (
+            get_avg_spot_price_from_pricing_history_data_by_sku_and_az(
+                hourly_pricing_data
+            )
+        )
+    else:
+        avg_by_sku_az = get_filtered_instances_by_price_no_az(
+            filtered_instances_by_cpu
+        )
 
     instance_selection_strategy_cls = InstanceType.get_selection_strategy(
         instance_selection_strategy
@@ -393,47 +426,33 @@ def get_cheapest_sku_for_hw_reqs(
         "Applying instance selection strategy: %s ...",
         instance_selection_strategy,
     )
-    sku, az, price = instance_selection_strategy_cls.execute(avg_by_sku_az)
+    selected_instance_type, az, price = (
+        instance_selection_strategy_cls.execute(avg_by_sku_az)
+    )
 
-    arch: str = ""
-    i_desc: dict = {}
-    for i in filtered_instances:
-        if i["InstanceType"] == sku:
-            i_desc = i
-            arch = extract_cpu_arch_from_sku_desc(CLOUD_AWS, i)
-    if not i_desc or not arch:
-        Exception("Should not happen")
+    iti: InstanceTypeInfo | None = None
+    for i in filtered_instances_by_cpu:
+        if i.instance_type == selected_instance_type:
+            iti = i
+    if not iti:
+        raise Exception("Should not happen")
 
-    monthly_price = round(price * 24 * 30, 1)
+    if az:
+        iti.availability_zone = az
+    if not iti.monthly_spot_price:
+        iti.monthly_spot_price = round(price * 24 * 30, 1)
+
     logger.debug(
         "Cheapest SKU found - %s (%s) in AWS zone %s a for monthly Spot price of $%s",
-        sku,
-        arch,
+        selected_instance_type,
+        iti.arch,
         az,
         round(price * 24 * 30, 1),
     )
-    logger.debug(
-        "Instance types in selection: %s", {x[0] for x in avg_by_sku_az}
-    )
-    logger.debug("Prices in selection: %s", avg_by_sku_az)
+    logger.debug("Instances / Prices in selection: %s", avg_by_sku_az)
 
     # TODO respect max_skus
-    return [
-        InstanceTypeInfo(
-            instance_type=sku,
-            cloud=CLOUD_AWS,
-            region=region,
-            arch=arch,
-            provider_description=i_desc,
-            monthly_spot_price=monthly_price,
-            availability_zone=az,
-            cpu=i_desc.get("VCpuInfo", {}).get("DefaultVCpus", 0),
-            ram_mb=i_desc.get("MemoryInfo", {}).get("SizeInMiB", 0),
-            instance_storage=i_desc.get("InstanceStorageInfo", {}).get(
-                "TotalSizeInGB", 0
-            ),
-        )
-    ]
+    return [iti]
 
 
 @timed_cache(seconds=30)

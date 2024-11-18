@@ -46,6 +46,7 @@ def boto3_api_instance_list_to_instance_type_info(
             sku.storage_speed_class = ii["InstanceStorageInfo"]["Disks"][0][
                 "Type"
             ]
+        sku.is_burstable = bool(ii.get("BurstablePerformanceSupported"))
         sku.provider_description = ii
         ret.append(sku)
 
@@ -64,7 +65,9 @@ def get_cheapest_skus_for_hardware_requirements(
         "Looking for Spot VMs for following HW reqs: %s",
         [x for x in m.vm.dict().items() if x[1] is not None],
     )
+    use_boto3: bool = True
     if check_price and not (m.aws.access_key_id and m.aws.secret_access_key):
+        use_boto3 = False
         all_instances_for_region = (
             get_all_instance_types_from_aws_regional_pricing_info(
                 m.region, get_aws_static_ondemand_pricing_info(m.region)
@@ -90,11 +93,12 @@ def get_cheapest_skus_for_hardware_requirements(
             ),
         )
         all_regional_spots = boto3_api_instance_list_to_instance_type_info(
-            all_boto3_instance_types_for_region
+            m.region, all_boto3_instance_types_for_region
         )
     return aws_spot.get_cheapest_sku_for_hw_reqs(
         all_regional_spots,
         m.region,
+        use_boto3=use_boto3,
         availability_zone=m.availability_zone,
         cpu_min=m.vm.cpu_min,
         cpu_max=m.vm.cpu_max,

@@ -3,6 +3,9 @@ import unittest
 
 from dateutil.tz import tzutc
 
+from pg_spot_operator.cloud_api import (
+    boto3_api_instance_list_to_instance_type_info,
+)
 from pg_spot_operator.cloud_impl import aws_spot
 from pg_spot_operator.cloud_impl.aws_spot import (
     get_current_hourly_spot_price,
@@ -518,16 +521,19 @@ SPOT_PRICING_INFO_S3_JSON_SAMPLE = {
 
 
 def test_filter_instances():
-    assert len(INSTANCE_LISTING) == 4
+    iti = boto3_api_instance_list_to_instance_type_info(
+        "dummy-reg", INSTANCE_LISTING
+    )
+    assert len(iti) == 4
     filtered = filter_instance_types_by_hw_req(
-        INSTANCE_LISTING,
+        iti,
         storage_min=10,
         storage_type=MF_SEC_VM_STORAGE_TYPE_LOCAL,
     )
     assert len(filtered) == 2
 
     filtered = filter_instance_types_by_hw_req(
-        INSTANCE_LISTING,
+        iti,
     )
     assert len(filtered) == 4
 

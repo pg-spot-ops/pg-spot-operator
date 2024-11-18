@@ -16,6 +16,7 @@ class InstanceTypeInfo:
     ram_mb: int = 0
     instance_storage: int = 0
     storage_speed_class: str = "hdd"
+    is_burstable: bool = False
     provider_description: dict = field(default_factory=dict)
 
 
