@@ -11,8 +11,11 @@ from statistics import mean
 import requests
 from botocore.exceptions import EndpointConnectionError
 
+from pg_spot_operator.cloud_impl.aws_cache import (
+    get_aws_static_ondemand_pricing_info,
+)
 from pg_spot_operator.cloud_impl.aws_client import get_client
-from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
+from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_cpu_arch_from_sku_desc,
     extract_instance_storage_size_and_type_from_aws_pricing_storage_string,
@@ -59,7 +62,7 @@ def describe_instance_type(instance_type: str, region: str) -> dict:
 
 def resolve_instance_type_info(
     instance_type: str, region: str, i_desc: dict | None = None
-) -> ResolvedInstanceTypeInfo:
+) -> InstanceTypeInfo:
     """i_desc = AWS API response dict. e.g.: aws ec2 describe-instance-types --instance-types i3en.xlarge"""
     if not i_desc:
         i_desc = describe_instance_type(instance_type, region)
@@ -67,7 +70,7 @@ def resolve_instance_type_info(
         raise Exception(
             f"Could not describe instance type {instance_type} in region {region}"
         )
-    return ResolvedInstanceTypeInfo(
+    return InstanceTypeInfo(
         instance_type=instance_type,
         arch=extract_cpu_arch_from_sku_desc(CLOUD_AWS, i_desc),
         cloud=CLOUD_AWS,
@@ -114,6 +117,12 @@ def get_all_ec2_spot_instance_types(
     for page in page_iterator:
         instances.extend(page["InstanceTypes"])
 
+    logger.debug(
+        "%s total instance types found for region %s via describe_instance_types. with_local_storage_only=%s",
+        len(instances),
+        region,
+        with_local_storage_only,
+    )
     return instances
 
 
@@ -148,74 +157,6 @@ def get_current_hourly_spot_price(
     return 0
 
 
-def get_cached_pricing_dict(cache_file: str) -> dict:
-    cache_dir = os.path.expanduser(
-        os.path.join(DEFAULT_CONFIG_DIR, "price_cache")
-    )
-    cache_path = os.path.join(cache_dir, cache_file)
-    if os.path.exists(cache_path):
-        logger.debug(
-            "Reading AWS pricing info from daily cache: %s", cache_path
-        )
-        try:
-            with open(cache_path, "r") as f:
-                return json.loads(f.read())
-        except Exception:
-            logger.error("Failed to read %s from AWS daily cache", cache_file)
-    return {}
-
-
-def cache_pricing_dict(cache_file: str, pricing_info: dict) -> None:
-    cache_dir = os.path.expanduser(
-        os.path.join(DEFAULT_CONFIG_DIR, "price_cache")
-    )
-    cache_path = os.path.join(cache_dir, cache_file)
-    os.makedirs(cache_dir, exist_ok=True)
-    with open(cache_path, "w") as f:
-        json.dump(pricing_info, f)
-
-
-def get_amazon_ec2_ondemand_pricing_metadata_via_http() -> dict:
-    url = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/metadata.json"
-    logger.debug("Fetching AWS pricing metadata JSON via HTTP ...")
-    logger.debug("Metadata URL: %s", url)
-    f = requests.get(
-        url, headers={"Content-Type": "application/json"}, timeout=5
-    )
-    if f.status_code != 200:
-        logger.error("Failed to retrieve AWS pricing metadata via HTTP")
-        return {}
-    return f.json()
-
-
-def get_pricing_info_via_http(region: str, instance_type: str) -> dict:
-    """AWS caches pricing info for public usage in static files like:
-    https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/EU%20(Stockholm)/Linux/index.json
-    """
-    region_location = get_aws_region_code_to_name_mapping().get(region, "")
-    if not region_location:
-        raise Exception(f"Could not map region code {region} to location name")
-    logger.debug(
-        f"Looking up AWS on-demand pricing info for instance type {instance_type} in {region} ({region_location}) ..."
-    )
-
-    url = f"https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/{region_location}/Linux/index.json"
-
-    sanitized_url = urllib.parse.quote(url, safe=":/")
-    logger.debug("requests.get: %s", sanitized_url)
-    f = requests.get(
-        sanitized_url, headers={"Content-Type": "application/json"}, timeout=5
-    )
-    if f.status_code != 200:
-        logger.error(
-            "Failed to retrieve AWS pricing info - retcode: %s, URL: %s",
-            f.status_code,
-            url,
-        )
-        return {}
-    return f.json()
-
-
 def get_ondemand_price_for_instance_type_from_aws_regional_pricing_info(
     region: str, instance_type: str, regional_pricing_info: dict
 ) -> float:
@@ -234,44 +175,15 @@ def get_ondemand_price_for_instance_type_from_aws_regional_pricing_info(
     return 0
 
 
-def clean_up_old_ondemad_pricing_cache_files(older_than_days: int) -> None:
-    """Delete old per region JSON files
-    ~/.pg-spot-operator/price_cache/aws_ondemand_us-east-1_20241115.json
-    """
-    cache_dir = os.path.expanduser(
-        os.path.join(DEFAULT_CONFIG_DIR, "price_cache")
-    )
-    epoch = time.time()
-    for pd in sorted(glob.glob(os.path.join(cache_dir, "aws_ondemand_*"))):
-        try:
-            st = os.stat(pd)
-            if epoch - st.st_mtime > 3600 * 24 * older_than_days:
-                os.unlink(pd)
-        except Exception:
-            logger.info("Failed to clean up old on-demand pricing JSON %s", pd)
-
-
 def get_current_hourly_ondemand_price(
     region: str,
     instance_type: str,
 ) -> float:
-    today = date.today()
-    cache_file = (
-        f"aws_ondemand_{region}_{today.year}{today.month}{today.day}.json"
-    )
-    pricing_info = get_cached_pricing_dict(cache_file)
-    if not pricing_info:
-        pricing_info = get_pricing_info_via_http(region, instance_type)
-        if pricing_info:
-            cache_pricing_dict(cache_file, pricing_info)
-            clean_up_old_ondemad_pricing_cache_files(older_than_days=7)
-        else:
-            logger.error(
-                f"Failed to retrieve AWS ondemand pricing info for instance type {instance_type} in region {region}"
-            )
-            return 0
+    ondemand_pricing_info = get_aws_static_ondemand_pricing_info(region)
+    if not ondemand_pricing_info:
+        return 0
     return get_ondemand_price_for_instance_type_from_aws_regional_pricing_info(
-        region, instance_type, pricing_info
+        region, instance_type, ondemand_pricing_info
     )
 
 
@@ -429,7 +341,7 @@ def get_avg_spot_price_from_pricing_history_data_by_sku_and_az(
 
 
 def get_cheapest_sku_for_hw_reqs(
-    max_skus_to_get: int,
+    all_instances_for_region: list[InstanceTypeInfo],
     region: str,
     availability_zone: str | None = None,
     cpu_min: int = 0,
@@ -442,18 +354,8 @@ def get_cheapest_sku_for_hw_reqs(
     storage_speed_class: str = "any",
     instance_types_to_avoid: list[str] | None = None,
     instance_selection_strategy: str | None = None,
-) -> list[ResolvedInstanceTypeInfo]:
+) -> list[InstanceTypeInfo]:
     """Returns a price-sorted list"""
-
-    all_instances_for_region = get_all_ec2_spot_instance_types(
-        region,
-        with_local_storage_only=(storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL),
-    )
-    logger.debug(
-        "%s total instance types found for region %s",
-        len(all_instances_for_region),
-        region,
-    )
     filtered_instances = filter_instance_types_by_hw_req(
         all_instances_for_region,
         cpu_min=cpu_min,
@@ -526,7 +428,7 @@ def get_cheapest_sku_for_hw_reqs(
 
     # TODO respect max_skus
     return [
-        ResolvedInstanceTypeInfo(
+        InstanceTypeInfo(
             instance_type=sku,
             cloud=CLOUD_AWS,
             region=region,
@@ -617,14 +519,14 @@ def get_backing_vms_for_instances_if_any(
 
 def get_all_spot_instance_types_from_aws_regional_pricing_info(
     region: str, regional_pricing_info: dict
-) -> list[ResolvedInstanceTypeInfo]:
-    instances: list[ResolvedInstanceTypeInfo] = []
+) -> list[InstanceTypeInfo]:
+    instances: list[InstanceTypeInfo] = []
 
     for reg, reg_data in regional_pricing_info.get("regions", {}).items():
         for _, sku_data in reg_data.items():
             try:
                 instances.append(
-                    ResolvedInstanceTypeInfo(
+                    InstanceTypeInfo(
                         instance_type=sku_data["Instance Type"],
                         arch=infer_cpu_arch_from_aws_instance_type_name(
                             sku_data["Instance Type"]

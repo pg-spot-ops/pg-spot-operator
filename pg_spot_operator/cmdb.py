@@ -22,10 +22,7 @@ from sqlalchemy.engine.base import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from pg_spot_operator import manifests, util
-from pg_spot_operator.cloud_impl.cloud_structs import (
-    CloudVM,
-    ResolvedInstanceTypeInfo,
-)
+from pg_spot_operator.cloud_impl.cloud_structs import CloudVM, InstanceTypeInfo
 from pg_spot_operator.cmdb_impl import sqlite
 from pg_spot_operator.manifests import InstanceManifest
 
@@ -504,7 +501,7 @@ def get_ssh_connstr(m: InstanceManifest) -> str:
 
 
 def finalize_ensure_vm(
-    m: InstanceManifest, i_info: ResolvedInstanceTypeInfo, vm: CloudVM
+    m: InstanceManifest, i_info: InstanceTypeInfo, vm: CloudVM
 ):
     if not (
         vm.provider_id and vm.instance_type and vm.login_user and vm.ip_private

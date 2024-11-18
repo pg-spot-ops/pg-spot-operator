@@ -35,7 +35,7 @@ from pg_spot_operator.cloud_impl.aws_vm import (
     release_address_by_allocation_id_in_region,
     terminate_instances_in_region,
 )
-from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
+from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_cpu_arch_from_sku_desc,
 )
@@ -43,6 +43,7 @@ from pg_spot_operator.cmdb import get_instance_connect_string, get_ssh_connstr
 from pg_spot_operator.constants import (
     BACKUP_TYPE_PGBACKREST,
     CLOUD_AWS,
+    DEFAULT_CONFIG_DIR,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
     SPOT_OPERATOR_EXPIRES_TAG,
 )
@@ -60,7 +61,6 @@ ACTION_MAX_DURATION = 600
 VM_KEEPALIVE_SCANNER_INTERVAL_S = 60
 ACTION_HANDLER_TEMP_SPACE_ROOT = "~/.pg-spot-operator/tmp"
 ANSIBLE_DEFAULT_ROOT_PATH = "./ansible"
-DEFAULT_CONFIG_DIR = "~/.pg-spot-operator"
 
 logger = logging.getLogger(__name__)
 
@@ -82,9 +82,9 @@ class UserExit(Exception):
 def preprocess_ensure_vm_action(
     m: InstanceManifest,
     existing_instance_info: dict | None = None,
-) -> ResolvedInstanceTypeInfo:
+) -> InstanceTypeInfo:
     """Fill in the "blanks" that are not set by the user but still needed, like the SKU"""
-    sku: ResolvedInstanceTypeInfo
+    sku: InstanceTypeInfo
     selected_instance_type = (
         m.vm.instance_types[0] if len(m.vm.instance_types) == 1 else ""
     )
@@ -118,7 +118,7 @@ def preprocess_ensure_vm_action(
             )
 
         i_desc = describe_instance_type(selected_instance_type, m.region)
-        sku = ResolvedInstanceTypeInfo(
+        sku = InstanceTypeInfo(
             instance_type=selected_instance_type,
             cloud=CLOUD_AWS,
             region=m.region,

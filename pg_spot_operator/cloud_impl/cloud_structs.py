@@ -3,7 +3,7 @@ from datetime import datetime
 
 
 @dataclass
-class ResolvedInstanceTypeInfo:
+class InstanceTypeInfo:
     instance_type: str
     arch: str
     cloud: str
