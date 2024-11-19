@@ -417,7 +417,9 @@ def check_cli_args_valid(args: ArgumentParser):
             "Invalid --aws-vpc-id, expecting to start with 'vpc-'",
         )
         exit(1)
-    if not args.check_price and not is_explicit_aws_region_code(args.region):
+    if (
+        not args.check_price or args.teardown or args.teardown_region
+    ) and not is_explicit_aws_region_code(args.region):
         logger.error(
             "Fuzzy or regex --region input only allowed in --check-price mode",
         )

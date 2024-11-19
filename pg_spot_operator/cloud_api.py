@@ -70,7 +70,7 @@ def get_cheapest_skus_for_hardware_requirements(
     )
     ret: list[InstanceTypeInfo] = []
 
-    for region in regions or []:
+    for region in regions or [m.region]:
         logger.debug("Processing region %s ...", region)
         if use_boto3:
             all_boto3_instance_types_for_region = (
