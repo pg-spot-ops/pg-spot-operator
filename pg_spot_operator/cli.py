@@ -1,5 +1,6 @@
 import fcntl
 import logging
+import math
 import os.path
 
 import yaml
@@ -517,7 +518,8 @@ def resolve_manifest_and_display_price(
     )
 
     logger.info(
-        "Current monthly Spot price in %s %s: $%s",
+        "Current monthly Spot price for %s in %s %s: $%s",
+        sku.instance_type,
         "AZ" if m.availability_zone else "region",
         m.availability_zone if m.availability_zone else m.region,
         sku.monthly_spot_price,
@@ -536,10 +538,13 @@ def resolve_manifest_and_display_price(
             / sku.monthly_ondemand_price
         )
         logger.info(
-            "Current Spot discount rate: %s%% (spot $%s vs on-demand $%s)",
+            "Current Spot vs Ondemand discount rate: %s%% ($%s vs $%s), approx. %sx to non-HA RDS",
             round(spot_discount_pct, 1),
             round(sku.monthly_spot_price, 1),
             round(sku.monthly_ondemand_price, 1),
+            math.ceil(
+                sku.monthly_ondemand_price / sku.monthly_spot_price * 1.5
+            ),
         )
 
 

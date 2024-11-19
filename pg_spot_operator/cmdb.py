@@ -554,13 +554,12 @@ def finalize_ensure_vm(
 
         session.commit()
         logger.info(
-            "OK - %s VM with name %s (ip_public = %s , ip_private = %s) registered for instance %s. Provider ID: %s",
+            "OK - %s VM %s registered for 'instance' %s (ip_public = %s , ip_private = %s)",
             m.cloud,
-            vm.provider_name or "NONAME",
+            vm.provider_id,
+            m.instance_name,
             vm.ip_public,
             vm.ip_private,
-            m.instance_name,
-            vm.provider_id,
         )
 
 

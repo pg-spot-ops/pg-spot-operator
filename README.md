@@ -4,8 +4,8 @@
 
 # PG Spot Operator [Community Edition]
 
-Think of it as one-liner RDS, but at a fraction of the cost! Typical [savings](https://aws.amazon.com/ec2/spot/pricing/) are around
-5x compared to [RDS](https://aws.amazon.com/rds/postgresql/pricing/).
+Think of it as one-liner RDS, but at a fraction of the cost! Typical [savings](https://aws.amazon.com/ec2/spot/pricing/)
+of running self-managed EC2 Spot instances are around 5x compared to [RDS](https://aws.amazon.com/rds/postgresql/pricing/).
 
 Obviously not meant for all projects as a general RDS replacement, as utilizing Spot instances means one can be interrupted
 by AWS at any time, and it takes a few minutes to restore the state.
@@ -26,19 +26,47 @@ better than our shiny new MacBook Pro - seems our data exploration quest might n
 Wait, what about tapping into the power of cloud instead? Let's just spin up a private high-end analytics DB for an
 as-low-as-it-gets cost!
 
+Just in case let's check the pricing beforehand, though - in most cases it will be much better than 3 year Reserved Instances!
 ```
-# Assuming we already have a working AWS CLI (`~/.aws/credentials`) set up
+# Step 0 - install the pg-spot-operator package via pip/pipx:
 pipx install pg-spot-operator
-psql $(pg_spot_operator --region=eu-north-1 --ram-min=128 --storage-min=500 --storage-type=local \
-  --instance-name=analytics --connstr-output-only \
-  --admin-user=pgspotops --admin-user-password=topsecret123)
 
-2024-10-14 14:32:57,530 INFO Resolving HW requirements to actual instance types / prices ...
-2024-10-14 14:33:01,408 INFO Cheapest instance type found: r6gd.4xlarge (arm)
-2024-10-14 14:33:01,409 INFO Main specs - vCPU: 16, RAM: 128 GB, instance storage: 950
-2024-10-14 14:33:01,730 INFO Current Spot discount rate in AZ eu-north-1b: -70.7% (spot $205.2 vs on-demand $700.4)
+# Resolve user requirements to actual EC2 instance types and pick the cheapest (by default)
+# according to the current Spot prices in some region:
+pg_spot_operator --check-price \
+  --region=eu-south-2 --ram-min=128 \
+  --storage-min=500 --storage-type=local
+
+2024-11-19 11:47:18,838 INFO Resolving HW requirements to actual instance types / prices using --selection-strategy=cheapest ...
+2024-11-19 11:47:20,849 INFO Instance type selected: gr6.4xlarge (arm)
+2024-11-19 11:47:20,849 INFO Main specs - vCPU: 16, RAM: 128 GB, instance storage: 600
+2024-11-19 11:47:20,849 INFO Current monthly Spot price for gr6.4xlarge in region eu-south-2: $155.7
+2024-11-19 11:47:20,849 INFO Current Spot vs Ondemand discount rate: -86.7% ($155.7 vs $1167.7), approx. 12x to non-HA RDS
+
+```
+PS for more important or long-term purposes you would go with the default `--storage-type=network`, i.e. EBS, but for our
+work day or even week it's highly unlikely that the instance will get interrupted, and we rather want speed.
+
+For actually launching any AWS instances we of course need a working CLI (`~/.aws/credentials`) setup or just have some
+[privileged enough](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/scripts/terraform/create-iam-user-and-credentials/create_region_limited_user.tf#L22)
+access key + secret available.
+```
+# In --connstr-output-only mode we can land right into `psql`!
+psql $(pg_spot_operator --region=eu-south-2 --ram-min=128 \
+  --storage-min=500 --storage-type=local \
+  --instance-name=analytics --connstr-output-only \
+  --admin-user=pgspotops --admin-user-password=topsecret123
+)
+
+2024-11-19 11:47:32,362 INFO Processing manifest for instance 'analytics' set via CLI / ENV ...
 ...
-psql (17.0 (Ubuntu 17.0-1.pgdg24.04+1), server 16.4 (Debian 16.4-1.pgdg120+2))
+2024-11-19 11:47:40,778 INFO Launching a new spot instance of type gr6.4xlarge in region eu-south-2 ...
+2024-11-19 11:47:54,250 INFO OK - aws VM i-07058e08fae07e50d registered for 'instance' analytics (ip_public = 51.92.44.224 , ip_private = 172.31.43.230)
+2024-11-19 11:48:04,251 INFO Applying Postgres tuning profile 'default' to given hardware ...
+...
+2024-11-19 11:49:58,620 INFO Instance analytics setup completed
+
+psql (17.1 (Ubuntu 17.1-1.pgdg24.04+1), server 16.5 (Debian 16.5-1.pgdg120+1))
 SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off, ALPN: none)
 Type "help" for help.
 
@@ -53,20 +81,19 @@ postgres=# \i my_dataset.sql
 postgres=# SELECT ...
 ```
 
-Incredible! As hinted in the log output - an 8h work day will cost us less than a cup of coffee, specifically $2.3.
+Incredible, as hinted in the log output - **an 8h work day will cost us $1.7** - less than a cup of coffee!
 
-PS Note that the displayed 3.4x discount is calculated from the normal on-demand EC2 instance cost, RDS adds a ~50%
-premium on top of that + EBS storage costs. Also note that the instance is tuned according to the hardware already!
+Also note that the instance is tuned according to the hardware already!
 
 Wow, that task went smooth, other people's computers can be really useful sometimes...OK time to call it a day and shut down
 the instance ...
 
 ```
-pg_spot_operator --region=eu-north-1 --instance-name=analytics --teardown
+pg_spot_operator --region=eu-south-2 --instance-name=analytics --teardown
+
+2024-11-19 11:48:04,251 INFO Destroying cloud resources if any for instance analytics ...
 ...
-2024-10-14 14:57:03,201 INFO Destroying cloud resources if any for instance analytics ...
-...
-2024-10-14 14:59:09,293 INFO OK - cloud resources for instance analytics cleaned-up
+2024-11-19 11:48:04,251 INFO OK - cloud resources for instance analytics cleaned-up
 ```
 
 PS If you don't yet have a safe AWS playground / credentials - start with a bit of Terraform [here](https://github.com/pg-spot-ops/pg-spot-operator/tree/main/scripts/terraform)

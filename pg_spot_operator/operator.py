@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import math
 import os
 import shutil
 import signal
@@ -172,12 +173,13 @@ def preprocess_ensure_vm_action(
             / sku.monthly_ondemand_price
         )
         logger.info(
-            "Current Spot discount rate for SKU %s in region %s = %s%% (spot $%s vs on-demand $%s)",
-            sku.instance_type,
-            m.region,
+            "Current Spot vs Ondemand discount rate: %s%% ($%s vs $%s), approx. %sx to non-HA RDS",
             round(spot_discount, 1),
             sku.monthly_spot_price,
             sku.monthly_ondemand_price,
+            math.ceil(
+                sku.monthly_ondemand_price / sku.monthly_spot_price * 1.5
+            ),
         )
 
     return sku
