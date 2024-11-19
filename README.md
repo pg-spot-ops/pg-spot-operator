@@ -59,9 +59,9 @@ Current Spot vs Ondemand discount rate: -72.8% ($238.2 vs $874.4), approx. 6x to
 Ok seems `eu-south-2` is best for us currently with some incredible pricing, as hinted in the log output - **a full work
 day on a very powerful instance will cost us a mere $1.7** - less than a cup of coffee!
 
-For actually launching any AWS instances we of course need a working CLI (`~/.aws/credentials`) setup or just have some
+For actually launching any AWS instances we of course need a working CLI (`~/.aws/credentials`) or have some
 [privileged enough](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/scripts/terraform/create-iam-user-and-credentials/create_region_limited_user.tf#L22)
-access key + secret available.
+access key + secret available or some transparent "assume role" based scheme set up on the operator host.
 ```
 # In --connstr-output-only mode we can land right into `psql`!
 psql $(pg_spot_operator --region=eu-south-2 --ram-min=128 \
