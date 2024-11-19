@@ -41,13 +41,14 @@ resource "aws_iam_user_policy" "user_policy" {
           "ec2:DisassociateAddress",
           "ec2:ReleaseAddress",
           "ec2:*Volume*",
-          "s3:ListBucket*",
-          "s3:ListMultipart*",
-          "s3:PutObject",
-          "s3:GetObject",
-          "s3:GetObjectVersion",
-          "s3:DeleteObject",
-          "s3:DeleteObjectVersion"
+# S3 required for pgBackRest PITR archiving
+#           "s3:ListBucket*",
+#           "s3:ListMultipart*",
+#           "s3:PutObject",
+#           "s3:GetObject",
+#           "s3:GetObjectVersion",
+#           "s3:DeleteObject",
+#           "s3:DeleteObjectVersion"
         ]
         Effect   = "Allow"
         Resource = "*"
