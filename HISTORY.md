@@ -4,6 +4,39 @@ Changelog
 
 (unreleased)
 ------------
+- README - mention "assume role" based authentication option. [Kaarel
+  Moppel]
+
+  Under pre-requisites to creating a DB
+- Cross regional price check (#90) [Kaarel Moppel]
+
+  * Add util to resolve fuzzy regions to real ones
+
+  * Main flow in place - show max top 3 cheapest regions
+
+  * Cope with parsing of NA spot prices in S3 price list files
+
+  * Update READMEs to reflect the new --region regex + --check-price combo
+
+  * Fail early when regex --region input used in non-check-price mode
+
+  * Don't allow regex --region also for --teardown / --teardown-region
+- New CLI flag: --list-regions (#89) [Kaarel Moppel]
+
+  * New CLI option: --list-regions
+
+  * Document new --list-regions in docs/README_env_options.md
+- Show selected instance storage speed class also. [Kaarel Moppel]
+
+  Or "EBS only" if no instance storage support
+- Uncomment S3 privileges in sample Terraform. [Kaarel Moppel]
+
+  As not needed for base functionality
+
+
+0.8.7 (2024-11-19)
+------------------
+- Release: version 0.8.7 🚀 [Kaarel Moppel]
 - Fix CPU arch "guessing" from instance_type name. [Kaarel Moppel]
 
   Was fixed to ARM. Assuming "g" always present for ARM instances
