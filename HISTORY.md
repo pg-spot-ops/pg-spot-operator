@@ -4,6 +4,244 @@ Changelog
 
 (unreleased)
 ------------
+- Fix CPU arch "guessing" from instance_type name. [Kaarel Moppel]
+
+  Was fixed to ARM. Assuming "g" always present for ARM instances
+- Bump codecov/codecov-action from 4 to 5 (#87) [dependabot[bot],
+  dependabot[bot]]
+
+  Bumps [codecov/codecov-action](https://github.com/codecov/codecov-action) from 4 to 5.
+  - [Release notes](https://github.com/codecov/codecov-action/releases)
+  - [Changelog](https://github.com/codecov/codecov-action/blob/main/CHANGELOG.md)
+  - [Commits](https://github.com/codecov/codecov-action/compare/v4...v5)
+
+  ---
+  updated-dependencies:
+  - dependency-name: codecov/codecov-action
+    dependency-type: direct:production
+    update-type: version-update:semver-major
+  ...
+- Non auth price check (#88) [Kaarel Moppel]
+
+  * WIP
+
+  * Parse ResolvedInstanceTypeInfo from AWS static ondemand pricing JSON
+
+  Some info is not quite as explicit as from boto3 directly, like CPU
+  arch, so need to do some best effort heuristics until find a better
+  source for instance details
+
+  * WIP
+
+  * Generalize instance type info from boto3 and JSON APIs into InstanceTypeInfo
+
+  * Linter passing
+
+  * Fix ondemand JSON cache reading
+
+  * Don't ugly-error when no SKUs match user HW reqs
+
+  * Fix CPU arch filtering
+
+  Support arm / non-arm only for now
+
+  * Fix non-auth price fetching from sa-east-1 region
+
+  South America (São Paulo) had to be un-accented
+
+  * In debug mode hint if using the S3 API or boto3 calls for pricing
+
+  * Respect --instance-types user input
+
+  Don't consider any other SKUs then
+
+  * Minor formatting / debug output changes
+
+  * README - update to new output messages
+
+  Plus add an approximate comparison to RDS prices
+- Fetch price info via AWS endpoints (#67) [Evans Akai Bekoe, Kaarel
+  Moppel]
+
+  * fetch price info via AWS endpoints
+
+  * fix linter and errors
+
+  * provide else-clause of pricing function
+
+  * cast price string to float
+
+  * add logging for when pricing info is not found
+
+  * Don't double-check the pricing manifest + os.path.join + some logging
+
+  * Simplify on-demand price parsing + a test
+
+  * WIP
+
+  * Pass tests - simplify the on-demand pricing URL derivation
+
+  * Use the old ec2.shop for fallback if AWS static info fails
+
+  * Round on-demand AWS and fallback price using same precision
+
+  * Clean up older than 1 week ondemand pricing files automatically
+
+  * Don't fetch the ondemand meta files at all as not likely to change
+
+  And we have a fallback in place
+
+  ---------
+- K8s/README_k8s.md typo. [Kaarel Moppel]
+- README - add a link to the k8s sub-readme. [Kaarel Moppel]
+- Add a K8s readme. [Kaarel Moppel]
+- Minor k8s/example_deployment.yaml adjustment. [Kaarel Moppel]
+- Helm example - set storageClass to "standard" [Kaarel Moppel]
+
+  To make Minikube PVCs work without an explicit PV
+- Add some more Docker build exclude folders. [Kaarel Moppel]
+- K8s - add a sample Deployment manifest. [Kaarel Moppel]
+- K8s - add a minimal Helm chart (#85) [Kaarel Moppel]
+
+  * Add a minimal Helm chart
+
+  * Make basic skel work
+
+  * Add PVC for .ssh
+
+  * Add a PV to make minikube happy
+
+  * Silence "image has non-numeric user (nobody)" errors
+
+  100Mi -> 10Mi SSH volume
+
+  * Add an initContainer to deployment
+
+  To fix /app/.ssh permissions that get set to root on volume mount. There
+  must be a better way though??
+- Docker - generate SSH keys properly during runtime (#84) [Kaarel
+  Moppel]
+
+  * Docker - generate SSH keys during runtime
+
+  Add a dump-init entrypoint wrapper for that
+
+  * Set Docker user ID to 5432 to appease PodSecurityPolicy runAsNonRoot
+
+  Also remove some root useful extra packages
+
+  * Create /app/.ssh during image build
+- README - remove Docker examples with bind mounts. [Kaarel Moppel]
+
+  As most probably will now run into user privilege issues after switching
+  to a non-root image + safer conceptually also to feed in only what is
+  required
+- Docker - fix non-root user Ansible SSH access. [Kaarel Moppel]
+
+  Seems HOME for the nobody user resolved to /nonexistent. Thus
+  create a soft-link to /app
+
+  debug1: Trying private key: /nonexistent/.ssh/id_rsa
+- Ansible - do not cache SSH signatures on connect. [Kaarel Moppel]
+
+  Better for long-term setups
+- Increase SSH ConnectTimeout to 3s from 1s for the displayed SSH
+  connstr. [Kaarel Moppel]
+- Make --connstr-output-only --vm-only aware. [Kaarel Moppel]
+
+  Print out the SSH "connstr" instead of Postgres connstr
+- Docker - switch to a non-root image (#83) [Kaarel Moppel]
+
+  As things seems to have matured enough
+- README - replace Github release badge with PyPI release. [Kaarel
+  Moppel]
+- README - add a few badges. [Kaarel Moppel]
+- README - fix double credentials setting in the Docker example. [Kaarel
+  Moppel]
+- Docker image building - point to Containerfile explicitly. [Kaarel
+  Moppel]
+- Automate Docker image building / publishing. [Kaarel Moppel]
+- Region teardown improvement - mark all instances as deleted also in
+  CMDB. [Kaarel Moppel]
+
+  Consider any CMDB errors as non-critical though
+- Fix --teardown-region - not all instances were cleaned up. [Kaarel
+  Moppel]
+
+  The describe_instances loop didn't account for multiple reservations
+- VM provisioning - increase OS disk from default 8 to 20 GB. [Kaarel
+  Moppel]
+
+  Previous change wasn't effective as root device for Debian AMI is
+  actually /dev/xvda not /dev/sda1
+- Docs/README_development.md - link to the Resource Explorer img.
+  [Kaarel Moppel]
+- README_development.md - mention AWS Resource Explorer. [Kaarel Moppel]
+
+  To track down any operator created objects if needed
+- README_integration.md - note that callbacks are limited to 30 seconds
+  runtime. [Kaarel Moppel]
+- A new top level manifest attribute "vm_only" to skip the Postgres
+  setup (#82) [Kaarel Moppel]
+
+  * New top level manifest attribute: vm_only
+
+  To skip the Postgres setup
+
+  * Update the manifest in CMDB after vm_only loop also
+
+  As in normal mode, not to get superfluous manifest diff output
+- Hint that non-floating IPs take longer to recover after an eviction.
+  [Kaarel Moppel]
+
+  Due to some AWS NIC state refresh lag, can't re-attach before NIC shown
+  as available again
+- Teardown fixes (#81) [Kaarel Moppel]
+
+  * Delete only explicitly created NICs on teardown
+
+  Also only EIPs of the target instance
+
+  * Delete NICs before EIPs also in teardown_region()
+
+  As EIPs depend on NICs
+
+  * Don't even try to delete backup if we don't have a bucket set
+- Mention our VPC + IAM setup Terraform scripts also in the AWS CLI
+  readme. [Kaarel Moppel]
+- README - suggest to run the Terraform from "scripts" if no play
+  account. [Kaarel Moppel]
+
+  available for the user
+- Fix last one - add missing EIP policies. [Kaarel Moppel]
+- Example Terraform to create a sandbox VPC + IAM user + creds (#80)
+  [Kaarel Moppel]
+
+  IAM policies are region limited for additional play safety
+- READEME - switch quickstart demo from Docker to Py as more terse.
+  [Kaarel Moppel]
+- New CLI flag: --aws-key-pair-name / PGSO_AWS_KEY_PAIR_NAME (#78)
+  [Kaarel Moppel]
+
+  * New CLI flag: --aws-key-pair-name / PGSO_AWS_KEY_PAIR_NAME
+
+  To specify an existing EC2 SSH key pair to access the VM. Other SSH
+  inputs also still effective
+
+  * Don't bail when aws.key_pair_name input is invalid
+
+  As other SSH key specification options could be valid
+
+  * README - in Docker howto showcase the new PGSO_AWS_KEY_PAIR_NAME envvar
+- README - make more clear which AWS credentials are required. [Kaarel
+  Moppel]
+
+  In the quickstart section
+
+
+0.8.6 (2024-11-05)
+------------------
+- Release: version 0.8.6 🚀 [Kaarel Moppel]
 - Don't display the main loop sleep message in dry-run mode. [Kaarel
   Moppel]
 - Auto-download ansible setup scripts from GitHub if missing (#76)
