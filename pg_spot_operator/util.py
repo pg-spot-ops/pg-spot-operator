@@ -2,6 +2,7 @@ import functools
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import urllib.request
@@ -311,3 +312,17 @@ sa-east-1	South America (São Paulo)	Not required
             continue
         ret[splits[0].strip()] = splits[1].replace("Europe", "EU").strip()
     return ret
+
+
+def region_regex_to_actual_region_codes(region_regex: str) -> list[str]:
+    """Empty / no input = all regions"""
+    if not region_regex or region_regex.strip() == "":
+        return sorted(list(get_aws_region_code_to_name_mapping().keys()))
+
+    r = re.compile(region_regex, re.IGNORECASE)
+    ret: list[str] = []
+
+    for code, name in get_aws_region_code_to_name_mapping().items():
+        if r.search(code) or r.search(name):
+            ret.append(code)
+    return sorted(ret)

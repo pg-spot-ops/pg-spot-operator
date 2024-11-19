@@ -31,21 +31,33 @@ Just in case let's check the pricing beforehand, though - in most cases it will 
 # Step 0 - install the pg-spot-operator package via pip/pipx:
 pipx install pg-spot-operator
 
-# Resolve user requirements to actual EC2 instance types and pick the cheapest (by default)
-# according to the current Spot prices in some region:
+# Resolve user requirements to actual EC2 instance types and show the cheapest instances in each region:
 pg_spot_operator --check-price \
-  --region=eu-south-2 --ram-min=128 \
+  --region='eu-' --ram-min=128 \
   --storage-min=500 --storage-type=local
 
-2024-11-19 11:47:18,838 INFO Resolving HW requirements to actual instance types / prices using --selection-strategy=cheapest ...
-2024-11-19 11:47:20,849 INFO Instance type selected: gr6.4xlarge (arm)
-2024-11-19 11:47:20,849 INFO Main specs - vCPU: 16, RAM: 128 GB, instance storage: 600
-2024-11-19 11:47:20,849 INFO Current monthly Spot price for gr6.4xlarge in region eu-south-2: $155.7
-2024-11-19 11:47:20,849 INFO Current Spot vs Ondemand discount rate: -86.7% ($155.7 vs $1167.7), approx. 12x to non-HA RDS
-
+Resolving HW requirements to actual instance types / prices using --selection-strategy=cheapest ...
+Looking for the top 3 cheapest regions for given HW reqs within: ['eu-central-1', 'eu-central-2', 'eu-north-1', 'eu-south-1', 'eu-south-2', 'eu-west-1', 'eu-west-2', 'eu-west-3']
+Top 3 cheapest regions pricing info:
+===== REGION eu-south-2 =====
+Instance type selected for region eu-south-2: gr6.4xlarge (arm)
+Main specs - vCPU: 16, RAM: 128 GB, instance storage: 600 GB nvme
+Current monthly Spot price for gr6.4xlarge in region eu-south-2: $155.7
+Current Spot vs Ondemand discount rate: -86.7% ($155.7 vs $1167.7), approx. 12x to non-HA RDS
+===== REGION eu-north-1 =====
+Instance type selected for region eu-north-1: r7gd.4xlarge (arm)
+Main specs - vCPU: 16, RAM: 128 GB, instance storage: 950 GB nvme
+Current monthly Spot price for r7gd.4xlarge in region eu-north-1: $226.2
+Current Spot vs Ondemand discount rate: -72.7% ($226.2 vs $827.4), approx. 6x to non-HA RDS
+===== REGION eu-central-2 =====
+Instance type selected for region eu-central-2: r6gd.4xlarge (arm)
+Main specs - vCPU: 16, RAM: 128 GB, instance storage: 950 GB nvme
+Current monthly Spot price for r6gd.4xlarge in region eu-central-2: $238.2
+Current Spot vs Ondemand discount rate: -72.8% ($238.2 vs $874.4), approx. 6x to non-HA RDS
 ```
-PS for more important or long-term purposes you would go with the default `--storage-type=network`, i.e. EBS, but for our
-work day or even week it's highly unlikely that the instance will get interrupted, and we rather want speed.
+
+Ok seems `eu-south-2` is best for us currently with some incredible pricing, as hinted in the log output - **a full work
+day on a very powerful instance will cost us a mere $1.7** - less than a cup of coffee!
 
 For actually launching any AWS instances we of course need a working CLI (`~/.aws/credentials`) setup or just have some
 [privileged enough](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/scripts/terraform/create-iam-user-and-credentials/create_region_limited_user.tf#L22)
@@ -81,7 +93,8 @@ postgres=# \i my_dataset.sql
 postgres=# SELECT ...
 ```
 
-Incredible, as hinted in the log output - **an 8h work day will cost us $1.7** - less than a cup of coffee!
+PS for more important or long-term purposes you would go with the default `--storage-type=network`, i.e. EBS, but for our
+work day or even week it's highly unlikely that the instance will get interrupted, and we rather want speed.
 
 Also note that the instance is tuned according to the hardware already!
 

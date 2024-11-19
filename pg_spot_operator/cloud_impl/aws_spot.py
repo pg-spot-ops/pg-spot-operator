@@ -462,10 +462,10 @@ def get_cheapest_sku_for_hw_reqs(
         iti.monthly_spot_price = round(price * 24 * 30, 1)
 
     logger.debug(
-        "Cheapest SKU found - %s (%s) in AWS zone %s a for monthly Spot price of $%s",
+        "Cheapest SKU found - %s (%s) in %s a for monthly Spot price of $%s",
         selected_instance_type,
         iti.arch,
-        az,
+        iti.availability_zone or iti.region,
         round(price * 24 * 30, 1),
     )
     logger.debug("Instances / Prices in selection: %s", avg_by_sku_az)
@@ -655,7 +655,7 @@ def get_spot_instance_types_with_price_from_s3_pricing_json(
                   },
     """
     ret = {}
-
+    r = re.compile(r"[0-9.]")
     for rd in spot_pricing_info.get("config", {}).get("regions", []):
         if rd.get("region") != region:
             continue
@@ -665,8 +665,12 @@ def get_spot_instance_types_with_price_from_s3_pricing_json(
                     continue
                 for vc in size.get("valueColumns", []):
                     if vc.get("name") == "linux":
-                        ret[size["size"]] = float(
+                        if vc.get("prices", {}).get("USD", 0) and r.match(
                             vc.get("prices", {}).get("USD", 0)
-                        )
+                        ):
+                            if float(vc.get("prices", {}).get("USD", 0)):
+                                ret[size["size"]] = float(
+                                    vc.get("prices", {}).get("USD", 0)
+                                )
 
     return ret
