@@ -510,11 +510,12 @@ def resolve_manifest_and_display_price(
     sku = cheapest_skus[0]
     logger.info("Instance type selected: %s (%s)", sku.instance_type, sku.arch)
     logger.info(
-        "Main specs - vCPU: %s, RAM: %s %s, instance storage: %s",
+        "Main specs - vCPU: %s, RAM: %s %s, instance storage: %s %s",
         sku.cpu,
         sku.ram_mb if sku.ram_mb < 1024 else int(sku.ram_mb / 1024),
         "MiB" if sku.ram_mb < 1024 else "GB",
-        sku.instance_storage,
+        f"{sku.instance_storage} GB" if sku.instance_storage else "EBS only",
+        sku.storage_speed_class if sku.instance_storage else "",
     )
 
     logger.info(
