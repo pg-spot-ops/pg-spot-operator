@@ -508,13 +508,7 @@ def resolve_manifest_and_display_price(
         len(region.split("-")) == 3 and "*" not in region
     )
     if exact_region_input:
-        cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
-            m, use_boto3=use_boto3
-        )
-        if cheapest_skus:
-            cheapest_skus = cheapest_skus[
-                :1
-            ]  # Show first, in future try following few also if create fails
+        regions = [region]
     else:
         regions = region_regex_to_actual_region_codes(region)
         if not regions:
@@ -527,9 +521,9 @@ def resolve_manifest_and_display_price(
             regions,
         )
 
-        cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
-            m, use_boto3=use_boto3, regions=regions
-        )
+    cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
+        m, use_boto3=use_boto3, regions=regions
+    )
 
     if not cheapest_skus:
         logger.error(
@@ -537,7 +531,14 @@ def resolve_manifest_and_display_price(
         )
         exit(1)
 
+    cheapest_skus = sorted(cheapest_skus, key=lambda x: x.monthly_spot_price)
+    cheapest_skus = cheapest_skus[:3]
+
+    if not exact_region_input:
+        logger.info("Top 3 cheapest regions pricing info:")
     for sku in cheapest_skus:
+        if not exact_region_input:
+            logger.info("===== REGION %s =====", sku.region)
         logger.info(
             "Instance type selected for region %s: %s (%s)",
             sku.region,
