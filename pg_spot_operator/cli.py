@@ -11,7 +11,10 @@ from pg_spot_operator.cloud_impl.aws_client import set_access_keys
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.operator import clean_up_old_logs_if_any
-from pg_spot_operator.util import try_download_ansible_from_github
+from pg_spot_operator.util import (
+    get_aws_region_code_to_name_mapping,
+    try_download_ansible_from_github,
+)
 
 SQLITE_DBNAME = "pgso.db"
 
@@ -56,6 +59,9 @@ class ArgumentParser(Tap):
     check_price: bool = str_to_bool(
         os.getenv("PGSO_CHECK_PRICE", "false")
     )  # Resolve HW reqs, show Spot price and exit
+    list_regions: bool = str_to_bool(
+        os.getenv("PGSO_LIST_REGIONS", "false")
+    )  # Display all known AWS region codes + names
     check_manifest: bool = str_to_bool(
         os.getenv("PGSO_CHECK_MANIFEST", "false")
     )  # Validate instance manifests and exit
@@ -597,6 +603,17 @@ def init_cmdb_and_apply_schema_migrations_if_needed(
     logger.debug("%s schema migration applied", applied_count)
 
 
+def list_regions_and_exit() -> None:
+    print(
+        "# Based on: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions"
+    )
+    for code, location_name in sorted(
+        get_aws_region_code_to_name_mapping().items()
+    ):
+        print(f"{code}\t\t{location_name}")
+    exit(0)
+
+
 def main():  # pragma: no cover
 
     global args
@@ -616,6 +633,9 @@ def main():  # pragma: no cover
         exit(0)
 
     check_cli_args_valid(args)
+
+    if args.list_regions:
+        list_regions_and_exit()
 
     if args.check_manifest:
         check_manifest_and_exit(args)
