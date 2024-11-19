@@ -22,10 +22,7 @@ from sqlalchemy.engine.base import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from pg_spot_operator import manifests, util
-from pg_spot_operator.cloud_impl.cloud_structs import (
-    CloudVM,
-    ResolvedInstanceTypeInfo,
-)
+from pg_spot_operator.cloud_impl.cloud_structs import CloudVM, InstanceTypeInfo
 from pg_spot_operator.cmdb_impl import sqlite
 from pg_spot_operator.manifests import InstanceManifest
 
@@ -163,7 +160,7 @@ class IgnoredInstance(Base):
 
 def init_engine_and_check_connection(sqlite_connstr: str):
     sqlite_path = os.path.expanduser(sqlite_connstr)
-    logger.info("Initializing CMDB sqlite3 engine at %s ...", sqlite_path)
+    logger.debug("Initializing CMDB sqlite3 engine at %s ...", sqlite_path)
     if not os.path.exists(os.path.dirname(sqlite_path)):
         os.mkdir(os.path.dirname(sqlite_path))
     global engine
@@ -504,7 +501,7 @@ def get_ssh_connstr(m: InstanceManifest) -> str:
 
 
 def finalize_ensure_vm(
-    m: InstanceManifest, i_info: ResolvedInstanceTypeInfo, vm: CloudVM
+    m: InstanceManifest, i_info: InstanceTypeInfo, vm: CloudVM
 ):
     if not (
         vm.provider_id and vm.instance_type and vm.login_user and vm.ip_private
@@ -557,13 +554,12 @@ def finalize_ensure_vm(
 
         session.commit()
         logger.info(
-            "OK - %s VM with name %s (ip_public = %s , ip_private = %s) registered for instance %s. Provider ID: %s",
+            "OK - %s VM %s registered for 'instance' %s (ip_public = %s , ip_private = %s)",
             m.cloud,
-            vm.provider_name or "NONAME",
+            vm.provider_id,
+            m.instance_name,
             vm.ip_public,
             vm.ip_private,
-            m.instance_name,
-            vm.provider_id,
         )
 
 

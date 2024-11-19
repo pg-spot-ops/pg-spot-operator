@@ -442,8 +442,8 @@ def ec2_launch_instance(
             }
         )
 
-    logger.debug(
-        f"Launching new {market_type} instance of type {instance_type} in region {region}..."
+    logger.info(
+        f"Launching a new {market_type} instance of type {instance_type} in region {region} ..."
     )
 
     client = get_client("ec2", region)

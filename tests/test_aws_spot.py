@@ -3,6 +3,9 @@ import unittest
 
 from dateutil.tz import tzutc
 
+from pg_spot_operator.cloud_api import (
+    boto3_api_instance_list_to_instance_type_info,
+)
 from pg_spot_operator.cloud_impl import aws_spot
 from pg_spot_operator.cloud_impl.aws_spot import (
     get_current_hourly_spot_price,
@@ -10,6 +13,8 @@ from pg_spot_operator.cloud_impl.aws_spot import (
     filter_instance_types_by_hw_req,
     resolve_instance_type_info,
     get_ondemand_price_for_instance_type_from_aws_regional_pricing_info,
+    get_spot_instance_types_with_price_from_s3_pricing_json,
+    extract_memory_mb_from_aws_pricing_memory_string,
 )
 from pg_spot_operator.constants import MF_SEC_VM_STORAGE_TYPE_LOCAL
 
@@ -466,17 +471,70 @@ REGIONAL_PRICING_INFO = {
 }
 
 
+# https://website.spot.ec2.aws.a2z.com/spot.json
+SPOT_PRICING_INFO_S3_JSON_SAMPLE = {
+    "vers": 0.01,
+    "config": {
+        "rate": "perhr",
+        "valueColumns": ["linux", "mswin"],
+        "currencies": ["USD"],
+        "regions": [
+            {
+                "region": "us-east-1",
+                "footnotes": {"*": "notAvailableForCCorCGPU"},
+                "instanceTypes": [
+                    {
+                        "type": "generalCurrentGen",
+                        "sizes": [
+                            {
+                                "size": "m6i.xlarge",
+                                "valueColumns": [
+                                    {
+                                        "name": "linux",
+                                        "prices": {"USD": "0.0615"},
+                                    },
+                                    {
+                                        "name": "mswin",
+                                        "prices": {"USD": "0.2032"},
+                                    },
+                                ],
+                            },
+                            {
+                                "size": "m6g.xlarge",
+                                "valueColumns": [
+                                    {
+                                        "name": "linux",
+                                        "prices": {"USD": "0.0378"},
+                                    },
+                                    {
+                                        "name": "mswin",
+                                        "prices": {"USD": "N/A*"},
+                                    },
+                                ],
+                            },
+                        ],
+                    }
+                ],
+            }
+        ],
+    },
+}
+
+
 def test_filter_instances():
-    assert len(INSTANCE_LISTING) == 4
+    iti = boto3_api_instance_list_to_instance_type_info(
+        "dummy-reg", INSTANCE_LISTING
+    )
+    assert len(iti) == 4
     filtered = filter_instance_types_by_hw_req(
-        INSTANCE_LISTING,
+        iti,
         storage_min=10,
         storage_type=MF_SEC_VM_STORAGE_TYPE_LOCAL,
     )
     assert len(filtered) == 2
 
     filtered = filter_instance_types_by_hw_req(
-        INSTANCE_LISTING,
+        iti,
     )
     assert len(filtered) == 4
 
@@ -520,4 +578,22 @@ def test_get_ondemand_price_for_instance_type_from_aws_regional_pricing_info():
             "eu-north-1", "r7a.2xlarge", REGIONAL_PRICING_INFO
         )
         > 0
+    )
+
+
+def test_get_spot_instance_types_with_price_from_s3_pricing_json():
+    x = get_spot_instance_types_with_price_from_s3_pricing_json(
+        "us-east-1", SPOT_PRICING_INFO_S3_JSON_SAMPLE
+    )
+    assert len(x) == 2
+    assert x["m6g.xlarge"] > 0.01
+
+
+def test_extract_memory_mb_from_aws_pricing_memory_string():
+    assert extract_memory_mb_from_aws_pricing_memory_string("64 GiB") == int(
+        64 * 1024
+    )
+    assert extract_memory_mb_from_aws_pricing_memory_string("512 MiB") == 512
+    assert extract_memory_mb_from_aws_pricing_memory_string("1 TiB") == int(
+        1 * 1024 * 1024
     )

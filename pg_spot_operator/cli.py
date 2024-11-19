@@ -1,5 +1,6 @@
 import fcntl
 import logging
+import math
 import os.path
 
 import yaml
@@ -481,22 +482,31 @@ def resolve_manifest_and_display_price(
         raise Exception("Valid InstanceManifest expected")
 
     logger.info(
-        "Resolving HW requirements to actual instance types / prices using instance selection strategy: %s ...",
+        "Resolving HW requirements to actual instance types / prices using --selection-strategy=%s ...",
         m.vm.instance_selection_strategy,
     )
 
-    # Set AWS creds
-    m.decrypt_secrets_if_any()
-    set_access_keys(
-        m.aws.access_key_id, m.aws.secret_access_key, m.aws.profile_name
+    use_boto3: bool = False
+    # Set AWS creds if AZ set, AZ-specific pricing info not available over static API
+    if m.availability_zone or (
+        (m.aws.access_key_id and m.aws.secret_access_key) or m.aws.profile_name
+    ):
+        m.decrypt_secrets_if_any()
+        set_access_keys(
+            m.aws.access_key_id, m.aws.secret_access_key, m.aws.profile_name
+        )
+        use_boto3 = True
+
+    cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
+        m, use_boto3=use_boto3
     )
 
-    cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(m)
     if not cheapest_skus:
         logger.error(
             f"No SKUs matching HW requirements found for instance {m.instance_name} in region / zone {m.region or m.availability_zone}"
         )
         exit(1)
+
     sku = cheapest_skus[0]
     logger.info("Instance type selected: %s (%s)", sku.instance_type, sku.arch)
     logger.info(
@@ -506,30 +516,35 @@ def resolve_manifest_and_display_price(
         "MiB" if sku.ram_mb < 1024 else "GB",
         sku.instance_storage,
     )
+
     logger.info(
-        "Current monthly Spot price in AZ %s: $%s",
-        sku.availability_zone,
+        "Current monthly Spot price for %s in %s %s: $%s",
+        sku.instance_type,
+        "AZ" if m.availability_zone else "region",
+        m.availability_zone if m.availability_zone else m.region,
         sku.monthly_spot_price,
     )
+
     if not sku.monthly_ondemand_price:
         sku.monthly_ondemand_price = (
             cloud_api.try_get_monthly_ondemand_price_for_sku(
                 m.region, sku.instance_type
             )
         )
-
     if sku.monthly_ondemand_price and sku.monthly_spot_price:
-        spot_discount = (
+        spot_discount_pct = (
             100.0
             * (sku.monthly_spot_price - sku.monthly_ondemand_price)
             / sku.monthly_ondemand_price
         )
         logger.info(
-            "Current Spot discount rate in AZ %s: %s%% (spot $%s vs on-demand $%s)",
-            sku.availability_zone,
-            round(spot_discount, 1),
-            sku.monthly_spot_price,
-            sku.monthly_ondemand_price,
+            "Current Spot vs Ondemand discount rate: %s%% ($%s vs $%s), approx. %sx to non-HA RDS",
+            round(spot_discount_pct, 1),
+            round(sku.monthly_spot_price, 1),
+            round(sku.monthly_ondemand_price, 1),
+            math.ceil(
+                sku.monthly_ondemand_price / sku.monthly_spot_price * 1.5
+            ),
         )
 
 
@@ -653,7 +668,7 @@ def main():  # pragma: no cover
     # Download the Ansible scripts if missing and in some "real" mode, as not bundled to PyPI currently
     download_ansible_from_github_if_not_set_locally(args)
 
-    logger.info("Entering main loop")
+    logger.debug("Entering main loop")
 
     operator.do_main_loop(
         cli_env_manifest=env_manifest,

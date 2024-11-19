@@ -1,32 +1,29 @@
-import glob
-import json
 import logging
-import os
-import time
-import urllib.parse
+import re
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from statistics import mean
 
 import requests
 from botocore.exceptions import EndpointConnectionError
 
+from pg_spot_operator.cloud_impl.aws_cache import (
+    get_aws_static_ondemand_pricing_info,
+)
 from pg_spot_operator.cloud_impl.aws_client import get_client
-from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
+from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_cpu_arch_from_sku_desc,
+    extract_instance_storage_size_and_type_from_aws_pricing_storage_string,
+    infer_cpu_arch_from_aws_instance_type_name,
 )
 from pg_spot_operator.constants import (
     CLOUD_AWS,
-    DEFAULT_CONFIG_DIR,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
     SPOT_OPERATOR_ID_TAG,
 )
 from pg_spot_operator.instance_type import InstanceType
-from pg_spot_operator.util import (
-    get_aws_region_code_to_name_mapping,
-    timed_cache,
-)
+from pg_spot_operator.util import timed_cache
 
 MAX_SKUS_FOR_SPOT_PRICE_COMPARE = 10
 SPOT_HISTORY_LOOKBACK_DAYS = 1
@@ -57,7 +54,7 @@ def describe_instance_type(instance_type: str, region: str) -> dict:
 
 def resolve_instance_type_info(
     instance_type: str, region: str, i_desc: dict | None = None
-) -> ResolvedInstanceTypeInfo:
+) -> InstanceTypeInfo:
     """i_desc = AWS API response dict. e.g.: aws ec2 describe-instance-types --instance-types i3en.xlarge"""
     if not i_desc:
         i_desc = describe_instance_type(instance_type, region)
@@ -65,7 +62,7 @@ def resolve_instance_type_info(
         raise Exception(
             f"Could not describe instance type {instance_type} in region {region}"
         )
-    return ResolvedInstanceTypeInfo(
+    return InstanceTypeInfo(
         instance_type=instance_type,
         arch=extract_cpu_arch_from_sku_desc(CLOUD_AWS, i_desc),
         cloud=CLOUD_AWS,
@@ -112,6 +109,12 @@ def get_all_ec2_spot_instance_types(
     for page in page_iterator:
         instances.extend(page["InstanceTypes"])
 
+    logger.debug(
+        "%s total instance types found for region %s via describe_instance_types. with_local_storage_only=%s",
+        len(instances),
+        region,
+        with_local_storage_only,
+    )
     return instances
 
 
@@ -146,74 +149,6 @@ def get_current_hourly_spot_price(
     return 0
 
 
-def get_cached_pricing_dict(cache_file: str) -> dict:
-    cache_dir = os.path.expanduser(
-        os.path.join(DEFAULT_CONFIG_DIR, "price_cache")
-    )
-    cache_path = os.path.join(cache_dir, cache_file)
-    if os.path.exists(cache_path):
-        logger.debug(
-            "Reading AWS pricing info from daily cache: %s", cache_path
-        )
-        try:
-            with open(cache_path, "r") as f:
-                return json.loads(f.read())
-        except Exception:
-            logger.error("Failed to read %s from AWS daily cache", cache_file)
-    return {}
-
-
-def cache_pricing_dict(cache_file: str, pricing_info: dict) -> None:
-    cache_dir = os.path.expanduser(
-        os.path.join(DEFAULT_CONFIG_DIR, "price_cache")
-    )
-    cache_path = os.path.join(cache_dir, cache_file)
-    os.makedirs(cache_dir, exist_ok=True)
-    with open(cache_path, "w") as f:
-        json.dump(pricing_info, f)
-
-
-def get_amazon_ec2_ondemand_pricing_metadata_via_http() -> dict:
-    url = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/metadata.json"
-    logger.debug("Fetching AWS pricing metadata JSON via HTTP ...")
-    logger.debug("Metadata URL: %s", url)
-    f = requests.get(
-        url, headers={"Content-Type": "application/json"}, timeout=5
-    )
-    if f.status_code != 200:
-        logger.error("Failed to retrieve AWS pricing metadata via HTTP")
-        return {}
-    return f.json()
-
-
-def get_pricing_info_via_http(region: str, instance_type: str) -> dict:
-    """AWS caches pricing info for public usage in static files like:
-    https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/EU%20(Stockholm)/Linux/index.json
-    """
-    region_location = get_aws_region_code_to_name_mapping().get(region, "")
-    if not region_location:
-        raise Exception(f"Could not map region code {region} to location name")
-    logger.debug(
-        f"Looking up AWS on-demand pricing info for instance type {instance_type} in {region} ({region_location}) ..."
-    )
-
-    url = f"https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/{region_location}/Linux/index.json"
-
-    sanitized_url = urllib.parse.quote(url, safe=":/")
-    logger.debug("requests.get: %s", sanitized_url)
-    f = requests.get(
-        sanitized_url, headers={"Content-Type": "application/json"}, timeout=5
-    )
-    if f.status_code != 200:
-        logger.error(
-            "Failed to retrieve AWS pricing info - retcode: %s, URL: %s",
-            f.status_code,
-            url,
-        )
-        return {}
-    return f.json()
-
-
 def get_ondemand_price_for_instance_type_from_aws_regional_pricing_info(
     region: str, instance_type: str, regional_pricing_info: dict
 ) -> float:
@@ -232,44 +167,15 @@ def get_ondemand_price_for_instance_type_from_aws_regional_pricing_info(
     return 0
 
 
-def clean_up_old_ondemad_pricing_cache_files(older_than_days: int) -> None:
-    """Delete old per region JSON files
-    ~/.pg-spot-operator/price_cache/aws_ondemand_us-east-1_20241115.json
-    """
-    cache_dir = os.path.expanduser(
-        os.path.join(DEFAULT_CONFIG_DIR, "price_cache")
-    )
-    epoch = time.time()
-    for pd in sorted(glob.glob(os.path.join(cache_dir, "aws_ondemand_*"))):
-        try:
-            st = os.stat(pd)
-            if epoch - st.st_mtime > 3600 * 24 * older_than_days:
-                os.unlink(pd)
-        except Exception:
-            logger.info("Failed to clean up old on-demand pricing JSON %s", pd)
-
-
 def get_current_hourly_ondemand_price(
     region: str,
     instance_type: str,
 ) -> float:
-    today = date.today()
-    cache_file = (
-        f"aws_ondemand_{region}_{today.year}{today.month}{today.day}.json"
-    )
-    pricing_info = get_cached_pricing_dict(cache_file)
-    if not pricing_info:
-        pricing_info = get_pricing_info_via_http(region, instance_type)
-        if pricing_info:
-            cache_pricing_dict(cache_file, pricing_info)
-            clean_up_old_ondemad_pricing_cache_files(older_than_days=7)
-        else:
-            logger.error(
-                f"Failed to retrieve AWS ondemand pricing info for instance type {instance_type} in region {region}"
-            )
-            return 0
+    ondemand_pricing_info = get_aws_static_ondemand_pricing_info(region)
+    if not ondemand_pricing_info:
+        return 0
     return get_ondemand_price_for_instance_type_from_aws_regional_pricing_info(
-        region, instance_type, pricing_info
+        region, instance_type, ondemand_pricing_info
     )
 
 
@@ -291,78 +197,90 @@ def get_current_hourly_ondemand_price_fallback(
 
 
 def filter_instance_types_by_hw_req(
-    instance_types: list[dict],
+    all_instance_types: list[InstanceTypeInfo],
     cpu_min: int | None = 0,
     cpu_max: int | None = 0,
     ram_min: int | None = 0,
-    architecture: str | None = "any",
+    cpu_arch: str = "",
     storage_min: int | None = 0,
     storage_type: str = "network",
     allow_burstable: bool = True,
     storage_speed_class: str | None = "any",
+    instance_types: list[str] | None = None,
     instance_types_to_avoid: list[str] | None = None,
-) -> list[dict]:
+) -> list[InstanceTypeInfo]:
     """Returns qualified SKUs sorted by (CPU, RAM) or (CPU, Total instance storage DESC)"""
-    ret = []
-    for i in instance_types:
+    ret: list[InstanceTypeInfo] = []
+    for ii in all_instance_types:
+
+        if instance_types and ii.instance_type not in instance_types:
+            continue
+
         if (
             instance_types_to_avoid
-            and i["InstanceType"] in instance_types_to_avoid
+            and ii.instance_type in instance_types_to_avoid
         ):
             continue
 
-        if architecture and architecture != "any":
-            if architecture not in ",".join(
-                i["ProcessorInfo"]["SupportedArchitectures"]
-            ):
-                # On AWS architectures are named x86_64 and arm64
+        if cpu_arch and cpu_arch.strip() and cpu_arch.strip().lower() != "any":
+            # On AWS architectures are named x86_64 and arm64, but we only look for arm / not-arm for now
+            if "arm" in cpu_arch.strip().lower() and "arm" not in ii.arch:
+                continue
+            if "arm" not in cpu_arch.strip().lower() and "arm" in ii.arch:
                 continue
 
-        if allow_burstable is False and i["BurstablePerformanceSupported"]:
+        if allow_burstable is False and ii.is_burstable:
             continue
 
-        if cpu_min:
-            cpus = i["VCpuInfo"]["DefaultVCpus"]
-            if cpus < cpu_min:
-                continue
+        if cpu_min and ii.cpu < cpu_min:
+            continue
 
-        if cpu_max:
-            cpus = i["VCpuInfo"]["DefaultVCpus"]
-            if cpus > cpu_max:
-                continue
+        if cpu_max and ii.cpu > cpu_max:
+            continue
 
-        if ram_min:
-            ram_mb = i["MemoryInfo"]["SizeInMiB"]
-            if ram_mb < ram_min * 1000:
-                continue
-        if storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL and not i.get(
-            "InstanceStorageSupported"
+        if ram_min and ii.ram_mb / 1000 < ram_min:  # User input in GBs
+            continue
+
+        if (
+            storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
+            and ii.instance_storage == 0
         ):
             continue
+
         if storage_min and storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL:
-            if i["InstanceStorageInfo"]["TotalSizeInGB"] < storage_min:
+            if ii.instance_storage < storage_min:
                 continue
-            instance_storage_speed_class = i["InstanceStorageInfo"]["Disks"][
-                0
-            ]["Type"]
+
+        if (
+            storage_speed_class
+        ):  # PS storage_speed_class=ssd > SSD + NVME, storage_speed_class=nvme > nvme only
             if (
                 storage_speed_class == "hdd"
-                and instance_storage_speed_class != "hdd"
-            ):  # Consider SSD to be equal with NVME for AWS
+                and ii.storage_speed_class != "hdd"
+            ):
                 continue
-        ret.append(i)
-    if storage_min and storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL:
+            if (
+                storage_speed_class == "nvme"
+                and ii.storage_speed_class != "nvme"
+            ):
+                continue
+
+        ret.append(ii)
+
+    if (
+        storage_min and storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
+    ):  # Prefer bigger disks for local storage
         ret.sort(
             key=lambda x: (
-                x["VCpuInfo"]["DefaultVCpus"],
-                x["InstanceStorageInfo"]["TotalSizeInGB"],
+                x.cpu,
+                x.instance_storage,
             )
         )
     else:
         ret.sort(
             key=lambda x: (
-                x["VCpuInfo"]["DefaultVCpus"],
-                x["MemoryInfo"]["SizeInMiB"],
+                x.cpu,
+                x.ram_mb,
             )
         )
     return ret
@@ -407,7 +325,7 @@ def get_spot_pricing_data_for_skus_over_period(
 def get_avg_spot_price_from_pricing_history_data_by_sku_and_az(
     pricing_data: list[dict],
 ) -> list[tuple[str, str, float]]:
-    """Returns SKUs by region and price, cheapest first"""
+    """Returns SKUs by az and price, cheapest first"""
 
     per_sku_az_hist: dict[str, dict[str, list]] = defaultdict(
         lambda: defaultdict(list)
@@ -426,9 +344,21 @@ def get_avg_spot_price_from_pricing_history_data_by_sku_and_az(
     return sorted(ret, key=lambda x: x[2])
 
 
+def get_filtered_instances_by_price_no_az(
+    filtered_instances_by_cpu: list[InstanceTypeInfo],
+) -> list[tuple[str, str, float]]:
+    """Static S3 Spot JSONs show the price of the cheapest AZ sadly without mentioning it"""
+    by_cpu = [
+        (x.instance_type, "", x.hourly_spot_price)
+        for x in filtered_instances_by_cpu
+    ]
+    return sorted(by_cpu, key=lambda x: x[2])
+
+
 def get_cheapest_sku_for_hw_reqs(
-    max_skus_to_get: int,
+    all_instances: list[InstanceTypeInfo],
     region: str,
+    use_boto3: bool = False,
     availability_zone: str | None = None,
     cpu_min: int = 0,
     cpu_max: int = 0,
@@ -438,58 +368,75 @@ def get_cheapest_sku_for_hw_reqs(
     storage_min: int = 0,
     allow_burstable: bool = True,
     storage_speed_class: str = "any",
+    instance_types: list[str] | None = None,
     instance_types_to_avoid: list[str] | None = None,
     instance_selection_strategy: str | None = None,
-) -> list[ResolvedInstanceTypeInfo]:
+) -> list[InstanceTypeInfo]:
     """Returns a price-sorted list"""
+    if not all_instances:
+        raise Exception("Need all_instances to select cheapest")
 
-    all_instances_for_region = get_all_ec2_spot_instance_types(
-        region,
-        with_local_storage_only=(storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL),
-    )
     logger.debug(
-        "%s total instance types found for region %s",
-        len(all_instances_for_region),
-        region,
+        "Filtering through %s instances types to mathc HW reqs ...",
+        len(all_instances),
     )
-    filtered_instances = filter_instance_types_by_hw_req(
-        all_instances_for_region,
+    filtered_instances_by_cpu = filter_instance_types_by_hw_req(
+        all_instances,
         cpu_min=cpu_min,
         cpu_max=cpu_max,
         ram_min=ram_min,
-        architecture=architecture,
+        cpu_arch=architecture,
         storage_min=storage_min,
         storage_type=storage_type,
         allow_burstable=allow_burstable,
         storage_speed_class=storage_speed_class,
+        instance_types=instance_types,
         instance_types_to_avoid=instance_types_to_avoid,
     )
 
-    logger.debug("%s of them matching min HW reqs", len(filtered_instances))
+    logger.debug(
+        "%s of them matching min HW reqs", len(filtered_instances_by_cpu)
+    )
 
-    if len(filtered_instances) > MAX_SKUS_FOR_SPOT_PRICE_COMPARE:
+    if not filtered_instances_by_cpu:
+        return []
+
+    if len(filtered_instances_by_cpu) > MAX_SKUS_FOR_SPOT_PRICE_COMPARE:
         logger.debug(
             "Reducing to %s instance types by CPU count to reduce pricing history fetching",
             MAX_SKUS_FOR_SPOT_PRICE_COMPARE,
         )
-        filtered_instances = filtered_instances[
+        filtered_instances_by_cpu = filtered_instances_by_cpu[
             :MAX_SKUS_FOR_SPOT_PRICE_COMPARE
         ]
 
-    filtered_instance_types = [x["InstanceType"] for x in filtered_instances]
-    hourly_pricing_data = get_spot_pricing_data_for_skus_over_period(
-        filtered_instance_types,
-        region,
-        timedelta(days=SPOT_HISTORY_LOOKBACK_DAYS),
-        availability_zone,
-    )
-    if not hourly_pricing_data:
-        raise Exception(
-            "Could not fetch pricing data, can't select SKU"
-        )  # TODO use last cached data
-    avg_by_sku_az = get_avg_spot_price_from_pricing_history_data_by_sku_and_az(
-        hourly_pricing_data
-    )
+    filtered_instance_types = [
+        x.instance_type for x in filtered_instances_by_cpu
+    ]
+    avg_by_sku_az: list[tuple[str, str, float]] = (
+        []
+    )  # [(i3.xlarge, eu-north-1, 0.0132),]
+
+    if use_boto3:
+        hourly_pricing_data = get_spot_pricing_data_for_skus_over_period(
+            filtered_instance_types,
+            region,
+            timedelta(days=SPOT_HISTORY_LOOKBACK_DAYS),
+            availability_zone,
+        )
+        if not hourly_pricing_data:
+            raise Exception(
+                "Could not fetch pricing data, can't select SKU"
+            )  # TODO use last cached data
+        avg_by_sku_az = (
+            get_avg_spot_price_from_pricing_history_data_by_sku_and_az(
+                hourly_pricing_data
+            )
+        )
+    else:
+        avg_by_sku_az = get_filtered_instances_by_price_no_az(
+            filtered_instances_by_cpu
+        )
 
     instance_selection_strategy_cls = InstanceType.get_selection_strategy(
         instance_selection_strategy
@@ -498,47 +445,33 @@ def get_cheapest_sku_for_hw_reqs(
         "Applying instance selection strategy: %s ...",
         instance_selection_strategy,
     )
-    sku, az, price = instance_selection_strategy_cls.execute(avg_by_sku_az)
+    selected_instance_type, az, price = (
+        instance_selection_strategy_cls.execute(avg_by_sku_az)
+    )
 
-    arch: str = ""
-    i_desc: dict = {}
-    for i in filtered_instances:
-        if i["InstanceType"] == sku:
-            i_desc = i
-            arch = extract_cpu_arch_from_sku_desc(CLOUD_AWS, i)
-    if not i_desc or not arch:
-        Exception("Should not happen")
+    iti: InstanceTypeInfo | None = None
+    for i in filtered_instances_by_cpu:
+        if i.instance_type == selected_instance_type:
+            iti = i
+    if not iti:
+        raise Exception("Should not happen")
 
-    monthly_price = round(price * 24 * 30, 1)
+    if az:
+        iti.availability_zone = az
+    if not iti.monthly_spot_price:
+        iti.monthly_spot_price = round(price * 24 * 30, 1)
+
     logger.debug(
         "Cheapest SKU found - %s (%s) in AWS zone %s a for monthly Spot price of $%s",
-        sku,
-        arch,
+        selected_instance_type,
+        iti.arch,
         az,
         round(price * 24 * 30, 1),
     )
-    logger.debug(
-        "Instance types in selection: %s", {x[0] for x in avg_by_sku_az}
-    )
-    logger.debug("Prices in selection: %s", avg_by_sku_az)
+    logger.debug("Instances / Prices in selection: %s", avg_by_sku_az)
 
     # TODO respect max_skus
-    return [
-        ResolvedInstanceTypeInfo(
-            instance_type=sku,
-            cloud=CLOUD_AWS,
-            region=region,
-            arch=arch,
-            provider_description=i_desc,
-            monthly_spot_price=monthly_price,
-            availability_zone=az,
-            cpu=i_desc.get("VCpuInfo", {}).get("DefaultVCpus", 0),
-            ram_mb=i_desc.get("MemoryInfo", {}).get("SizeInMiB", 0),
-            instance_storage=i_desc.get("InstanceStorageInfo", {}).get(
-                "TotalSizeInGB", 0
-            ),
-        )
-    ]
+    return [iti]
 
 
 @timed_cache(seconds=30)
@@ -611,3 +544,129 @@ def get_backing_vms_for_instances_if_any(
         )
         raise Exception("Failed to list VMs due to AWS connectivity problems")
     return instances
+
+
+def extract_memory_mb_from_aws_pricing_memory_string(
+    memory_string: str,
+) -> int:
+    if not memory_string:
+        return 0
+    matches = re.findall(r"^\s*(\d+)\s*(\w+)", memory_string)
+    if matches:
+        size = float(matches[0][0])
+        unit = matches[0][1]
+        if "G" in unit.upper():
+            return int(size * 1024)
+        elif "T" in unit.upper():
+            return int(size * 1024 * 1024)
+        else:
+            return int(size)
+    return 0
+
+
+def get_all_instance_types_from_aws_regional_pricing_info(
+    region: str, regional_pricing_info: dict
+) -> list[InstanceTypeInfo]:
+    instances: list[InstanceTypeInfo] = []
+
+    for reg, reg_data in regional_pricing_info.get("regions", {}).items():
+        for _, sku_data in reg_data.items():
+            try:
+                instances.append(
+                    InstanceTypeInfo(
+                        instance_type=sku_data["Instance Type"],
+                        arch=infer_cpu_arch_from_aws_instance_type_name(
+                            sku_data["Instance Type"]
+                        ),
+                        cloud=CLOUD_AWS,
+                        region=region,
+                        hourly_ondemand_price=float(sku_data["price"]),
+                        monthly_ondemand_price=float(sku_data["price"])
+                        * 24
+                        * 30,
+                        cpu=int(sku_data["vCPU"]),
+                        ram_mb=extract_memory_mb_from_aws_pricing_memory_string(
+                            sku_data.get("Memory", "0")
+                        ),
+                        instance_storage=extract_instance_storage_size_and_type_from_aws_pricing_storage_string(
+                            sku_data["Storage"]
+                        )[
+                            0
+                        ],
+                        storage_speed_class=extract_instance_storage_size_and_type_from_aws_pricing_storage_string(
+                            sku_data["Storage"]
+                        )[
+                            1
+                        ],
+                        provider_description=sku_data,
+                    )
+                )
+            except Exception as e:
+                logger.error(
+                    "Failed to parse instance info from: %s. Error: %s",
+                    sku_data,
+                    e,
+                )
+
+    return instances
+
+
+def get_spot_instance_types_with_price_from_s3_pricing_json(
+    region: str, spot_pricing_info: dict
+) -> dict:
+    """Info from: https://website.spot.ec2.aws.a2z.com/spot.json
+    {
+      "vers": 0.01,
+      "config": {
+        "rate": "perhr",
+        "valueColumns": [
+          "linux",
+          "mswin"
+        ],
+        "currencies": [
+          "USD"
+        ],
+        "regions": [
+          {
+            "region": "us-east-1",
+            "footnotes": {
+              "*": "notAvailableForCCorCGPU"
+            },
+            "instanceTypes": [
+              {
+                "type": "generalCurrentGen",
+                "sizes": [
+                  {
+                    "size": "m6i.xlarge",
+                    "valueColumns": [
+                      {
+                        "name": "linux",
+                        "prices": {
+                          "USD": "0.0615"
+                        }
+                      },
+                      {
+                        "name": "mswin",
+                        "prices": {
+                          "USD": "0.2032"
+                        }
+                      }
+                    ]
+                  },
+    """
+    ret = {}
+
+    for rd in spot_pricing_info.get("config", {}).get("regions", []):
+        if rd.get("region") != region:
+            continue
+        for ins_types in rd.get("instanceTypes", []):
+            for size in ins_types.get("sizes", []):
+                if not size.get("size"):
+                    continue
+                for vc in size.get("valueColumns", []):
+                    if vc.get("name") == "linux":
+                        ret[size["size"]] = float(
+                            vc.get("prices", {}).get("USD", 0)
+                        )
+
+    return ret

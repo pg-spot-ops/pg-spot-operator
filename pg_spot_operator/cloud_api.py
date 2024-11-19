@@ -1,43 +1,119 @@
 import logging
 
 from pg_spot_operator.cloud_impl import aws_spot
+from pg_spot_operator.cloud_impl.aws_cache import (
+    get_aws_static_ondemand_pricing_info,
+    get_spot_pricing_from_public_json,
+)
 from pg_spot_operator.cloud_impl.aws_spot import (
+    get_all_ec2_spot_instance_types,
+    get_all_instance_types_from_aws_regional_pricing_info,
     get_current_hourly_ondemand_price_fallback,
     get_current_hourly_spot_price,
+    get_spot_instance_types_with_price_from_s3_pricing_json,
 )
-from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
-from pg_spot_operator.constants import CLOUD_AWS, SPOT_OPERATOR_ID_TAG
+from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
+from pg_spot_operator.cloud_impl.cloud_util import (
+    extract_cpu_arch_from_sku_desc,
+)
+from pg_spot_operator.constants import (
+    CLOUD_AWS,
+    MF_SEC_VM_STORAGE_TYPE_LOCAL,
+    SPOT_OPERATOR_ID_TAG,
+)
 from pg_spot_operator.manifests import InstanceManifest
 
 logger = logging.getLogger(__name__)
+
+
+def boto3_api_instance_list_to_instance_type_info(
+    region: str, boto3_instance_type_infos: list[dict]
+) -> list[InstanceTypeInfo]:
+    ret = []
+    for ii in boto3_instance_type_infos:
+        sku = InstanceTypeInfo(
+            region=region,
+            cloud=CLOUD_AWS,
+            instance_type=ii["InstanceType"],
+            arch=extract_cpu_arch_from_sku_desc(CLOUD_AWS, ii),
+        )
+        sku.cpu = ii["VCpuInfo"]["DefaultVCpus"]
+        sku.ram_mb = ii["MemoryInfo"]["SizeInMiB"]
+        if ii.get("InstanceStorageSupported"):
+            sku.instance_storage = ii.get("InstanceStorageInfo", {}).get(
+                "TotalSizeInGB", 0
+            )
+        if ii.get("InstanceStorageInfo", {}).get("Disks"):
+            sku.storage_speed_class = ii["InstanceStorageInfo"]["Disks"][0][
+                "Type"
+            ]
+        sku.is_burstable = bool(ii.get("BurstablePerformanceSupported"))
+        sku.provider_description = ii
+        ret.append(sku)
+
+    return ret
 
 
 def get_cheapest_skus_for_hardware_requirements(
     m: InstanceManifest,
     max_skus_to_get: int = 1,
     skus_to_avoid: list[str] | None = None,
-) -> list[ResolvedInstanceTypeInfo]:
+    use_boto3: bool = True,
+) -> list[InstanceTypeInfo]:
+    """By default prefer to use the direct boto3 APIs to get the most fresh instance and pricing info.
+    Use AWS static JSONs for unauthenticated price checks"""
     logger.debug(
-        "Looking for Spot VMs for following HW reqs: %s",
+        "Looking for Spot VMs via %s for following HW reqs: %s",
+        "boto3" if use_boto3 else "S3 price listings",
         [x for x in m.vm.dict().items() if x[1] is not None],
     )
-    if m.cloud == CLOUD_AWS:
-        return aws_spot.get_cheapest_sku_for_hw_reqs(
-            max_skus_to_get,
+
+    if use_boto3:
+        all_boto3_instance_types_for_region = get_all_ec2_spot_instance_types(
             m.region,
-            availability_zone=m.availability_zone,
-            cpu_min=m.vm.cpu_min,
-            cpu_max=m.vm.cpu_max,
-            ram_min=m.vm.ram_min,
-            architecture=m.vm.cpu_architecture,
-            storage_type=m.vm.storage_type,
-            storage_min=m.vm.storage_min,
-            allow_burstable=m.vm.allow_burstable,
-            storage_speed_class=m.vm.storage_speed_class,
-            instance_types_to_avoid=skus_to_avoid,
-            instance_selection_strategy=m.vm.instance_selection_strategy,
+            with_local_storage_only=(
+                m.vm.storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
+            ),
         )
-    return []
+        all_regional_spots = boto3_api_instance_list_to_instance_type_info(
+            m.region, all_boto3_instance_types_for_region
+        )
+    else:
+        all_instances_for_region = (
+            get_all_instance_types_from_aws_regional_pricing_info(
+                m.region, get_aws_static_ondemand_pricing_info(m.region)
+            )
+        )
+        all_spot_instances_for_region_with_price = (
+            get_spot_instance_types_with_price_from_s3_pricing_json(
+                m.region, get_spot_pricing_from_public_json()
+            )
+        )
+        all_regional_spots = []
+        for x in all_instances_for_region:
+            if all_spot_instances_for_region_with_price.get(x.instance_type):
+                x.hourly_spot_price = all_spot_instances_for_region_with_price[
+                    x.instance_type
+                ]
+                all_regional_spots.append(x)
+
+    return aws_spot.get_cheapest_sku_for_hw_reqs(
+        all_regional_spots,
+        m.region,
+        use_boto3=use_boto3,
+        availability_zone=m.availability_zone,
+        cpu_min=m.vm.cpu_min,
+        cpu_max=m.vm.cpu_max,
+        ram_min=m.vm.ram_min,
+        architecture=m.vm.cpu_architecture,
+        storage_type=m.vm.storage_type,
+        storage_min=m.vm.storage_min,
+        allow_burstable=m.vm.allow_burstable,
+        storage_speed_class=m.vm.storage_speed_class,
+        instance_types=m.vm.instance_types,
+        instance_types_to_avoid=skus_to_avoid,
+        instance_selection_strategy=m.vm.instance_selection_strategy,
+    )
 
 
 def get_all_operator_vms_in_manifest_region(

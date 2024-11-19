@@ -14,3 +14,4 @@ pydantic
 pyyaml
 types-PyYAML
 sqlalchemy
+unidecode

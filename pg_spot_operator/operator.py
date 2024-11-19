@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import math
 import os
 import shutil
 import signal
@@ -35,7 +36,7 @@ from pg_spot_operator.cloud_impl.aws_vm import (
     release_address_by_allocation_id_in_region,
     terminate_instances_in_region,
 )
-from pg_spot_operator.cloud_impl.cloud_structs import ResolvedInstanceTypeInfo
+from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_cpu_arch_from_sku_desc,
 )
@@ -43,6 +44,7 @@ from pg_spot_operator.cmdb import get_instance_connect_string, get_ssh_connstr
 from pg_spot_operator.constants import (
     BACKUP_TYPE_PGBACKREST,
     CLOUD_AWS,
+    DEFAULT_CONFIG_DIR,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
     SPOT_OPERATOR_EXPIRES_TAG,
 )
@@ -60,7 +62,6 @@ ACTION_MAX_DURATION = 600
 VM_KEEPALIVE_SCANNER_INTERVAL_S = 60
 ACTION_HANDLER_TEMP_SPACE_ROOT = "~/.pg-spot-operator/tmp"
 ANSIBLE_DEFAULT_ROOT_PATH = "./ansible"
-DEFAULT_CONFIG_DIR = "~/.pg-spot-operator"
 
 logger = logging.getLogger(__name__)
 
@@ -82,9 +83,9 @@ class UserExit(Exception):
 def preprocess_ensure_vm_action(
     m: InstanceManifest,
     existing_instance_info: dict | None = None,
-) -> ResolvedInstanceTypeInfo:
+) -> InstanceTypeInfo:
     """Fill in the "blanks" that are not set by the user but still needed, like the SKU"""
-    sku: ResolvedInstanceTypeInfo
+    sku: InstanceTypeInfo
     selected_instance_type = (
         m.vm.instance_types[0] if len(m.vm.instance_types) == 1 else ""
     )
@@ -92,7 +93,7 @@ def preprocess_ensure_vm_action(
         selected_instance_type = existing_instance_info["InstanceType"]
     else:
         logger.info(
-            "Resolving HW requirements in region %s using strategy '%s' ...",
+            "Resolving HW requirements in region %s using --selection-strategy=%s ...",
             m.region,
             m.vm.instance_selection_strategy,
         )
@@ -118,7 +119,7 @@ def preprocess_ensure_vm_action(
             )
 
         i_desc = describe_instance_type(selected_instance_type, m.region)
-        sku = ResolvedInstanceTypeInfo(
+        sku = InstanceTypeInfo(
             instance_type=selected_instance_type,
             cloud=CLOUD_AWS,
             region=m.region,
@@ -172,12 +173,13 @@ def preprocess_ensure_vm_action(
             / sku.monthly_ondemand_price
         )
         logger.info(
-            "Current Spot discount rate for SKU %s in region %s = %s%% (spot $%s vs on-demand $%s)",
-            sku.instance_type,
-            m.region,
+            "Current Spot vs Ondemand discount rate: %s%% ($%s vs $%s), approx. %sx to non-HA RDS",
             round(spot_discount, 1),
             sku.monthly_spot_price,
             sku.monthly_ondemand_price,
+            math.ceil(
+                sku.monthly_ondemand_price / sku.monthly_spot_price * 1.5
+            ),
         )
 
     return sku
@@ -591,7 +593,7 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
     - Collect "output" folder contents on successful exit
     """
 
-    logging.info(
+    logging.debug(
         "Starting Ansible action %s for instance %s ...",
         action,
         m.instance_name,
@@ -677,9 +679,9 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
         logger.info("Backing instance found: %s", instance_id)
     else:
         logger.warning(
-            "Detected a missing VM for instance %s (%s) - %s ...",
+            "Detected a missing VM for instance '%s' in region %s - %s ...",
             m.instance_name,
-            m.cloud,
+            m.region,
             "NOT creating (--dry-run)" if dry_run else "creating",
         )
         cmdb.mark_any_active_vms_as_deleted(m)
@@ -923,7 +925,7 @@ def do_main_loop(
             if cli_env_manifest:
                 (
                     logger.info(
-                        "Processing manifest for instance %s set via ENV ...",
+                        "Processing manifest for instance '%s' set via CLI / ENV ...",
                         cli_env_manifest.instance_name,
                     )
                     if first_loop
@@ -1144,9 +1146,8 @@ def do_main_loop(
 
             else:
                 logger.info(
-                    "No state changes detected for instance %s (%s)",
+                    "No state changes detected for instance '%s'",
                     m.instance_name,
-                    m.cloud,
                 )
                 raise NoOp()
 
