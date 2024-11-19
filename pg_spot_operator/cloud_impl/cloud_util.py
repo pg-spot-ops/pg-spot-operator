@@ -168,3 +168,10 @@ def extract_instance_storage_size_and_type_from_aws_pricing_storage_string(
                 else "ssd" if "ssd" in m.group(2).lower() else "hdd"
             )
         return size, storage_speed_class
+
+
+def is_explicit_aws_region_code(region: str) -> bool:
+    """eu-north-1 for example is explicit"""
+    if not region or not region.strip():
+        return False
+    return len(region.split("-")) == 3 and "|" not in region

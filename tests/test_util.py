@@ -59,6 +59,7 @@ def test_region_regex_to_actual_region_codes():
         ("eu-west", ["eu-west-1", "eu-west-2", "eu-west-3"]),
         ("london", ["eu-west-2"]),
         ("(us-east|ca-we)", ["ca-west-1", "us-east-1", "us-east-2"]),
+        ("eu-(ce|no)", ["eu-central-1", "eu-central-2", "eu-north-1"]),
     ]
     for regex_input, expected in test_values:
         regs = region_regex_to_actual_region_codes(regex_input)

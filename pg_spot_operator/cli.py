@@ -8,6 +8,7 @@ from tap import Tap
 
 from pg_spot_operator import cloud_api, cmdb, manifests, operator
 from pg_spot_operator.cloud_impl.aws_client import set_access_keys
+from pg_spot_operator.cloud_impl.cloud_util import is_explicit_aws_region_code
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.operator import clean_up_old_logs_if_any
@@ -416,6 +417,11 @@ def check_cli_args_valid(args: ArgumentParser):
             "Invalid --aws-vpc-id, expecting to start with 'vpc-'",
         )
         exit(1)
+    if not args.check_price and not is_explicit_aws_region_code(args.region):
+        logger.error(
+            "Fuzzy or regex --region input only allowed in --check-price mode",
+        )
+        exit(1)
 
 
 def try_load_manifest(manifest_str: str) -> InstanceManifest | None:
@@ -504,10 +510,7 @@ def resolve_manifest_and_display_price(
         )
         use_boto3 = True
 
-    exact_region_input: bool = (
-        len(region.split("-")) == 3 and "*" not in region
-    )
-    if exact_region_input:
+    if is_explicit_aws_region_code(region):
         regions = [region]
     else:
         regions = region_regex_to_actual_region_codes(region)
@@ -534,10 +537,10 @@ def resolve_manifest_and_display_price(
     cheapest_skus = sorted(cheapest_skus, key=lambda x: x.monthly_spot_price)
     cheapest_skus = cheapest_skus[:3]
 
-    if not exact_region_input:
+    if not is_explicit_aws_region_code(region):
         logger.info("Top 3 cheapest regions pricing info:")
     for sku in cheapest_skus:
-        if not exact_region_input:
+        if not is_explicit_aws_region_code(region):
             logger.info("===== REGION %s =====", sku.region)
         logger.info(
             "Instance type selected for region %s: %s (%s)",

@@ -1,5 +1,6 @@
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_instance_storage_size_and_type_from_aws_pricing_storage_string,
+    is_explicit_aws_region_code,
 )
 
 
@@ -20,3 +21,11 @@ def test_extract_instance_storage_size_and_type_from_aws_pricing_storage_string(
             )
             == ret
         )
+
+
+def test_is_explicit_aws_region_code():
+    assert is_explicit_aws_region_code("eu-north-1")
+    assert not is_explicit_aws_region_code("")
+    assert not is_explicit_aws_region_code("eu-")
+    assert not is_explicit_aws_region_code("paris|stock")
+    assert not is_explicit_aws_region_code("eu-(ce|no)")
