@@ -13,6 +13,7 @@ from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.operator import clean_up_old_logs_if_any
 from pg_spot_operator.util import (
     get_aws_region_code_to_name_mapping,
+    region_regex_to_actual_region_codes,
     try_download_ansible_from_github,
 )
 
@@ -477,7 +478,7 @@ def ensure_single_instance_running(instance_name: str):
 
 
 def resolve_manifest_and_display_price(
-    m: InstanceManifest | None, user_manifest_path: str
+    m: InstanceManifest | None, user_manifest_path: str, region: str
 ) -> None:
     if not m and user_manifest_path:
         with open(
@@ -503,9 +504,32 @@ def resolve_manifest_and_display_price(
         )
         use_boto3 = True
 
-    cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
-        m, use_boto3=use_boto3
+    exact_region_input: bool = (
+        len(region.split("-")) == 3 and "*" not in region
     )
+    if exact_region_input:
+        cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
+            m, use_boto3=use_boto3
+        )
+        if cheapest_skus:
+            cheapest_skus = cheapest_skus[
+                :1
+            ]  # Show first, in future try following few also if create fails
+    else:
+        regions = region_regex_to_actual_region_codes(region)
+        if not regions:
+            logger.error(
+                "Could not resolve region regex '%s' to any regions", region
+            )
+            exit(1)
+        logger.info(
+            "Looking for the top 3 cheapest regions for given HW reqs within: %s",
+            regions,
+        )
+
+        cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
+            m, use_boto3=use_boto3, regions=regions
+        )
 
     if not cheapest_skus:
         logger.error(
@@ -513,46 +537,55 @@ def resolve_manifest_and_display_price(
         )
         exit(1)
 
-    sku = cheapest_skus[0]
-    logger.info("Instance type selected: %s (%s)", sku.instance_type, sku.arch)
-    logger.info(
-        "Main specs - vCPU: %s, RAM: %s %s, instance storage: %s %s",
-        sku.cpu,
-        sku.ram_mb if sku.ram_mb < 1024 else int(sku.ram_mb / 1024),
-        "MiB" if sku.ram_mb < 1024 else "GB",
-        f"{sku.instance_storage} GB" if sku.instance_storage else "EBS only",
-        sku.storage_speed_class if sku.instance_storage else "",
-    )
-
-    logger.info(
-        "Current monthly Spot price for %s in %s %s: $%s",
-        sku.instance_type,
-        "AZ" if m.availability_zone else "region",
-        m.availability_zone if m.availability_zone else m.region,
-        sku.monthly_spot_price,
-    )
-
-    if not sku.monthly_ondemand_price:
-        sku.monthly_ondemand_price = (
-            cloud_api.try_get_monthly_ondemand_price_for_sku(
-                m.region, sku.instance_type
-            )
-        )
-    if sku.monthly_ondemand_price and sku.monthly_spot_price:
-        spot_discount_pct = (
-            100.0
-            * (sku.monthly_spot_price - sku.monthly_ondemand_price)
-            / sku.monthly_ondemand_price
+    for sku in cheapest_skus:
+        logger.info(
+            "Instance type selected for region %s: %s (%s)",
+            sku.region,
+            sku.instance_type,
+            sku.arch,
         )
         logger.info(
-            "Current Spot vs Ondemand discount rate: %s%% ($%s vs $%s), approx. %sx to non-HA RDS",
-            round(spot_discount_pct, 1),
-            round(sku.monthly_spot_price, 1),
-            round(sku.monthly_ondemand_price, 1),
-            math.ceil(
-                sku.monthly_ondemand_price / sku.monthly_spot_price * 1.5
+            "Main specs - vCPU: %s, RAM: %s %s, instance storage: %s %s",
+            sku.cpu,
+            sku.ram_mb if sku.ram_mb < 1024 else int(sku.ram_mb / 1024),
+            "MiB" if sku.ram_mb < 1024 else "GB",
+            (
+                f"{sku.instance_storage} GB"
+                if sku.instance_storage
+                else "EBS only"
             ),
+            sku.storage_speed_class if sku.instance_storage else "",
         )
+
+        logger.info(
+            "Current monthly Spot price for %s in %s %s: $%s",
+            sku.instance_type,
+            "AZ" if m.availability_zone else "region",
+            sku.availability_zone if sku.availability_zone else sku.region,
+            sku.monthly_spot_price,
+        )
+
+        if not sku.monthly_ondemand_price:
+            sku.monthly_ondemand_price = (
+                cloud_api.try_get_monthly_ondemand_price_for_sku(
+                    sku.region, sku.instance_type
+                )
+            )
+        if sku.monthly_ondemand_price and sku.monthly_spot_price:
+            spot_discount_pct = (
+                100.0
+                * (sku.monthly_spot_price - sku.monthly_ondemand_price)
+                / sku.monthly_ondemand_price
+            )
+            logger.info(
+                "Current Spot vs Ondemand discount rate: %s%% ($%s vs $%s), approx. %sx to non-HA RDS",
+                round(spot_discount_pct, 1),
+                round(sku.monthly_spot_price, 1),
+                round(sku.monthly_ondemand_price, 1),
+                math.ceil(
+                    sku.monthly_ondemand_price / sku.monthly_spot_price * 1.5
+                ),
+            )
 
 
 def download_ansible_from_github_if_not_set_locally(
@@ -677,7 +710,9 @@ def main():  # pragma: no cover
             env_manifest.expiration_date = "now"
 
     if args.check_price:
-        resolve_manifest_and_display_price(env_manifest, args.manifest_path)
+        resolve_manifest_and_display_price(
+            env_manifest, args.manifest_path, args.region
+        )
         exit(0)
 
     init_cmdb_and_apply_schema_migrations_if_needed(args)

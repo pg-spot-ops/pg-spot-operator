@@ -59,6 +59,7 @@ def get_cheapest_skus_for_hardware_requirements(
     max_skus_to_get: int = 1,
     skus_to_avoid: list[str] | None = None,
     use_boto3: bool = True,
+    regions: list[str] | None = None,
 ) -> list[InstanceTypeInfo]:
     """By default prefer to use the direct boto3 APIs to get the most fresh instance and pricing info.
     Use AWS static JSONs for unauthenticated price checks"""
