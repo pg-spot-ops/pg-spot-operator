@@ -377,7 +377,7 @@ def get_cheapest_sku_for_hw_reqs(
         raise Exception("Need all_instances to select cheapest")
 
     logger.debug(
-        "Filtering through %s instances types to mathc HW reqs ...",
+        "Filtering through %s instances types to match HW reqs ...",
         len(all_instances),
     )
     filtered_instances_by_cpu = filter_instance_types_by_hw_req(

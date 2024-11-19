@@ -15,8 +15,12 @@ from pg_spot_operator.cloud_impl.aws_spot import (
     get_ondemand_price_for_instance_type_from_aws_regional_pricing_info,
     get_spot_instance_types_with_price_from_s3_pricing_json,
     extract_memory_mb_from_aws_pricing_memory_string,
+    get_all_instance_types_from_aws_regional_pricing_info,
 )
-from pg_spot_operator.constants import MF_SEC_VM_STORAGE_TYPE_LOCAL
+from pg_spot_operator.constants import (
+    MF_SEC_VM_STORAGE_TYPE_LOCAL,
+    CPU_ARCH_X86,
+)
 
 INSTANCE_LISTING = [
     {
@@ -466,6 +470,22 @@ REGIONAL_PRICING_INFO = {
                 "Pre Installed S/W": "NA",
                 "License Model": "No License required",
             },
+            "i3 2xlarge EU Stockholm Linux": {
+                "rateCode": "FUB7Q54ZGEMZPF29.JRTCKXETXF.6YS6EN2CT7",
+                "price": "0.6520000000",
+                "Location": "EU (Stockholm)",
+                "Instance Family": "Storage optimized",
+                "vCPU": "8",
+                "Instance Type": "i3.2xlarge",
+                "Memory": "61 GiB",
+                "Storage": "1 x 1900 NVMe SSD",
+                "Network Performance": "Up to 10 Gigabit",
+                "plc:OperatingSystem": "Linux",
+                "plc:InstanceFamily": "Storage Optimized",
+                "Operating System": "Linux",
+                "Pre Installed S/W": "NA",
+                "License Model": "No License required",
+            },
         }
     },
 }
@@ -579,6 +599,14 @@ def test_get_ondemand_price_for_instance_type_from_aws_regional_pricing_info():
         )
         > 0
     )
+
+
+def test_instance_info_parsing():
+    all_instances = get_all_instance_types_from_aws_regional_pricing_info(
+        "eu-north-1", REGIONAL_PRICING_INFO
+    )
+    by_instance_type = {x.instance_type: x for x in all_instances}
+    assert by_instance_type["i3.2xlarge"].arch == CPU_ARCH_X86
 
 
 def test_get_spot_instance_types_with_price_from_s3_pricing_json():

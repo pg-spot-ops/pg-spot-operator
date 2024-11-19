@@ -51,10 +51,12 @@ def extract_cpu_arch_from_sku_desc(cloud: str, i_desc: dict) -> str:
 
 
 def infer_cpu_arch_from_aws_instance_type_name(instance_type: str) -> str:
-    if "g" in instance_type:
-        return CPU_ARCH_ARM
-    else:
-        return CPU_ARCH_X86
+    """Defaults to x86"""
+    if instance_type:
+        splits = instance_type.split(".")
+        if len(splits) == 2 and "g" in splits[0]:
+            return CPU_ARCH_ARM
+    return CPU_ARCH_X86
 
 
 def parse_aws_pricing_json_storage_string(
