@@ -481,7 +481,7 @@ def resolve_manifest_and_display_price(
         raise Exception("Valid InstanceManifest expected")
 
     logger.info(
-        "Resolving HW requirements to actual instance types / prices using instance selection strategy: %s ...",
+        "Resolving HW requirements to actual instance types / prices using --selection-strategy=%s ...",
         m.vm.instance_selection_strategy,
     )
 
@@ -530,16 +530,14 @@ def resolve_manifest_and_display_price(
             )
         )
     if sku.monthly_ondemand_price and sku.monthly_spot_price:
-        spot_discount = (
+        spot_discount_pct = (
             100.0
             * (sku.monthly_spot_price - sku.monthly_ondemand_price)
             / sku.monthly_ondemand_price
         )
         logger.info(
-            "Current Spot discount rate in %s %s: %s%% (spot $%s vs on-demand $%s)",
-            "AZ" if m.availability_zone else "region",
-            m.availability_zone if m.availability_zone else m.region,
-            round(spot_discount, 1),
+            "Current Spot discount rate: %s%% (spot $%s vs on-demand $%s)",
+            round(spot_discount_pct, 1),
             round(sku.monthly_spot_price, 1),
             round(sku.monthly_ondemand_price, 1),
         )
@@ -665,7 +663,7 @@ def main():  # pragma: no cover
     # Download the Ansible scripts if missing and in some "real" mode, as not bundled to PyPI currently
     download_ansible_from_github_if_not_set_locally(args)
 
-    logger.info("Entering main loop")
+    logger.debug("Entering main loop")
 
     operator.do_main_loop(
         cli_env_manifest=env_manifest,

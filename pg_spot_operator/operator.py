@@ -92,7 +92,7 @@ def preprocess_ensure_vm_action(
         selected_instance_type = existing_instance_info["InstanceType"]
     else:
         logger.info(
-            "Resolving HW requirements in region %s using strategy '%s' ...",
+            "Resolving HW requirements in region %s using --selection-strategy=%s ...",
             m.region,
             m.vm.instance_selection_strategy,
         )
@@ -591,7 +591,7 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
     - Collect "output" folder contents on successful exit
     """
 
-    logging.info(
+    logging.debug(
         "Starting Ansible action %s for instance %s ...",
         action,
         m.instance_name,
@@ -677,9 +677,9 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
         logger.info("Backing instance found: %s", instance_id)
     else:
         logger.warning(
-            "Detected a missing VM for instance %s (%s) - %s ...",
+            "Detected a missing VM for instance '%s' in region %s - %s ...",
             m.instance_name,
-            m.cloud,
+            m.region,
             "NOT creating (--dry-run)" if dry_run else "creating",
         )
         cmdb.mark_any_active_vms_as_deleted(m)
@@ -923,7 +923,7 @@ def do_main_loop(
             if cli_env_manifest:
                 (
                     logger.info(
-                        "Processing manifest for instance %s set via ENV ...",
+                        "Processing manifest for instance '%s' set via CLI / ENV ...",
                         cli_env_manifest.instance_name,
                     )
                     if first_loop
@@ -1144,9 +1144,8 @@ def do_main_loop(
 
             else:
                 logger.info(
-                    "No state changes detected for instance %s (%s)",
+                    "No state changes detected for instance '%s'",
                     m.instance_name,
-                    m.cloud,
                 )
                 raise NoOp()
 

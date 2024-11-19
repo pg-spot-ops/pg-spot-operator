@@ -160,7 +160,7 @@ class IgnoredInstance(Base):
 
 def init_engine_and_check_connection(sqlite_connstr: str):
     sqlite_path = os.path.expanduser(sqlite_connstr)
-    logger.info("Initializing CMDB sqlite3 engine at %s ...", sqlite_path)
+    logger.debug("Initializing CMDB sqlite3 engine at %s ...", sqlite_path)
     if not os.path.exists(os.path.dirname(sqlite_path)):
         os.mkdir(os.path.dirname(sqlite_path))
     global engine
