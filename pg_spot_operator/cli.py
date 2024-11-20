@@ -91,7 +91,9 @@ class ArgumentParser(Tap):
         "PGSO_INSTANCE_TYPES", ""
     )  # i3.xlarge,i3.2xlarge
     cloud: str = os.getenv("PGSO_CLOUD", "aws")
-    region: str = os.getenv("PGSO_REGION", "")
+    region: str = os.getenv(
+        "PGSO_REGION", ""
+    )  # Exact region or also a Regex in price check mode
     zone: str = os.getenv("PGSO_ZONE", "")
     cpu_min: int = int(os.getenv("PGSO_CPU_MIN", "0"))
     cpu_max: int = int(os.getenv("PGSO_CPU_MAX", "0"))

@@ -31,7 +31,8 @@ Just in case let's check the pricing beforehand, though - in most cases it will 
 # Step 0 - install the pg-spot-operator package via pip/pipx:
 pipx install pg-spot-operator
 
-# Resolve user requirements to actual EC2 instance types and show the cheapest instances in each region:
+# Resolve user requirements to actual EC2 instance types and show the cheapest instances.
+# Note that in this example we only consider EU regions, to get OK latencies, globally one could save even more
 pg_spot_operator --check-price \
   --region='eu-' --ram-min=128 \
   --storage-min=500 --storage-type=local
@@ -44,16 +45,7 @@ Instance type selected for region eu-south-2: gr6.4xlarge (arm)
 Main specs - vCPU: 16, RAM: 128 GB, instance storage: 600 GB nvme
 Current monthly Spot price for gr6.4xlarge in region eu-south-2: $155.7
 Current Spot vs Ondemand discount rate: -86.7% ($155.7 vs $1167.7), approx. 12x to non-HA RDS
-===== REGION eu-north-1 =====
-Instance type selected for region eu-north-1: r7gd.4xlarge (arm)
-Main specs - vCPU: 16, RAM: 128 GB, instance storage: 950 GB nvme
-Current monthly Spot price for r7gd.4xlarge in region eu-north-1: $226.2
-Current Spot vs Ondemand discount rate: -72.7% ($226.2 vs $827.4), approx. 6x to non-HA RDS
-===== REGION eu-central-2 =====
-Instance type selected for region eu-central-2: r6gd.4xlarge (arm)
-Main specs - vCPU: 16, RAM: 128 GB, instance storage: 950 GB nvme
-Current monthly Spot price for r6gd.4xlarge in region eu-central-2: $238.2
-Current Spot vs Ondemand discount rate: -72.8% ($238.2 vs $874.4), approx. 6x to non-HA RDS
+...
 ```
 
 Ok seems `eu-south-2` is best for us currently with some incredible pricing, as hinted in the log output - **a full work
