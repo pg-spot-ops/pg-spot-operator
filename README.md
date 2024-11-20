@@ -61,7 +61,10 @@ day on a very powerful instance will cost us a mere $1.7** - less than a cup of 
 
 For actually launching any AWS instances we of course need a working CLI (`~/.aws/credentials`) or have some
 [privileged enough](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/scripts/terraform/create-iam-user-and-credentials/create_region_limited_user.tf#L22)
-access key + secret available or some transparent "assume role" based scheme set up on the operator host.
+access key and secret available or some transparent "assume role" based scheme set up on the operator host + minimally SSH
+port 22 + Postgres port 5432 access on the used Security Group (defaults to the "default" SG, more info under the
+[Security](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_security.md) section.
+
 ```
 # In --connstr-output-only mode we can land right into `psql`!
 psql $(pg_spot_operator --region=eu-south-2 --ram-min=128 \
