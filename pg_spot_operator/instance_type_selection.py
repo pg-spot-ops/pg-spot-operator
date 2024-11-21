@@ -1,9 +1,6 @@
 import random
 from typing import Type
 
-from pg_spot_operator.cloud_impl.aws_spot import (
-    extract_instance_type_eviction_rates_from_public_eviction_info,
-)
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
 
 
@@ -44,23 +41,7 @@ class InstanceTypeSelectionEvictionRate(InstanceTypeSelectionStrategy):
     def execute(
         cls, qualified_instance_types: list[InstanceTypeInfo]
     ) -> InstanceTypeInfo:
-        ev_rates = (
-            extract_instance_type_eviction_rates_from_public_eviction_info(
-                qualified_instance_types[0].region
-            )
-        )
-        if not ev_rates:
-            raise Exception(
-                "Can't use eviction rate based selection as could not fetch eviction rate data"
-            )
-        for ins in qualified_instance_types:
-            if ins.instance_type in ev_rates:
-                ins.max_eviction_rate = ev_rates[
-                    ins.instance_type
-                ].eviction_rate_max_pct
-                ins.eviction_rate_group_label = ev_rates[
-                    ins.instance_type
-                ].eviction_rate_group_label
+
         qualified_instance_types.sort(
             key=lambda x: (x.max_eviction_rate, x.hourly_spot_price)
         )

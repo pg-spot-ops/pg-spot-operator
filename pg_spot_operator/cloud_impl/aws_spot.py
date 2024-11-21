@@ -464,9 +464,25 @@ def get_cheapest_sku_for_hw_reqs(
                 qiti.hourly_spot_price = spot_price
                 qualified_instances_with_price_info.append(qiti)
     else:
+        qualified_instances_with_price_info = qualified_instances_by_cpu
         # Already have a price in InstanceTypeInfo when using public AWS pricing API, just for showing the candidates
         avg_by_sku_az = get_filtered_instances_by_price_no_az(
             qualified_instances_by_cpu
+        )
+
+    try:
+        qualified_instances_with_price_info = (
+            add_eviction_rate_to_instance_types(
+                region, qualified_instances_with_price_info
+            )
+        )
+    except Exception:
+        if (
+            instance_selection_strategy == "eviction-rate"
+        ):  # Can't proceed, for other strategies not critical
+            raise
+        logger.warning(
+            "Could not fetch eviction rate information from AWS, can't display expected eviction rate info"
         )
 
     instance_selection_strategy_cls = (
@@ -767,3 +783,24 @@ def extract_instance_type_eviction_rates_from_public_eviction_info(
             )
 
     return ret
+
+
+def add_eviction_rate_to_instance_types(
+    region, instances: list[InstanceTypeInfo]
+) -> list[InstanceTypeInfo]:
+    ev_rate_info = (
+        extract_instance_type_eviction_rates_from_public_eviction_info(region)
+    )
+    if not ev_rate_info:
+        raise Exception(
+            "Can't use eviction rate based selection as could not fetch eviction rate data"
+        )
+    for ins in instances:
+        if ins.instance_type in ev_rate_info:
+            ins.max_eviction_rate = ev_rate_info[
+                ins.instance_type
+            ].eviction_rate_max_pct
+            ins.eviction_rate_group_label = ev_rate_info[
+                ins.instance_type
+            ].eviction_rate_group_label
+    return instances

@@ -594,6 +594,11 @@ def resolve_manifest_and_display_price(
                     sku.monthly_ondemand_price / sku.monthly_spot_price * 1.5
                 ),
             )
+        if sku.eviction_rate_group_label:
+            logger.info(
+                "Current expected monthly eviction rate range: %s",
+                sku.eviction_rate_group_label,
+            )
 
 
 def download_ansible_from_github_if_not_set_locally(
