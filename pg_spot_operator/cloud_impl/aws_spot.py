@@ -11,7 +11,10 @@ from pg_spot_operator.cloud_impl.aws_cache import (
     get_aws_static_ondemand_pricing_info,
 )
 from pg_spot_operator.cloud_impl.aws_client import get_client
-from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
+from pg_spot_operator.cloud_impl.cloud_structs import (
+    EvictionRateInfo,
+    InstanceTypeInfo,
+)
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_cpu_arch_from_sku_desc,
     extract_instance_storage_size_and_type_from_aws_pricing_storage_string,
@@ -672,5 +675,64 @@ def get_spot_instance_types_with_price_from_s3_pricing_json(
                                 ret[size["size"]] = float(
                                     vc.get("prices", {}).get("USD", 0)
                                 )
+
+    return ret
+
+
+def get_eviction_rate_brackets_from_public_eviction_info(
+    public_eviction_rate_info: dict,
+) -> dict:
+    """Based on https://spot-bid-advisor.s3.amazonaws.com/spot-advisor-data.json
+    eviction rate groups / brackets are defined by AWS as:
+    [{'index': 0, 'label': '<5%', 'dots': 0, 'max': 5},
+     {'index': 1, 'label': '5-10%', 'dots': 1, 'max': 11},
+     {'index': 2, 'label': '10-15%', 'dots': 2, 'max': 16},
+     {'index': 3, 'label': '15-20%', 'dots': 3, 'max': 22},
+     {'index': 4, 'label': '>20%', 'dots': 4, 'max': 100}]
+    """
+    try:
+        return {
+            x["index"]: x for x in public_eviction_rate_info.get("ranges", [])
+        }
+    except Exception:
+        logger.error("Failed to parse eviction rate groups")
+    return {}
+
+
+def extract_instance_type_eviction_rates_from_public_eviction_info(
+    region: str, public_eviction_info: dict
+) -> dict[str, EvictionRateInfo]:
+    ret: dict[str, EvictionRateInfo] = {}
+
+    ev_brackets = get_eviction_rate_brackets_from_public_eviction_info(
+        public_eviction_info
+    )
+
+    for instance_type, ev_info in (
+        public_eviction_info.get("spot_advisor", {})
+        .get(region, {})
+        .get("Linux", {})
+        .items()
+    ):
+        # In[156]: eviction_rate_info["spot_advisor"]["eu-north-1"]["Linux"]
+        # Out[156]:
+        # {'r5dn.24xlarge': {'s': 73, 'r': 2},
+        #  'm7gd.8xlarge': {'s': 74, 'r': 1},
+
+        try:
+            ret[instance_type] = EvictionRateInfo(
+                instance_type=instance_type,
+                region=region,
+                eviction_rate_group=ev_info["r"],
+                eviction_rate_group_label=ev_brackets[ev_info["r"]]["label"],
+                spot_savings_rate=ev_info["s"],
+                eviction_rate_max_pct=ev_brackets[ev_info["r"]]["max"],
+            )
+        except Exception as e:
+            logger.error(
+                "Failed to parse instance eviction rate info from: %s. Error: %s",
+                ev_info,
+                e,
+            )
 
     return ret

@@ -37,3 +37,14 @@ class CloudVM:
     created_on: datetime | None = None
     provider_description: dict | None = None
     volume_description: dict | None = None
+
+
+# Wraps "spot_advisor" key from https://spot-bid-advisor.s3.amazonaws.com/spot-advisor-data.json
+@dataclass
+class EvictionRateInfo:
+    instance_type: str
+    region: str
+    spot_savings_rate: int
+    eviction_rate_group: int
+    eviction_rate_group_label: str
+    eviction_rate_max_pct: str

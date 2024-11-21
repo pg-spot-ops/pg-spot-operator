@@ -16,6 +16,8 @@ from pg_spot_operator.cloud_impl.aws_spot import (
     get_spot_instance_types_with_price_from_s3_pricing_json,
     extract_memory_mb_from_aws_pricing_memory_string,
     get_all_instance_types_from_aws_regional_pricing_info,
+    get_eviction_rate_brackets_from_public_eviction_info,
+    extract_instance_type_eviction_rates_from_public_eviction_info,
 )
 from pg_spot_operator.constants import (
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
@@ -540,6 +542,40 @@ SPOT_PRICING_INFO_S3_JSON_SAMPLE = {
     },
 }
 
+# From https://spot-bid-advisor.s3.amazonaws.com/spot-advisor-data.json
+PUBLIC_EVICTION_RATE_INFO = {
+    "global_rate": "<10%",
+    "instance_types": {
+        "r7g.xlarge": {"emr": True, "cores": 4, "ram_gb": 32.0},
+        "c8g.16xlarge": {"emr": True, "cores": 64, "ram_gb": 128.0},
+        "c8g.48xlarge": {"emr": True, "cores": 192, "ram_gb": 384.0},
+        "g4ad.8xlarge": {"emr": False, "cores": 32, "ram_gb": 128.0},
+        "g4ad.16xlarge": {"emr": False, "cores": 64, "ram_gb": 256.0},
+    },
+    "ranges": [
+        {"index": 0, "label": "<5%", "dots": 0, "max": 5},
+        {"index": 1, "label": "5-10%", "dots": 1, "max": 11},
+        {"index": 2, "label": "10-15%", "dots": 2, "max": 16},
+        {"index": 3, "label": "15-20%", "dots": 3, "max": 22},
+        {"index": 4, "label": ">20%", "dots": 4, "max": 100},
+    ],
+    "spot_advisor": {
+        "eu-north-1": {
+            "Linux": {
+                "r5dn.24xlarge": {"s": 73, "r": 2},
+                "m7gd.8xlarge": {"s": 74, "r": 1},
+                "m7a.16xlarge": {"s": 71, "r": 3},
+                "c6gd.medium": {"s": 73, "r": 1},
+                "r7g.large": {"s": 70, "r": 0},
+                "c6gd.8xlarge": {"s": 73, "r": 0},
+                "r7a.2xlarge": {"s": 70, "r": 0},
+                "t3.large": {"s": 69, "r": 0},
+                "m6g.12xlarge": {"s": 74, "r": 0},
+            }
+        }
+    },
+}
+
 
 def test_filter_instances():
     iti = boto3_api_instance_list_to_instance_type_info(
@@ -625,3 +661,27 @@ def test_extract_memory_mb_from_aws_pricing_memory_string():
     assert extract_memory_mb_from_aws_pricing_memory_string("1 TiB") == int(
         1 * 1024 * 1024
     )
+
+
+def test_eviction_rate_group_to_label():
+    ev_grp_map = get_eviction_rate_brackets_from_public_eviction_info(
+        public_eviction_rate_info=PUBLIC_EVICTION_RATE_INFO
+    )
+    assert ev_grp_map[0]["label"] == "<5%"
+    assert ev_grp_map[4]["label"] == ">20%"
+    assert (
+        get_eviction_rate_brackets_from_public_eviction_info(
+            public_eviction_rate_info={"x": 1}
+        )
+        == {}
+    )
+
+
+def test_extract_instance_type_eviction_rates_from_public_eviction_info():
+    evi = extract_instance_type_eviction_rates_from_public_eviction_info(
+        list(PUBLIC_EVICTION_RATE_INFO["spot_advisor"].keys())[0],
+        PUBLIC_EVICTION_RATE_INFO,
+    )
+    assert evi
+    assert len(evi) == 9
+    assert evi["r7g.large"].eviction_rate_group == 0

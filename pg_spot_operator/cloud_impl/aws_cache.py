@@ -217,3 +217,44 @@ def get_spot_pricing_from_public_json() -> dict:
     write_pricing_cache_file_as_json(cache_file, spot_pricing_info)
 
     return spot_pricing_info
+
+
+def get_spot_eviction_rates_from_public_json() -> dict:
+    """Via an AWS managed ~1MB JSON: https://spot-bid-advisor.s3.amazonaws.com/spot-advisor-data.json
+    Caches locally into hourly aws_eviction_rate_* files
+    """
+    now = datetime.now()
+    cache_file = (
+        f"aws_eviction_rate_{now.year}{now.month}{now.day}_{now.hour}00.json"
+    )
+    eviction_rate_info = get_cached_pricing_dict(cache_file)
+    if eviction_rate_info:
+        return eviction_rate_info
+
+    url = "https://spot-bid-advisor.s3.amazonaws.com/spot-advisor-data.json"
+    logger.debug(
+        "Fetching AWS spot eviction rate info from %s to %s ...",
+        url,
+        cache_file,
+    )
+    r = requests.get(
+        url, headers={"Content-Type": "application/json"}, timeout=5
+    )
+    if r.status_code != 200:
+        logger.error(
+            "Failed to retrieve AWS pricing info - retcode: %s, URL: %s",
+            r.status_code,
+            url,
+        )
+        latest_stored_spot_pricing_info = get_latest_spot_pricing_json()
+        if latest_stored_spot_pricing_info:
+            logger.warning(
+                "Using possibly outdated spot pricing from: %s",
+                latest_stored_spot_pricing_info,
+            )
+        return {}
+    eviction_rate_info = r.json()
+
+    write_pricing_cache_file_as_json(cache_file, eviction_rate_info)
+
+    return eviction_rate_info
