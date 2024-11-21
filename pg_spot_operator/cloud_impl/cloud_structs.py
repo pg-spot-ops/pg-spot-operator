@@ -13,6 +13,8 @@ class InstanceTypeInfo:
     monthly_spot_price: float = 0
     hourly_ondemand_price: float = 0
     monthly_ondemand_price: float = 0
+    max_eviction_rate: float = 0
+    eviction_rate_group_label: str = ""
     cpu: int = 0
     ram_mb: int = 0
     instance_storage: int = 0
@@ -47,4 +49,4 @@ class EvictionRateInfo:
     spot_savings_rate: int
     eviction_rate_group: int
     eviction_rate_group_label: str
-    eviction_rate_max_pct: str
+    eviction_rate_max_pct: int
