@@ -37,7 +37,7 @@ pg_spot_operator --check-price \
   --region='eu-' --ram-min=128 \
   --storage-min=500 --storage-type=local
 
-Resolving HW requirements to actual instance types / prices using --selection-strategy=cheapest ...
+Resolving HW requirements to actual instance types / prices using --selection-strategy=balanced ...
 Looking for the top 3 cheapest regions for given HW reqs within: ['eu-central-1', 'eu-central-2', 'eu-north-1', 'eu-south-1', 'eu-south-2', 'eu-west-1', 'eu-west-2', 'eu-west-3']
 Top 3 cheapest regions pricing info:
 ===== REGION eu-south-2 =====
@@ -121,10 +121,11 @@ and feed the output into `--aws-vpc-id`, `--aws-access-key-id` and `--aws-secret
   - Can optionally specify also a callback (executable file) to do something/integrate with the resulting connect
     string (just displayed by default) or just run in `--connstr-output-only` mode to be pipe-friendly
 * The operator:
-  - Finds the cheapest (the default strategy) Spot instance for given HW requirements and launches a VM
+  - Finds the cheapest Spot instance with OK eviction rate (the default "balanced" `--selection-strategy`) for given HW
+    requirements and launches a VM
   - Runs Ansible to set up Postgres
   - Keeps checking the VM health every minute (configurable) and if evicted, launches a new one, re-mounts the data
-    volume and resurrects Postgres
+    volume or does a PITR restore from S3 and resurrects Postgres
 
 # Usage
 

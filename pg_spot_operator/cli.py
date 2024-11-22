@@ -542,7 +542,10 @@ def resolve_manifest_and_display_price(
     cheapest_skus = cheapest_skus[:3]
 
     if not is_explicit_aws_region_code(region):
-        logger.info("Top 3 cheapest regions pricing info:")
+        logger.info(
+            "Top 3 cheapest regions pricing info for selection strategy '%s'",
+            m.vm.instance_selection_strategy,
+        )
     for sku in cheapest_skus:
         if not is_explicit_aws_region_code(region):
             logger.info("===== REGION %s =====", sku.region)
