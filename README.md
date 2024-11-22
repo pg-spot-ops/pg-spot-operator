@@ -39,12 +39,13 @@ pg_spot_operator --check-price \
 
 Resolving HW requirements to actual instance types / prices using --selection-strategy=balanced ...
 Looking for the top 3 cheapest regions for given HW reqs within: ['eu-central-1', 'eu-central-2', 'eu-north-1', 'eu-south-1', 'eu-south-2', 'eu-west-1', 'eu-west-2', 'eu-west-3']
-Top 3 cheapest regions pricing info:
+Top 3 cheapest regions pricing info for selection strategy 'balanced':
 ===== REGION eu-south-2 =====
 Instance type selected for region eu-south-2: gr6.4xlarge (arm)
 Main specs - vCPU: 16, RAM: 128 GB, instance storage: 600 GB nvme
 Current monthly Spot price for gr6.4xlarge in region eu-south-2: $155.7
 Current Spot vs Ondemand discount rate: -86.7% ($155.7 vs $1167.7), approx. 12x to non-HA RDS
+Current expected monthly eviction rate range: 5-10%
 ...
 ```
 
