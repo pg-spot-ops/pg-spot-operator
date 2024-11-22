@@ -15,7 +15,7 @@ class InstanceTypeSelectionStrategy:
         )
 
 
-class InstanceTypeSelectionDefault(InstanceTypeSelectionStrategy):
+class InstanceTypeSelectionCheapest(InstanceTypeSelectionStrategy):
 
     @classmethod
     def execute(
@@ -55,13 +55,11 @@ class InstanceTypeSelection:
         cls, instance_selection_strategy: str
     ) -> Type[InstanceTypeSelectionStrategy]:
         strategy = {
-            "cheapest": InstanceTypeSelectionDefault,
+            "cheapest": InstanceTypeSelectionCheapest,
             "random": InstanceTypeSelectionRandom,
             "eviction-rate": InstanceTypeSelectionEvictionRate,
         }
-        return (
-            strategy.get(
-                instance_selection_strategy.lower().strip() or "cheapest"
-            )
-            or InstanceTypeSelectionDefault
+        return strategy.get(
+            instance_selection_strategy.lower().strip(),
+            InstanceTypeSelectionCheapest,
         )
