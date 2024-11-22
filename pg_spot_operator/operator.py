@@ -182,6 +182,11 @@ def preprocess_ensure_vm_action(
                 sku.monthly_ondemand_price / sku.monthly_spot_price * 1.5
             ),
         )
+    if sku.eviction_rate_group_label:
+        logger.info(
+            "Current expected monthly eviction rate range: %s",
+            sku.eviction_rate_group_label,
+        )
 
     return sku
 

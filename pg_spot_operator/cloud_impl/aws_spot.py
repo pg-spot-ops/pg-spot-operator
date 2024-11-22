@@ -9,9 +9,13 @@ from botocore.exceptions import EndpointConnectionError
 
 from pg_spot_operator.cloud_impl.aws_cache import (
     get_aws_static_ondemand_pricing_info,
+    get_spot_eviction_rates_from_public_json,
 )
 from pg_spot_operator.cloud_impl.aws_client import get_client
-from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
+from pg_spot_operator.cloud_impl.cloud_structs import (
+    EvictionRateInfo,
+    InstanceTypeInfo,
+)
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_cpu_arch_from_sku_desc,
     extract_instance_storage_size_and_type_from_aws_pricing_storage_string,
@@ -22,10 +26,10 @@ from pg_spot_operator.constants import (
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
     SPOT_OPERATOR_ID_TAG,
 )
-from pg_spot_operator.instance_type import InstanceType
+from pg_spot_operator.instance_type_selection import InstanceTypeSelection
 from pg_spot_operator.util import timed_cache
 
-MAX_SKUS_FOR_SPOT_PRICE_COMPARE = 10
+MAX_SKUS_FOR_SPOT_PRICE_COMPARE = 15
 SPOT_HISTORY_LOOKBACK_DAYS = 1
 
 
@@ -370,7 +374,7 @@ def get_cheapest_sku_for_hw_reqs(
     storage_speed_class: str = "any",
     instance_types: list[str] | None = None,
     instance_types_to_avoid: list[str] | None = None,
-    instance_selection_strategy: str | None = None,
+    instance_selection_strategy: str = "cheapest",
 ) -> list[InstanceTypeInfo]:
     """Returns a price-sorted list"""
     if not all_instances:
@@ -380,46 +384,50 @@ def get_cheapest_sku_for_hw_reqs(
         "Filtering through %s instances types to match HW reqs ...",
         len(all_instances),
     )
-    filtered_instances_by_cpu = filter_instance_types_by_hw_req(
-        all_instances,
-        cpu_min=cpu_min,
-        cpu_max=cpu_max,
-        ram_min=ram_min,
-        cpu_arch=architecture,
-        storage_min=storage_min,
-        storage_type=storage_type,
-        allow_burstable=allow_burstable,
-        storage_speed_class=storage_speed_class,
-        instance_types=instance_types,
-        instance_types_to_avoid=instance_types_to_avoid,
+    qualified_instances_by_cpu: list[InstanceTypeInfo] = (
+        filter_instance_types_by_hw_req(
+            all_instances,
+            cpu_min=cpu_min,
+            cpu_max=cpu_max,
+            ram_min=ram_min,
+            cpu_arch=architecture,
+            storage_min=storage_min,
+            storage_type=storage_type,
+            allow_burstable=allow_burstable,
+            storage_speed_class=storage_speed_class,
+            instance_types=instance_types,
+            instance_types_to_avoid=instance_types_to_avoid,
+        )
     )
 
     logger.debug(
-        "%s of them matching min HW reqs", len(filtered_instances_by_cpu)
+        "%s of them matching min HW reqs", len(qualified_instances_by_cpu)
     )
 
-    if not filtered_instances_by_cpu:
+    if not qualified_instances_by_cpu:
         return []
 
-    if len(filtered_instances_by_cpu) > MAX_SKUS_FOR_SPOT_PRICE_COMPARE:
+    if len(qualified_instances_by_cpu) > MAX_SKUS_FOR_SPOT_PRICE_COMPARE:
         logger.debug(
             "Reducing to %s instance types by CPU count to reduce pricing history fetching",
             MAX_SKUS_FOR_SPOT_PRICE_COMPARE,
         )
-        filtered_instances_by_cpu = filtered_instances_by_cpu[
+        qualified_instances_by_cpu = qualified_instances_by_cpu[
             :MAX_SKUS_FOR_SPOT_PRICE_COMPARE
         ]
 
-    filtered_instance_types = [
-        x.instance_type for x in filtered_instances_by_cpu
+    instance_types_to_consider = [
+        x.instance_type for x in qualified_instances_by_cpu
     ]
     avg_by_sku_az: list[tuple[str, str, float]] = (
         []
     )  # [(i3.xlarge, eu-north-1, 0.0132),]
 
+    qualified_instances_with_price_info: list[InstanceTypeInfo] = []
+
     if use_boto3:
         hourly_pricing_data = get_spot_pricing_data_for_skus_over_period(
-            filtered_instance_types,
+            instance_types_to_consider,
             region,
             timedelta(days=SPOT_HISTORY_LOOKBACK_DAYS),
             availability_zone,
@@ -433,45 +441,84 @@ def get_cheapest_sku_for_hw_reqs(
                 hourly_pricing_data
             )
         )
+
+        if (
+            availability_zone
+        ):  # avg_by_sku_az and qualified_instances_by_cpu should map 1-to-1
+            avg_by_sku_az_map: dict[str, float] = {
+                ins_type: price for ins_type, _, price in avg_by_sku_az
+            }
+            for qi in qualified_instances_by_cpu:
+                if qi.instance_type in avg_by_sku_az_map:
+                    qi.hourly_spot_price = avg_by_sku_az_map[qi.instance_type]
+            qualified_instances_with_price_info = qualified_instances_by_cpu
+        else:
+            # If user doesn't fix AZ, instance type infos will "multiply" as get price per AZ
+            qualified_instances_map: dict[str, InstanceTypeInfo] = {
+                x.instance_type: x for x in qualified_instances_by_cpu
+            }
+
+            for ins_type, az, spot_price in avg_by_sku_az:
+                qiti: InstanceTypeInfo = qualified_instances_map[ins_type]
+                qiti_az = InstanceTypeInfo(**qiti.__dict__)
+                qiti_az.availability_zone = az
+                qiti.hourly_spot_price = spot_price
+                qualified_instances_with_price_info.append(qiti)
     else:
+        qualified_instances_with_price_info = qualified_instances_by_cpu
+        # Already have a price in InstanceTypeInfo when using public AWS pricing API, just for showing the candidates
         avg_by_sku_az = get_filtered_instances_by_price_no_az(
-            filtered_instances_by_cpu
+            qualified_instances_by_cpu
         )
 
-    instance_selection_strategy_cls = InstanceType.get_selection_strategy(
-        instance_selection_strategy
+    try:
+        qualified_instances_with_price_info = (
+            add_eviction_rate_to_instance_types(
+                region, qualified_instances_with_price_info
+            )
+        )
+    except Exception:
+        if instance_selection_strategy in (
+            "eviction-rate",
+            "balanced",
+        ):  # Can't proceed, for other strategies not critical
+            raise
+        logger.warning(
+            "Could not fetch eviction rate information from AWS, can't display expected eviction rate info"
+        )
+
+    instance_selection_strategy_cls = (
+        InstanceTypeSelection.get_selection_strategy(
+            instance_selection_strategy
+        )
     )
     logger.debug(
         "Applying instance selection strategy: %s ...",
         instance_selection_strategy,
     )
-    selected_instance_type, az, price = (
-        instance_selection_strategy_cls.execute(avg_by_sku_az)
+
+    # The final select instance type with pricing info
+    siti: InstanceTypeInfo = instance_selection_strategy_cls.execute(
+        qualified_instances_with_price_info
     )
 
-    iti: InstanceTypeInfo | None = None
-    for i in filtered_instances_by_cpu:
-        if i.instance_type == selected_instance_type:
-            iti = i
-    if not iti:
+    if not siti:
         raise Exception("Should not happen")
 
-    if az:
-        iti.availability_zone = az
-    if not iti.monthly_spot_price:
-        iti.monthly_spot_price = round(price * 24 * 30, 1)
+    if not siti.monthly_spot_price:
+        siti.monthly_spot_price = round(siti.hourly_spot_price * 24 * 30, 1)
 
     logger.debug(
         "Cheapest SKU found - %s (%s) in %s a for monthly Spot price of $%s",
-        selected_instance_type,
-        iti.arch,
-        iti.availability_zone or iti.region,
-        round(price * 24 * 30, 1),
+        siti.instance_type,
+        siti.arch,
+        siti.availability_zone or siti.region,
+        siti.monthly_spot_price,
     )
     logger.debug("Instances / Prices in selection: %s", avg_by_sku_az)
 
     # TODO respect max_skus
-    return [iti]
+    return [siti]
 
 
 @timed_cache(seconds=30)
@@ -674,3 +721,88 @@ def get_spot_instance_types_with_price_from_s3_pricing_json(
                                 )
 
     return ret
+
+
+def get_eviction_rate_brackets_from_public_eviction_info(
+    public_eviction_rate_info: dict,
+) -> dict:
+    """Based on https://spot-bid-advisor.s3.amazonaws.com/spot-advisor-data.json
+    eviction rate groups / brackets are defined by AWS as:
+    [{'index': 0, 'label': '<5%', 'dots': 0, 'max': 5},
+     {'index': 1, 'label': '5-10%', 'dots': 1, 'max': 11},
+     {'index': 2, 'label': '10-15%', 'dots': 2, 'max': 16},
+     {'index': 3, 'label': '15-20%', 'dots': 3, 'max': 22},
+     {'index': 4, 'label': '>20%', 'dots': 4, 'max': 100}]
+    """
+    try:
+        return {
+            x["index"]: x for x in public_eviction_rate_info.get("ranges", [])
+        }
+    except Exception:
+        logger.error("Failed to parse eviction rate groups")
+    return {}
+
+
+def extract_instance_type_eviction_rates_from_public_eviction_info(
+    region: str, public_eviction_info: dict | None = None
+) -> dict[str, EvictionRateInfo]:
+    ret: dict[str, EvictionRateInfo] = {}
+
+    if not public_eviction_info:
+        public_eviction_info = get_spot_eviction_rates_from_public_json()
+    if not public_eviction_info:
+        raise Exception("Need eviction rate info to proceed")
+
+    ev_brackets = get_eviction_rate_brackets_from_public_eviction_info(
+        public_eviction_info
+    )
+
+    for instance_type, ev_info in (
+        public_eviction_info.get("spot_advisor", {})
+        .get(region, {})
+        .get("Linux", {})
+        .items()
+    ):
+        # In[156]: eviction_rate_info["spot_advisor"]["eu-north-1"]["Linux"]
+        # Out[156]:
+        # {'r5dn.24xlarge': {'s': 73, 'r': 2},
+        #  'm7gd.8xlarge': {'s': 74, 'r': 1},
+
+        try:
+            ret[instance_type] = EvictionRateInfo(
+                instance_type=instance_type,
+                region=region,
+                eviction_rate_group=ev_info["r"],
+                eviction_rate_group_label=ev_brackets[ev_info["r"]]["label"],
+                spot_savings_rate=ev_info["s"],
+                eviction_rate_max_pct=ev_brackets[ev_info["r"]]["max"],
+            )
+        except Exception as e:
+            logger.error(
+                "Failed to parse instance eviction rate info from: %s. Error: %s",
+                ev_info,
+                e,
+            )
+
+    return ret
+
+
+def add_eviction_rate_to_instance_types(
+    region, instances: list[InstanceTypeInfo]
+) -> list[InstanceTypeInfo]:
+    ev_rate_info = (
+        extract_instance_type_eviction_rates_from_public_eviction_info(region)
+    )
+    if not ev_rate_info:
+        raise Exception(
+            "Can't use eviction rate based selection as could not fetch eviction rate data"
+        )
+    for ins in instances:
+        if ins.instance_type in ev_rate_info:
+            ins.max_eviction_rate = ev_rate_info[
+                ins.instance_type
+            ].eviction_rate_max_pct
+            ins.eviction_rate_group_label = ev_rate_info[
+                ins.instance_type
+            ].eviction_rate_group_label
+    return instances

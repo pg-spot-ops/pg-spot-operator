@@ -97,7 +97,7 @@ class ArgumentParser(Tap):
     zone: str = os.getenv("PGSO_ZONE", "")
     cpu_min: int = int(os.getenv("PGSO_CPU_MIN", "0"))
     cpu_max: int = int(os.getenv("PGSO_CPU_MAX", "0"))
-    selection_strategy: str = os.getenv("PGSO_SELECTION_STRATEGY", "cheapest")
+    selection_strategy: str = os.getenv("PGSO_SELECTION_STRATEGY", "balanced")
     ram_min: int = int(os.getenv("PGSO_RAM_MIN", "0"))
     storage_min: int = int(os.getenv("PGSO_STORAGE_MIN", "0"))
     storage_type: str = os.getenv("PGSO_STORAGE_TYPE", "network")
@@ -542,7 +542,10 @@ def resolve_manifest_and_display_price(
     cheapest_skus = cheapest_skus[:3]
 
     if not is_explicit_aws_region_code(region):
-        logger.info("Top 3 cheapest regions pricing info:")
+        logger.info(
+            "Top 3 cheapest regions pricing info for selection strategy '%s'",
+            m.vm.instance_selection_strategy,
+        )
     for sku in cheapest_skus:
         if not is_explicit_aws_region_code(region):
             logger.info("===== REGION %s =====", sku.region)
@@ -593,6 +596,11 @@ def resolve_manifest_and_display_price(
                 math.ceil(
                     sku.monthly_ondemand_price / sku.monthly_spot_price * 1.5
                 ),
+            )
+        if sku.eviction_rate_group_label:
+            logger.info(
+                "Current expected monthly eviction rate range: %s",
+                sku.eviction_rate_group_label,
             )
 
 
