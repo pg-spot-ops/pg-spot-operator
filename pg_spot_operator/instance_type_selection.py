@@ -19,11 +19,9 @@ class InstanceTypeSelectionCheapest(InstanceTypeSelectionStrategy):
 
     @classmethod
     def execute(
-        cls, qualified_instance_types: list[InstanceTypeInfo]
+        cls, instance_types: list[InstanceTypeInfo]
     ) -> InstanceTypeInfo:
-        non_zero_price = [
-            x for x in qualified_instance_types if x.hourly_spot_price
-        ]
+        non_zero_price = [x for x in instance_types if x.hourly_spot_price]
         if not non_zero_price:
             raise Exception(
                 "No qualified instances with hourly_spot_price set"
@@ -44,19 +42,46 @@ class InstanceTypeSelectionEvictionRate(InstanceTypeSelectionStrategy):
 
     @classmethod
     def execute(
-        cls, qualified_instance_types: list[InstanceTypeInfo]
+        cls, instance_types: list[InstanceTypeInfo]
     ) -> InstanceTypeInfo:
-        non_zero_price = [
-            x for x in qualified_instance_types if x.hourly_spot_price
+        valid_instances = [
+            x
+            for x in instance_types
+            if x.hourly_spot_price and x.max_eviction_rate
         ]
-        if not non_zero_price:
+        if not valid_instances:
             raise Exception(
                 "No qualified instances with max_eviction_rate and hourly_spot_price set"
             )
-        non_zero_price.sort(
+        valid_instances.sort(
             key=lambda x: (x.max_eviction_rate, x.hourly_spot_price)
         )
-        return non_zero_price[0]
+        return valid_instances[0]
+
+
+class InstanceTypeSelectionBalanced(InstanceTypeSelectionStrategy):
+    """A mix of price + eviction rate"""
+
+    @classmethod
+    def execute(
+        cls, instance_types: list[InstanceTypeInfo]
+    ) -> InstanceTypeInfo:
+        valid_instances = [
+            x
+            for x in instance_types
+            if x.hourly_spot_price and x.max_eviction_rate
+        ]
+        if not valid_instances:
+            raise Exception(
+                "No qualified instances with max_eviction_rate and hourly_spot_price set"
+            )
+        max_price = max([x.hourly_spot_price for x in valid_instances])
+        max_eviction_rate = max([x.max_eviction_rate for x in valid_instances])
+        return sorted(
+            valid_instances,
+            key=lambda x: x.hourly_spot_price / max_price
+            + x.max_eviction_rate / max_eviction_rate,
+        )[0]
 
 
 class InstanceTypeSelection:
@@ -69,8 +94,9 @@ class InstanceTypeSelection:
             "cheapest": InstanceTypeSelectionCheapest,
             "random": InstanceTypeSelectionRandom,
             "eviction-rate": InstanceTypeSelectionEvictionRate,
+            "balanced": InstanceTypeSelectionBalanced,
         }
         return strategy.get(
             instance_selection_strategy.lower().strip(),
-            InstanceTypeSelectionCheapest,
+            InstanceTypeSelectionBalanced,
         )
