@@ -1,7 +1,10 @@
+import logging
 import random
 from typing import Type
 
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
+
+logger = logging.getLogger(__name__)
 
 
 class InstanceTypeSelectionStrategy:
@@ -77,11 +80,26 @@ class InstanceTypeSelectionBalanced(InstanceTypeSelectionStrategy):
             )
         max_price = max([x.hourly_spot_price for x in valid_instances])
         max_eviction_rate = max([x.max_eviction_rate for x in valid_instances])
-        return sorted(
+        balanced = sorted(
             valid_instances,
             key=lambda x: x.hourly_spot_price / max_price
             + x.max_eviction_rate / max_eviction_rate,
-        )[0]
+        )
+        # logger.debug(
+        #     "Balanced index selection weights: %s",
+        #     [
+        #         (
+        #             x.instance_type,
+        #             x.availability_zone,
+        #             x.hourly_spot_price,
+        #             x.max_eviction_rate,
+        #             x.hourly_spot_price / max_price
+        #             + x.max_eviction_rate / max_eviction_rate,
+        #         )
+        #         for x in balanced
+        #     ],
+        # )
+        return balanced[0]
 
 
 class InstanceTypeSelection:

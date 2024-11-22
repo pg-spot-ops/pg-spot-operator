@@ -29,7 +29,7 @@ from pg_spot_operator.constants import (
 from pg_spot_operator.instance_type_selection import InstanceTypeSelection
 from pg_spot_operator.util import timed_cache
 
-MAX_SKUS_FOR_SPOT_PRICE_COMPARE = 10
+MAX_SKUS_FOR_SPOT_PRICE_COMPARE = 15
 SPOT_HISTORY_LOOKBACK_DAYS = 1
 
 
@@ -451,6 +451,7 @@ def get_cheapest_sku_for_hw_reqs(
             for qi in qualified_instances_by_cpu:
                 if qi.instance_type in avg_by_sku_az_map:
                     qi.hourly_spot_price = avg_by_sku_az_map[qi.instance_type]
+            qualified_instances_with_price_info = qualified_instances_by_cpu
         else:
             # If user doesn't fix AZ, instance type infos will "multiply" as get price per AZ
             qualified_instances_map: dict[str, InstanceTypeInfo] = {
@@ -477,8 +478,9 @@ def get_cheapest_sku_for_hw_reqs(
             )
         )
     except Exception:
-        if (
-            instance_selection_strategy == "eviction-rate"
+        if instance_selection_strategy in (
+            "eviction-rate",
+            "balanced",
         ):  # Can't proceed, for other strategies not critical
             raise
         logger.warning(
