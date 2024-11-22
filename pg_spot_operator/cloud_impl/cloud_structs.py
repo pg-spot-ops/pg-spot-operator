@@ -1,13 +1,15 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from pg_spot_operator.constants import CLOUD_AWS
+
 
 @dataclass
 class InstanceTypeInfo:
     instance_type: str
     arch: str
-    cloud: str
     region: str
+    cloud: str = CLOUD_AWS
     availability_zone: str = ""
     hourly_spot_price: float = 0
     monthly_spot_price: float = 0

@@ -21,9 +21,14 @@ class InstanceTypeSelectionCheapest(InstanceTypeSelectionStrategy):
     def execute(
         cls, qualified_instance_types: list[InstanceTypeInfo]
     ) -> InstanceTypeInfo:
-        return sorted(
-            qualified_instance_types, key=lambda x: x.hourly_spot_price
-        )[0]
+        non_zero_price = [
+            x for x in qualified_instance_types if x.hourly_spot_price
+        ]
+        if not non_zero_price:
+            raise Exception(
+                "No qualified instances with hourly_spot_price set"
+            )
+        return sorted(non_zero_price, key=lambda x: x.hourly_spot_price)[0]
 
 
 class InstanceTypeSelectionRandom(InstanceTypeSelectionStrategy):
@@ -41,11 +46,17 @@ class InstanceTypeSelectionEvictionRate(InstanceTypeSelectionStrategy):
     def execute(
         cls, qualified_instance_types: list[InstanceTypeInfo]
     ) -> InstanceTypeInfo:
-
-        qualified_instance_types.sort(
+        non_zero_price = [
+            x for x in qualified_instance_types if x.hourly_spot_price
+        ]
+        if not non_zero_price:
+            raise Exception(
+                "No qualified instances with max_eviction_rate and hourly_spot_price set"
+            )
+        non_zero_price.sort(
             key=lambda x: (x.max_eviction_rate, x.hourly_spot_price)
         )
-        return qualified_instance_types[0]
+        return non_zero_price[0]
 
 
 class InstanceTypeSelection:
