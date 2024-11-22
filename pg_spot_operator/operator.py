@@ -267,8 +267,7 @@ def populate_temp_workdir_for_action_exec(
     Also the original manifest + override one will be placed at "input/instance_manifest.yml",
     and for runnables additionally the manifest will be split into flat key-value files under "input"
     """
-    now = datetime.datetime.utcnow().replace(microsecond=0)
-    now_str = str(now).replace(" ", "_").replace(":", "")
+    now_str = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d")
     temp_workdir = os.path.join(
         os.path.expanduser(temp_workdir_root),
         manifest.instance_name,
@@ -456,6 +455,7 @@ EXTRA_ARGS="{extra_args}"
 ansible-galaxy install -r requirements.yml
 
 echo "ansible-playbook -i inventory --ssh-common-args '\\-o UserKnownHostsFile=/dev/null \\-o StrictHostKeyChecking=no' $EXTRA_ARGS {action}.yml"
+truncate -s0 ansible.log
 ansible-playbook -i inventory --ssh-common-args '\\-o UserKnownHostsFile=/dev/null \\-o StrictHostKeyChecking=no' $EXTRA_ARGS {action}.yml
 
 echo "Done at `date`"
@@ -562,7 +562,7 @@ def apply_postgres_config_tuning_to_manifest(
 def clean_up_old_logs_if_any(
     config_dir: str = operator_config_dir, old_threshold_days: int = 7
 ):
-    """Leaves empty instance_name/action folders in place though to indicate what operations have happened
+    """Leaves empty instance_name/action folders in place though to indicate what operations have happened / tried
     on which instances
     """
     tmp_path = os.path.expanduser(os.path.join(config_dir, "tmp"))
@@ -574,8 +574,8 @@ def clean_up_old_logs_if_any(
             d
         ) in (
             dirs
-        ):  # /home/krl/.pg-spot-operator/tmp/pg1/single_instance_setup/2024-10-02_093928/ansible.log
-            if not (d.startswith("20") and "-" in d):  # 2024-10-02_113800
+        ):  # /home/krl/.pg-spot-operator/tmp/pg1/single_instance_setup/2024-10-02_0900/ansible.log
+            if not (d.startswith("20") and "-" in d):  # 2024-10-02_0900
                 continue
             dt = isoparse(d)
             if dt < (
@@ -626,7 +626,7 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
         return True, {}
 
     logger.info(
-        "Starting handler for action %s of instance %s, log at %s",
+        "Starting action handler %s for instance %s, log at %s",
         action,
         m.instance_name,
         os.path.join(temp_workdir, "ansible.log"),
