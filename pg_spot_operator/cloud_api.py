@@ -54,7 +54,7 @@ def boto3_api_instance_list_to_instance_type_info(
     return ret
 
 
-def get_cheapest_skus_for_hardware_requirements(
+def resolve_hardware_requirements_to_instance_types(
     m: InstanceManifest,
     max_skus_to_get: int = 1,
     skus_to_avoid: list[str] | None = None,
@@ -108,7 +108,7 @@ def get_cheapest_skus_for_hardware_requirements(
                     all_regional_spots.append(x)
 
         ret.extend(
-            aws_spot.get_cheapest_sku_for_hw_reqs(
+            aws_spot.resolve_hardware_requirements_to_instance_types(
                 all_regional_spots,
                 region,
                 use_boto3=use_boto3,

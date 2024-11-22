@@ -528,7 +528,7 @@ def resolve_manifest_and_display_price(
             regions,
         )
 
-    cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
+    cheapest_skus = cloud_api.resolve_hardware_requirements_to_instance_types(
         m, use_boto3=use_boto3, regions=regions
     )
 

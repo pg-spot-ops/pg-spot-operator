@@ -201,7 +201,7 @@ def get_current_hourly_ondemand_price_fallback(
 
 
 def filter_instance_types_by_hw_req(
-    all_instance_types: list[InstanceTypeInfo],
+    all_instances: list[InstanceTypeInfo],
     cpu_min: int | None = 0,
     cpu_max: int | None = 0,
     ram_min: int | None = 0,
@@ -215,9 +215,27 @@ def filter_instance_types_by_hw_req(
 ) -> list[InstanceTypeInfo]:
     """Returns qualified SKUs sorted by (CPU, RAM) or (CPU, Total instance storage DESC)"""
     ret: list[InstanceTypeInfo] = []
-    for ii in all_instance_types:
 
-        if instance_types and ii.instance_type not in instance_types:
+    if instance_types:
+        logger.debug(
+            "Only considering following instance types: %s",
+            instance_types,
+        )
+
+    if instance_types_to_avoid:
+        logger.debug(
+            "NOT considering following instance types: %s",
+            instance_types_to_avoid,
+        )
+
+    all_instance_types = {x.instance_type for x in all_instances}
+    logger.debug(all_instance_types)
+    for ii in all_instances:
+
+        if instance_types:
+            if ii.instance_type not in instance_types:
+                continue
+            ret.append(ii)
             continue
 
         if (
@@ -359,7 +377,7 @@ def get_filtered_instances_by_price_no_az(
     return sorted(by_cpu, key=lambda x: x[2])
 
 
-def get_cheapest_sku_for_hw_reqs(
+def resolve_hardware_requirements_to_instance_types(
     all_instances: list[InstanceTypeInfo],
     region: str,
     use_boto3: bool = False,
@@ -384,7 +402,7 @@ def get_cheapest_sku_for_hw_reqs(
         "Filtering through %s instances types to match HW reqs ...",
         len(all_instances),
     )
-    qualified_instances_by_cpu: list[InstanceTypeInfo] = (
+    qualified_instances_cpu_sorted: list[InstanceTypeInfo] = (
         filter_instance_types_by_hw_req(
             all_instances,
             cpu_min=cpu_min,
@@ -401,23 +419,23 @@ def get_cheapest_sku_for_hw_reqs(
     )
 
     logger.debug(
-        "%s of them matching min HW reqs", len(qualified_instances_by_cpu)
+        "%s of them matching min HW reqs", len(qualified_instances_cpu_sorted)
     )
 
-    if not qualified_instances_by_cpu:
+    if not qualified_instances_cpu_sorted:
         return []
 
-    if len(qualified_instances_by_cpu) > MAX_SKUS_FOR_SPOT_PRICE_COMPARE:
+    if len(qualified_instances_cpu_sorted) > MAX_SKUS_FOR_SPOT_PRICE_COMPARE:
         logger.debug(
             "Reducing to %s instance types by CPU count to reduce pricing history fetching",
             MAX_SKUS_FOR_SPOT_PRICE_COMPARE,
         )
-        qualified_instances_by_cpu = qualified_instances_by_cpu[
+        qualified_instances_cpu_sorted = qualified_instances_cpu_sorted[
             :MAX_SKUS_FOR_SPOT_PRICE_COMPARE
         ]
 
     instance_types_to_consider = [
-        x.instance_type for x in qualified_instances_by_cpu
+        x.instance_type for x in qualified_instances_cpu_sorted
     ]
     avg_by_sku_az: list[tuple[str, str, float]] = (
         []
@@ -448,14 +466,16 @@ def get_cheapest_sku_for_hw_reqs(
             avg_by_sku_az_map: dict[str, float] = {
                 ins_type: price for ins_type, _, price in avg_by_sku_az
             }
-            for qi in qualified_instances_by_cpu:
+            for qi in qualified_instances_cpu_sorted:
                 if qi.instance_type in avg_by_sku_az_map:
                     qi.hourly_spot_price = avg_by_sku_az_map[qi.instance_type]
-            qualified_instances_with_price_info = qualified_instances_by_cpu
+            qualified_instances_with_price_info = (
+                qualified_instances_cpu_sorted
+            )
         else:
             # If user doesn't fix AZ, instance type infos will "multiply" as get price per AZ
             qualified_instances_map: dict[str, InstanceTypeInfo] = {
-                x.instance_type: x for x in qualified_instances_by_cpu
+                x.instance_type: x for x in qualified_instances_cpu_sorted
             }
 
             for ins_type, az, spot_price in avg_by_sku_az:
@@ -465,10 +485,10 @@ def get_cheapest_sku_for_hw_reqs(
                 qiti.hourly_spot_price = spot_price
                 qualified_instances_with_price_info.append(qiti)
     else:
-        qualified_instances_with_price_info = qualified_instances_by_cpu
+        qualified_instances_with_price_info = qualified_instances_cpu_sorted
         # Already have a price in InstanceTypeInfo when using public AWS pricing API, just for showing the candidates
         avg_by_sku_az = get_filtered_instances_by_price_no_az(
-            qualified_instances_by_cpu
+            qualified_instances_cpu_sorted
         )
 
     try:

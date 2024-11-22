@@ -98,8 +98,8 @@ def preprocess_ensure_vm_action(
             m.vm.instance_selection_strategy,
         )
     if not m.vm.instance_types and not existing_instance_info:
-        cheapest_skus = cloud_api.get_cheapest_skus_for_hardware_requirements(
-            m
+        cheapest_skus = (
+            cloud_api.resolve_hardware_requirements_to_instance_types(m)
         )
         if not cheapest_skus:
             raise Exception(
