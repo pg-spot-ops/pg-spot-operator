@@ -24,7 +24,12 @@ class InstanceTypeSelectionCheapest(InstanceTypeSelectionStrategy):
     def execute(
         cls, instance_types: list[InstanceTypeInfo]
     ) -> InstanceTypeInfo:
-        non_zero_price = [x for x in instance_types if x.hourly_spot_price]
+        """Don't consider the worst eviction rate bracket instance types still"""
+        non_zero_price = [
+            x
+            for x in instance_types
+            if x.hourly_spot_price and x.max_eviction_rate != 100
+        ]
         if not non_zero_price:
             raise Exception(
                 "No qualified instances with hourly_spot_price set"
