@@ -4,6 +4,91 @@ Changelog
 
 (unreleased)
 ------------
+- In CLI input mode infer --region automatically from --zone if not set.
+  [Kaarel Moppel]
+
+  Same as in manifest mode. Otherwise would get still a global price
+  check in --check-price mode
+- Merge pull request #94 from pg-spot-ops/check-price-improvements.
+  [Kaarel Moppel]
+
+  Check price improvements - don't bail when one region's price fetching fails + allow global --check-price
+- README update - demo the new global price check. [Kaarel Moppel]
+
+  In the Usage via Python section
+- Allow global price check with no region set at all. [Kaarel Moppel]
+- Improve CLI input validation - don't need --storage-min for EBS
+  storage. [Kaarel Moppel]
+
+  Also can have --instance-name set for --check-price mode
+- Fix authenticated / boto3 price resolving. [Kaarel Moppel]
+- Show a warning about regions not reached for pricing info. [Kaarel
+  Moppel]
+
+  A la:
+  WARNING - failed to inquiry regions: ['ap-southeast-5', 'cn-north-1', 'cn-northwest-1']
+- Logging - don't show asctime and levelname in --check-price mode.
+  [Kaarel Moppel]
+- Global --check-price improvements - dont bail on one region failing.
+  [Kaarel Moppel]
+- Improve HW reqs change handling. [Kaarel Moppel]
+
+  Currently the running instance was terminated but due to caching the
+  "ensure VM" function didn't pick up and a whole main loop passed before
+  rebuild was tried
+- Retries for --connstr-output-only mode. [Kaarel Moppel]
+
+  Currently program exited on first loop errors in --connstr-output-only
+  mode but no real season for that, cloud is volatile - just keep trying
+- Linter Python 3.10 -> 3.12. [Kaarel Moppel]
+- Fix new Ansible folder created on each main loop in case of errors.
+  [Kaarel Moppel]
+
+  Can take too much disk space in the end if left running for too long.
+  Now have oa folder per action per day
+- Fix explicit --instance-types input being too aggressive. [Kaarel
+  Moppel]
+- Merge pull request #93 from pg-spot-ops/eviction-rate-strategy.
+  [Kaarel Moppel]
+
+  Add eviction rate based and a balanced instance selection strategy
+- In "cheapest" selection mode don't consider the worst eviction rate
+  bracket still. [Kaarel Moppel]
+
+  With >20% eviction rates
+- README - add new eviction rate indicator to sample --check-price
+  output. [Kaarel Moppel]
+- Update READMEs + log hints on used strategy. [Kaarel Moppel]
+- Make the new "balanced" instance selection strategy the default.
+  [Kaarel Moppel]
+- Add a "balanced" instance selection strategy. [Kaarel Moppel]
+
+  Weighed average on price + eviction rate
+- Add tests for instance_type_selection.py. [Kaarel Moppel]
+- Rename InstanceTypeSelectionDefault to InstanceTypeSelectionCheapest.
+  [Kaarel Moppel]
+- Eviction rate strategy working. [Kaarel Moppel]
+
+  Also show the expected eviction rate when we have the information
+- WIP refactor selection strategy. [Kaarel Moppel]
+- Add AWS public Spot eviction rate parsing. [Kaarel Moppel]
+
+  Based on https://spot-bid-advisor.s3.amazonaws.com/spot-advisor-data.json
+- README - reduce quickstart --check-price output a bit for readability.
+  [Kaarel Moppel]
+
+  Also hint that --region can be a regex in --help
+- README - mention port 22 SG access pre-requisite in Quickstart.
+  [Kaarel Moppel]
+
+  Remove port 5432 mention as not a hard requirement for successful Ansible setup
+- README - mention port 22 / 5432 SG access pre-requisite in Quickstart.
+  [Kaarel Moppel]
+
+
+0.8.8 (2024-11-19)
+------------------
+- Release: version 0.8.8 🚀 [Kaarel Moppel]
 - README - mention "assume role" based authentication option. [Kaarel
   Moppel]
 
