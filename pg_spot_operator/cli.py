@@ -670,9 +670,13 @@ def main():  # pragma: no cover
 
     logging.basicConfig(
         format=(
-            "%(asctime)s %(levelname)s %(threadName)s %(filename)s:%(lineno)d %(message)s"
-            if args.verbose
-            else "%(asctime)s %(levelname)s %(message)s"
+            "%(message)s"
+            if args.check_price
+            else (
+                "%(asctime)s %(levelname)s %(threadName)s %(filename)s:%(lineno)d %(message)s"
+                if args.verbose
+                else "%(asctime)s %(levelname)s %(message)s"
+            )
         ),
         level=(logging.DEBUG if args.verbose else logging.INFO),
     )
