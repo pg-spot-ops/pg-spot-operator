@@ -924,6 +924,7 @@ def do_main_loop(
     while True:
         loops += 1
         logger.debug("Starting main loop iteration %s ...", loops)
+        loop_errors = False
 
         try:
             # Step 0 - load manifest from CLI args / full adhoc ENV manifest or manifest file
@@ -1172,8 +1173,9 @@ def do_main_loop(
             exit(0)
         except Exception:
             logger.exception("Exception on main loop")
+            loop_errors = True
 
-        if cli_connstr_output_only:
+        if cli_connstr_output_only and not loop_errors:
             if m.vm_only:
                 print(get_ssh_connstr(m))
             else:
