@@ -103,6 +103,15 @@ class ArgumentParser(Tap):
     ram_min: int = int(os.getenv("PGSO_RAM_MIN", "0"))
     storage_min: int = int(os.getenv("PGSO_STORAGE_MIN", "0"))
     storage_type: str = os.getenv("PGSO_STORAGE_TYPE", "network")
+    volume_type: str = os.getenv(
+        "PGSO_VOLUME_TYPE", "gp3"
+    )  # gp2, gp3, io1, io2
+    volume_iops: int = int(
+        os.getenv("PGSO_VOLUME_IOPS", "0")
+    )  # max. gp2/gp3=16K, io1=64K, io2=256K, gp3 def=3K
+    volume_throughput: int = int(
+        os.getenv("PGSO_VOLUME_THROUGHPUT", "0")
+    )  # gp3 def=125, max=1000, relevant only for gp3
     expiration_date: str = os.getenv(
         "PGSO_EXPIRATION_DATE", ""
     )  # ISO 8601 datetime
@@ -219,6 +228,9 @@ def compile_manifest_from_cmdline_params(
     m.vm.ram_min = args.ram_min
     m.vm.storage_min = args.storage_min
     m.vm.storage_type = args.storage_type
+    m.vm.volume_type = args.volume_type
+    m.vm.volume_iops = args.volume_iops
+    m.vm.volume_throughput = args.volume_throughput
     if args.instance_types:
         for ins_type in args.instance_types.split(","):
             m.vm.instance_types.append(ins_type)

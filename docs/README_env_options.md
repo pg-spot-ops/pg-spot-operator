@@ -35,6 +35,9 @@
 
 * **--storage-min / PGSO_STORAGE_MIN** Minimal disk size (in GB) to allocate. For local storage instances the actual size might be bigger.
 * **--storage-type / PGSO_STORAGE_TYPE** (Default: network) Allowed values: \[ network | local \].
+* **--volume-type / VOLUME_TYPE** Allowed values: \[ gp2, gp3\*, io1, io2 \]
+* **--volume-iops / VOLUME_IOPS** Set IOPS explicitly. Max. gp2/gp3=16K, io1=64K, io2=256K, gp3 def=3K
+* **--volume-throughput / VOLUME_THROUGHPUT** Set gp3 volume throughput explicitly in MiB/s. Max 1000. Default 125.
 * **--cpu-min / PGSO_CPU_MIN** Minimal CPUs to consider an instance type suitable
 * **--cpu-max / PGSO_CPU_MAX** Maximum CPUs to consider an instance type suitable. Required for the random selection strategy to cap the costs. 
 * **--ram-min / PGSO_RAM_MIN** Minimal RAM (in GB) to consider an instance type suitable

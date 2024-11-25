@@ -29,8 +29,7 @@ vm:
   volume_type: gp3  # gp2, gp3, io1, io2 Details: https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html
 #  volume_iops:  # For provisioned / paid IOPS, EBS gp3 default is 3000
                 # gp2 / gp3 max 16K, io1 64K, io2 256K
-#  volume_throughput:  # MBs. For provisioned / paid throughput for gp3, io1 and io2. gp3 default is 125
-                      # gp2 max 250, gp3 / io1 max 1000, io2 max 4000. PS Not that not all instance types can achieve max!
+#  volume_throughput:  # MBs. For provisioned / paid throughput for gp3. Default is 125, max 1000.
   detailed_monitoring: false  # As incurs extra costs
 os:
   unattended_security_upgrades: true  # Might result in nightly restarts
