@@ -14,6 +14,7 @@ from pg_spot_operator.constants import MF_SEC_VM_STORAGE_TYPE_LOCAL
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.operator import clean_up_old_logs_if_any
 from pg_spot_operator.util import (
+    extract_region_from_az,
     get_aws_region_code_to_name_mapping,
     region_regex_to_actual_region_codes,
     try_download_ansible_from_github,
@@ -206,6 +207,8 @@ def compile_manifest_from_cmdline_params(
     m.instance_name = args.instance_name
     m.region = args.region
     m.availability_zone = args.zone
+    if not m.region and m.availability_zone:
+        m.region = extract_region_from_az(m.availability_zone)
     m.expiration_date = args.expiration_date
     m.assign_public_ip = args.assign_public_ip
     m.setup_finished_callback = args.setup_finished_callback
@@ -501,7 +504,7 @@ def ensure_single_instance_running(instance_name: str):
 
 
 def resolve_manifest_and_display_price(
-    m: InstanceManifest | None, user_manifest_path: str, region: str
+    m: InstanceManifest | None, user_manifest_path: str
 ) -> None:
     if not m and user_manifest_path:
         with open(
@@ -527,13 +530,13 @@ def resolve_manifest_and_display_price(
         )
         use_boto3 = True
 
-    if is_explicit_aws_region_code(region):
-        regions = [region]
+    if is_explicit_aws_region_code(m.region):
+        regions = [m.region]
     else:
-        regions = region_regex_to_actual_region_codes(region)
+        regions = region_regex_to_actual_region_codes(m.region)
         if not regions:
             logger.error(
-                "Could not resolve region regex '%s' to any regions", region
+                "Could not resolve region regex '%s' to any regions", m.region
             )
             exit(1)
         logger.info(
@@ -554,13 +557,13 @@ def resolve_manifest_and_display_price(
     cheapest_skus = sorted(cheapest_skus, key=lambda x: x.monthly_spot_price)
     cheapest_skus = cheapest_skus[:3]
 
-    if not is_explicit_aws_region_code(region):
+    if not is_explicit_aws_region_code(m.region):
         logger.info(
             "Top 3 cheapest regions pricing info for selection strategy '%s'",
             m.vm.instance_selection_strategy,
         )
     for sku in cheapest_skus:
-        if not is_explicit_aws_region_code(region):
+        if not is_explicit_aws_region_code(m.region):
             logger.info("===== REGION %s =====", sku.region)
         logger.info(
             "Instance type selected for region %s: %s (%s)",
@@ -743,9 +746,7 @@ def main():  # pragma: no cover
             env_manifest.expiration_date = "now"
 
     if args.check_price:
-        resolve_manifest_and_display_price(
-            env_manifest, args.manifest_path, args.region
-        )
+        resolve_manifest_and_display_price(env_manifest, args.manifest_path)
         exit(0)
 
     init_cmdb_and_apply_schema_migrations_if_needed(args)
