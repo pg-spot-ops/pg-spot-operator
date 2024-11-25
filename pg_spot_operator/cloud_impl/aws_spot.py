@@ -571,7 +571,7 @@ def get_all_active_operator_instances_from_region(
     return instances
 
 
-@timed_cache(seconds=10)
+@timed_cache(seconds=5)
 def get_backing_vms_for_instances_if_any(
     region: str, instance_name: str
 ) -> list[dict]:

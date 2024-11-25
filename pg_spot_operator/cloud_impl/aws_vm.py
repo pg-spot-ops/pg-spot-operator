@@ -489,7 +489,7 @@ def ec2_launch_instance(
     logger.debug(
         f"New {market_type} {instance_type} instance {i_id} launched in AZ {i_az}"
     )
-    logger.debug("Waiting for instance 'runnable' state (timeout 300s) ...")
+    logger.debug("Waiting for instance 'running' state (timeout 300s) ...")
 
     resp: dict = {}
     i_desc: dict = {}

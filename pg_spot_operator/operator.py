@@ -1074,9 +1074,12 @@ def do_main_loop(
                     m, prev_success_manifest
                 )
                 if main_hw_reqs_changed:
-                    backing_ins_ids = get_backing_vms_for_instances_if_any(
+                    backing_instances = get_backing_vms_for_instances_if_any(
                         m.region, m.instance_name
                     )
+                    backing_ins_ids = [
+                        x["InstanceId"] for x in backing_instances
+                    ]
                     if backing_ins_ids:
                         if dry_run:
                             logger.warning(
@@ -1091,7 +1094,10 @@ def do_main_loop(
                             terminate_instances_in_region(
                                 m.region, backing_ins_ids
                             )
-                            logger.info("OK - terminated")
+                            logger.info("OK - terminated. Sleeping 5s ...")
+                            time.sleep(
+                                5
+                            )  # As get_backing_vms_for_instances_if_any cached for 5s
                     else:
                         logger.debug(
                             "HW reqs change detected but no backing VM found"
