@@ -103,6 +103,15 @@ class ArgumentParser(Tap):
     ram_min: int = int(os.getenv("PGSO_RAM_MIN", "0"))
     storage_min: int = int(os.getenv("PGSO_STORAGE_MIN", "0"))
     storage_type: str = os.getenv("PGSO_STORAGE_TYPE", "network")
+    volume_type: str = os.getenv(
+        "PGSO_VOLUME_TYPE", "gp3"
+    )  # gp2, gp3, io1, io2
+    volume_iops: int = int(
+        os.getenv("PGSO_VOLUME_IOPS", "0")
+    )  # max. gp2/gp3=16K, io1=64K, io2=256K, gp3 def=3K
+    volume_throughput: int = int(
+        os.getenv("PGSO_VOLUME_THROUGHPUT", "0")
+    )  # gp3 def=125, max=1000, relevant only for gp3
     expiration_date: str = os.getenv(
         "PGSO_EXPIRATION_DATE", ""
     )  # ISO 8601 datetime
