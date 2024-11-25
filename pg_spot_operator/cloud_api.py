@@ -71,61 +71,70 @@ def resolve_hardware_requirements_to_instance_types(
     ret: list[InstanceTypeInfo] = []
 
     for region in regions or [m.region]:
-        logger.debug("Processing region %s ...", region)
-        if use_boto3:
-            all_boto3_instance_types_for_region = (
-                get_all_ec2_spot_instance_types(
-                    region,
-                    with_local_storage_only=(
-                        m.vm.storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
-                    ),
-                )
-            )
-            all_regional_spots = boto3_api_instance_list_to_instance_type_info(
-                region, all_boto3_instance_types_for_region
-            )
-        else:
-            all_instances_for_region = (
-                get_all_instance_types_from_aws_regional_pricing_info(
-                    region, get_aws_static_ondemand_pricing_info(region)
-                )
-            )
-            all_spot_instances_for_region_with_price = (
-                get_spot_instance_types_with_price_from_s3_pricing_json(
-                    region, get_spot_pricing_from_public_json()
-                )
-            )
-            all_regional_spots = []
-            for x in all_instances_for_region:
-                if all_spot_instances_for_region_with_price.get(
-                    x.instance_type
-                ):
-                    x.hourly_spot_price = (
-                        all_spot_instances_for_region_with_price[
-                            x.instance_type
-                        ]
+        try:
+            logger.debug("Processing region %s ...", region)
+            if use_boto3:
+                all_boto3_instance_types_for_region = (
+                    get_all_ec2_spot_instance_types(
+                        region,
+                        with_local_storage_only=(
+                            m.vm.storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
+                        ),
                     )
-                    all_regional_spots.append(x)
+                )
+                all_regional_spots = (
+                    boto3_api_instance_list_to_instance_type_info(
+                        region, all_boto3_instance_types_for_region
+                    )
+                )
+            else:
+                all_instances_for_region = (
+                    get_all_instance_types_from_aws_regional_pricing_info(
+                        region, get_aws_static_ondemand_pricing_info(region)
+                    )
+                )
+                all_spot_instances_for_region_with_price = (
+                    get_spot_instance_types_with_price_from_s3_pricing_json(
+                        region, get_spot_pricing_from_public_json()
+                    )
+                )
+                all_regional_spots = []
+                for x in all_instances_for_region:
+                    if all_spot_instances_for_region_with_price.get(
+                        x.instance_type
+                    ):
+                        x.hourly_spot_price = (
+                            all_spot_instances_for_region_with_price[
+                                x.instance_type
+                            ]
+                        )
+                        all_regional_spots.append(x)
 
-        ret.extend(
-            aws_spot.resolve_hardware_requirements_to_instance_types(
-                all_regional_spots,
+                ret.extend(
+                    aws_spot.resolve_hardware_requirements_to_instance_types(
+                        all_regional_spots,
+                        region,
+                        use_boto3=use_boto3,
+                        availability_zone=m.availability_zone,
+                        cpu_min=m.vm.cpu_min,
+                        cpu_max=m.vm.cpu_max,
+                        ram_min=m.vm.ram_min,
+                        architecture=m.vm.cpu_architecture,
+                        storage_type=m.vm.storage_type,
+                        storage_min=m.vm.storage_min,
+                        allow_burstable=m.vm.allow_burstable,
+                        storage_speed_class=m.vm.storage_speed_class,
+                        instance_types=m.vm.instance_types,
+                        instance_types_to_avoid=skus_to_avoid,
+                        instance_selection_strategy=m.vm.instance_selection_strategy,
+                    )
+                )
+        except Exception as e:
+            logger.error(
+                "Failed to resolve instance types from region %s: %s",
                 region,
-                use_boto3=use_boto3,
-                availability_zone=m.availability_zone,
-                cpu_min=m.vm.cpu_min,
-                cpu_max=m.vm.cpu_max,
-                ram_min=m.vm.ram_min,
-                architecture=m.vm.cpu_architecture,
-                storage_type=m.vm.storage_type,
-                storage_min=m.vm.storage_min,
-                allow_burstable=m.vm.allow_burstable,
-                storage_speed_class=m.vm.storage_speed_class,
-                instance_types=m.vm.instance_types,
-                instance_types_to_avoid=skus_to_avoid,
-                instance_selection_strategy=m.vm.instance_selection_strategy,
+                e,
             )
-        )
     return ret
 
 
