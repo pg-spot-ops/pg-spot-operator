@@ -17,7 +17,7 @@ vault_password_file: /tmp/vault_password_file # If Ansible encrypted strings are
 vm:
   host: 192.168.121.221  # Target VM override (local testing)
   login_user: vagrant  # Target VM override (local testing)
-  cpu_architecture: arm  # [ arm | amd | x86 | intel ]  # amd | x86 | intel all resolve to same -> non-arm
+  cpu_arch: arm  # [ arm | amd | x86 | intel ]  # amd | x86 | intel all resolve to same -> non-arm
   cpu_min: 2  # Optional
   cpu_max: 8  # Optional
   ram_min: 4  # Optional

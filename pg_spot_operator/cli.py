@@ -121,7 +121,7 @@ class ArgumentParser(Tap):
     assign_public_ip: bool = str_to_bool(
         os.getenv("PGSO_ASSIGN_PUBLIC_IP", "true")
     )
-    cpu_architecture: str = os.getenv("PGSO_CPU_ARCHITECTURE", "")
+    cpu_arch: str = os.getenv("PGSO_CPU_ARCH", "")  # [ arm | x86 ]
     ssh_keys: str = os.getenv("PGSO_SSH_KEYS", "")  # Comma separated
     tuning_profile: str = os.getenv("PGSO_TUNING_PROFILE", "default")
     user_tags: str = os.getenv("PGSO_USER_TAGS", "")  # key=val,key2=val2
@@ -222,7 +222,7 @@ def compile_manifest_from_cmdline_params(
     m.assign_public_ip = args.assign_public_ip
     m.setup_finished_callback = args.setup_finished_callback
     m.vm_only = args.vm_only
-    m.vm.cpu_architecture = args.cpu_architecture
+    m.vm.cpu_arch = args.cpu_arch
     m.vm.cpu_min = args.cpu_min
     m.vm.cpu_max = args.cpu_max
     m.vm.ram_min = args.ram_min

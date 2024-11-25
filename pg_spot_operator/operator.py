@@ -132,7 +132,7 @@ def preprocess_ensure_vm_action(
                 "TotalSizeInGB", 0
             ),
         )
-    m.vm.cpu_architecture = sku.arch
+    m.vm.cpu_arch = sku.arch
 
     if not sku.monthly_spot_price:
         sku.monthly_spot_price = round(

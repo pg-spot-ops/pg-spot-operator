@@ -64,7 +64,7 @@ class SectionPostgresql(BaseModel):
 
 
 class SectionVm(BaseModel):
-    cpu_architecture: str = ""
+    cpu_arch: str = ""
     allow_burstable: bool = (
         False  # T-class instances tend to get killed more often, thus exclude by default
     )

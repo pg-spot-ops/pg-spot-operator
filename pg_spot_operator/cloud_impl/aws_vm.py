@@ -362,7 +362,7 @@ def ec2_launch_instance(
     region: str = m.region
     availability_zone: str = m.availability_zone
     user_tags: dict = m.user_tags
-    architecture: str = m.vm.cpu_architecture
+    architecture: str = m.vm.cpu_arch
     instance_type: str = m.vm.instance_types[0]
     key_pair_name: str = m.aws.key_pair_name
     security_group_ids: list[str] = m.aws.security_group_ids

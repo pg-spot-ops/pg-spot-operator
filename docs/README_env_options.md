@@ -43,7 +43,7 @@
 * **--ram-min / PGSO_RAM_MIN** Minimal RAM (in GB) to consider an instance type suitable
 * **--selection-strategy / PGSO_SELECTION_STRATEGY** (Default: balanced) Allowed values: \[ balanced | cheapest | eviction-rate | random \]. Random can work better when getting a lot of evictions. 
 * **--instance-types / PGSO_INSTANCE_TYPES** To explicitly control the instance type selection. E.g. "i3.xlarge,i3.2xlarge"
-* **--cpu-architecture / PGSO_CPU_ARCHITECTURE** arm / intel / amd / x86
+* **--cpu-architecture / PGSO_CPU_ARCH** arm / intel / amd / x86
 
 # Postgres
 
