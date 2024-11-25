@@ -117,26 +117,25 @@ def resolve_hardware_requirements_to_instance_types(
                             ]
                         )
                         all_regional_spots.append(x)
-
-                ret.extend(
-                    aws_spot.resolve_hardware_requirements_to_instance_types(
-                        all_regional_spots,
-                        region,
-                        use_boto3=use_boto3,
-                        availability_zone=m.availability_zone,
-                        cpu_min=m.vm.cpu_min,
-                        cpu_max=m.vm.cpu_max,
-                        ram_min=m.vm.ram_min,
-                        architecture=m.vm.cpu_architecture,
-                        storage_type=m.vm.storage_type,
-                        storage_min=m.vm.storage_min,
-                        allow_burstable=m.vm.allow_burstable,
-                        storage_speed_class=m.vm.storage_speed_class,
-                        instance_types=m.vm.instance_types,
-                        instance_types_to_avoid=skus_to_avoid,
-                        instance_selection_strategy=m.vm.instance_selection_strategy,
-                    )
+            ret.extend(
+                aws_spot.resolve_hardware_requirements_to_instance_types(
+                    all_regional_spots,
+                    region,
+                    use_boto3=use_boto3,
+                    availability_zone=m.availability_zone,
+                    cpu_min=m.vm.cpu_min,
+                    cpu_max=m.vm.cpu_max,
+                    ram_min=m.vm.ram_min,
+                    architecture=m.vm.cpu_architecture,
+                    storage_type=m.vm.storage_type,
+                    storage_min=m.vm.storage_min,
+                    allow_burstable=m.vm.allow_burstable,
+                    storage_speed_class=m.vm.storage_speed_class,
+                    instance_types=m.vm.instance_types,
+                    instance_types_to_avoid=skus_to_avoid,
+                    instance_selection_strategy=m.vm.instance_selection_strategy,
                 )
+            )
         except Exception as e:
             noinfo_regions.append(region)
             logger.error(
