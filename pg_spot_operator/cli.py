@@ -306,7 +306,7 @@ def get_manifest_from_args(args: ArgumentParser) -> InstanceManifest | None:
 def check_cli_args_valid(args: ArgumentParser):
     fixed_vm = bool(args.vm_login_user and args.vm_host)
     if not fixed_vm:
-        if not args.region and not args.zone:
+        if not args.region and not args.zone and not args.check_price:
             logger.error("--region input expected")
             exit(1)
         if not args.instance_name and not (
