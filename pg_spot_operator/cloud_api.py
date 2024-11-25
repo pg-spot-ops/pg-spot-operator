@@ -69,6 +69,7 @@ def resolve_hardware_requirements_to_instance_types(
         [x for x in m.vm.dict().items() if x[1] is not None],
     )
     ret: list[InstanceTypeInfo] = []
+    noinfo_regions: list[str] = []
 
     for region in regions or [m.region]:
         try:
@@ -93,11 +94,18 @@ def resolve_hardware_requirements_to_instance_types(
                         region, get_aws_static_ondemand_pricing_info(region)
                     )
                 )
+                if not all_instances_for_region:
+                    noinfo_regions.append(region)
+                    continue
                 all_spot_instances_for_region_with_price = (
                     get_spot_instance_types_with_price_from_s3_pricing_json(
                         region, get_spot_pricing_from_public_json()
                     )
                 )
+                if not all_spot_instances_for_region_with_price:
+                    noinfo_regions.append(region)
+                    continue
+
                 all_regional_spots = []
                 for x in all_instances_for_region:
                     if all_spot_instances_for_region_with_price.get(
@@ -130,11 +138,16 @@ def resolve_hardware_requirements_to_instance_types(
                     )
                 )
         except Exception as e:
+            noinfo_regions.append(region)
             logger.error(
                 "Failed to resolve instance types from region %s: %s",
                 region,
                 e,
             )
+    if noinfo_regions:
+        logger.warning(
+            "WARNING - failed to inquiry regions: %s", noinfo_regions
+        )
     return ret
 
 
