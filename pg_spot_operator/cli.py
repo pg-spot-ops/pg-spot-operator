@@ -10,6 +10,7 @@ from pg_spot_operator import cloud_api, cmdb, manifests, operator
 from pg_spot_operator.cloud_impl.aws_client import set_access_keys
 from pg_spot_operator.cloud_impl.cloud_util import is_explicit_aws_region_code
 from pg_spot_operator.cmdb_impl import schema_manager
+from pg_spot_operator.constants import MF_SEC_VM_STORAGE_TYPE_LOCAL
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.operator import clean_up_old_logs_if_any
 from pg_spot_operator.util import (
@@ -304,21 +305,31 @@ def get_manifest_from_args(args: ArgumentParser) -> InstanceManifest | None:
 
 def check_cli_args_valid(args: ArgumentParser):
     fixed_vm = bool(args.vm_login_user and args.vm_host)
-    if args.instance_name and not fixed_vm:
+    if not fixed_vm:
         if not args.region and not args.zone:
-            logger.error("--region input expected for single args")
+            logger.error("--region input expected")
             exit(1)
-        if not args.instance_name:
-            logger.error("--instance-name input expected for single args")
-            exit(1)
-        if not args.storage_min and not (
-            args.teardown or args.teardown_region
+        if not args.instance_name and not (
+            args.check_price or args.teardown_region
         ):
-            logger.error("--storage-min input expected for single args")
+            logger.error("--instance-name input expected")
             exit(1)
-        if args.region and len(args.region.split("-")) != 3:
+        if (
+            args.storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
+            and not args.storage_min
+            and not (args.teardown or args.teardown_region)
+        ):
             logger.error(
-                """Unexpected --region format, run "PAGER= aws account list-regions --query 'Regions[*].[RegionName]' --output text" for a complete listing""",
+                "--storage-min input expected for --storage-type=local"
+            )
+            exit(1)
+        if (
+            args.region
+            and not args.check_price
+            and len(args.region.split("-")) != 3
+        ):
+            logger.error(
+                """Unexpected --region format, run --list-regions for a complete region listing""",
             )
             exit(1)
         if args.zone and len(args.zone.split("-")) not in (3, 5):
@@ -326,9 +337,11 @@ def check_cli_args_valid(args: ArgumentParser):
                 """Unexpected --zone format, expecting smth like: eu-west-1b or us-west-2-lax-1a""",
             )
             exit(1)
-    if args.teardown_region and not args.region:
+    if args.teardown_region and (
+        not args.region or len(args.region.split("-")) != 3
+    ):
         logger.error(
-            """Unexpected --teardown-region requires --region set""",
+            """--teardown-region requires explicit --region set""",
         )
         exit(1)
 
@@ -685,10 +698,10 @@ def main():  # pragma: no cover
         args.print_help()
         exit(0)
 
-    check_cli_args_valid(args)
-
     if args.list_regions:
         list_regions_and_exit()
+
+    check_cli_args_valid(args)
 
     if args.check_manifest:
         check_manifest_and_exit(args)
