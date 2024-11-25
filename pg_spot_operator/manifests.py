@@ -175,7 +175,7 @@ class InstanceManifest(BaseModel):
     instance_name: str
     # Optional fields
     assign_public_ip: bool = True
-    floating_ips: bool = (
+    ip_floating: bool = (
         True  # If False NIC resources can be left hanging if not cleaned up properly
     )
     description: str = ""
