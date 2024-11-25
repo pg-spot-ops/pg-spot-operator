@@ -2,9 +2,9 @@
 - block:
   - name: Assert admin pass
     ansible.builtin.assert:
-      that: postgresql.admin_user_password|d('')
+      that: postgres.admin_user_password|d('')
       quiet: true
-    when: postgresql.admin_user|d('')
+    when: postgres.admin_user|d('')
 
   - name: Ensure postgres started
     ansible.builtin.service: name=postgresql state=started
@@ -14,12 +14,12 @@
     become_user: postgres
     community.postgresql.postgresql_user:
       state: present
-      name: "{{ postgresql.admin_user }}"
-      password: "{{ postgresql.admin_user_password }}"
-      role_attr_flags: "{{ postgresql.admin_is_superuser | d(False) | ternary('SUPERUSER', 'NOSUPERUSER,CREATEDB,CREATEROLE') }}"
+      name: "{{ postgres.admin_user }}"
+      password: "{{ postgres.admin_user_password }}"
+      role_attr_flags: "{{ postgres.admin_is_superuser | d(False) | ternary('SUPERUSER', 'NOSUPERUSER,CREATEDB,CREATEROLE') }}"
       login_host: /var/run/postgresql
       login_port: "5432"
-    when: postgresql.admin_user | d('') | length > 0
+    when: postgres.admin_user | d('') | length > 0
 
   - name: Create the "app" user if requested
     become: yes
@@ -27,7 +27,7 @@
     community.postgresql.postgresql_privs:
       database: postgres
       type: group
-      role: "{{ postgresql.admin_user }}"
+      role: "{{ postgres.admin_user }}"
       objs: >-
         {{ non_su_roles_17 if postgres_version|int >= 17
           else  non_su_roles_16 if postgres_version|int >= 16
@@ -35,7 +35,7 @@
           else non_su_roles_14 }}
       login_host: /var/run/postgresql
       login_port: "5432"
-    when: not postgresql.admin_is_superuser|d(False)
+    when: not postgres.admin_is_superuser|d(False)
 
   - name: Add DB privs to non-superuser
     become: yes
@@ -43,14 +43,14 @@
     community.postgresql.postgresql_privs:
       database: postgres
       type: database
-      role: "{{ postgresql.admin_user }}"
+      role: "{{ postgres.admin_user }}"
       privs: ALL
       login_host: /var/run/postgresql
       login_port: "5432"
-    when: not postgresql.admin_is_superuser|d(False) and item
+    when: not postgres.admin_is_superuser|d(False) and item
     loop:
       - 'postgres'
-      - "{{ postgresql.app_db_name | d('') }}"
+      - "{{ postgres.app_db_name | d('') }}"
 
   - name: Add PUBLIC schema privs to non-superuser
     become: yes
@@ -59,34 +59,34 @@
       db: "{{ item }}"
       login_host: /var/run/postgresql
       login_port: "5432"
-      query: "GRANT ALL ON SCHEMA PUBLIC TO {{ postgresql.admin_user }}"
+      query: "GRANT ALL ON SCHEMA PUBLIC TO {{ postgres.admin_user }}"
     when: item
     loop:
       - 'postgres'
-      - "{{ postgresql.app_db_name | d('') }}"
+      - "{{ postgres.app_db_name | d('') }}"
 
-  when: postgresql.admin_user | d('')
+  when: postgres.admin_user | d('')
 
 - name: Create the "app" DB if requested
   become: true
   become_user: postgres
   community.postgresql.postgresql_db:
     state: present
-    name: "{{ postgresql.app_db_name }}"
-    owner: "{{ postgresql.admin_user | default('') or 'postgres' }}"
+    name: "{{ postgres.app_db_name }}"
+    owner: "{{ postgres.admin_user | default('') or 'postgres' }}"
     template: template1
     login_host: /var/run/postgresql
     login_port: "5432"
-  when: postgresql.app_db_name | d('') | length > 0
+  when: postgres.app_db_name | d('') | length > 0
 
 - name: Add user listed extensions to the default or app db
   become: true
   become_user: postgres
   community.postgresql.postgresql_ext:
-    db: "{{ postgresql.app_db_name | d('') or 'postgres' }}"
+    db: "{{ postgres.app_db_name | d('') or 'postgres' }}"
     name: "{{ item }}"
     login_host: /var/run/postgresql
     login_port: "5432"
     cascade: true
-  loop: "{{ postgresql.extensions }}"
-  when: postgresql.extensions | d([])
+  loop: "{{ postgres.extensions }}"
+  when: postgres.extensions | d([])

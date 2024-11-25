@@ -88,7 +88,7 @@ class ArgumentParser(Tap):
     instance_name: str = os.getenv(
         "PGSO_INSTANCE_NAME", ""
     )  # If set other below params become relevant
-    postgresql_version: int = int(os.getenv("PGSO_POSTGRESQL_VERSION", "16"))
+    postgres_version: int = int(os.getenv("PGSO_POSTGRES_VERSION", "16"))
     instance_types: str = os.getenv(
         "PGSO_INSTANCE_TYPES", ""
     )  # i3.xlarge,i3.2xlarge
@@ -260,20 +260,20 @@ def compile_manifest_from_cmdline_params(
         for tag_set in args.user_tags.split(","):
             key_val = tag_set.split("=")
             m.user_tags[key_val[0]] = key_val[1]
-    m.postgresql.version = args.postgresql_version
-    m.postgresql.admin_user = args.admin_user
-    m.postgresql.admin_user_password = args.admin_user_password
-    m.postgresql.admin_is_superuser = str_to_bool(args.admin_is_superuser)
-    m.postgresql.app_db_name = args.app_db_name
-    m.postgresql.tuning_profile = args.tuning_profile
+    m.postgres.version = args.postgres_version
+    m.postgres.admin_user = args.admin_user
+    m.postgres.admin_user_password = args.admin_user_password
+    m.postgres.admin_is_superuser = str_to_bool(args.admin_is_superuser)
+    m.postgres.app_db_name = args.app_db_name
+    m.postgres.tuning_profile = args.tuning_profile
     if args.shared_preload_libraries:
-        m.postgresql.config_lines.append(
+        m.postgres.config_lines.append(
             "shared_preload_libraries = '"
             + args.shared_preload_libraries.rstrip("'").lstrip("'")
             + "'"
         )
     if args.extensions:
-        m.postgresql.extensions = args.extensions.strip().split(",")
+        m.postgres.extensions = args.extensions.strip().split(",")
     if args.os_extra_packages:
         m.os.extra_packages = args.os_extra_packages.strip().split(",")
 

@@ -6,7 +6,7 @@ cloud: aws
 region: eu-north-1
 instance_name: hello-aws
 #expiration_date: now
-postgresql:
+postgres:
   version: 16
   admin_user: admin
   admin_user_password: seitselehma

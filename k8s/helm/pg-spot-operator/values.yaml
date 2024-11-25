@@ -51,7 +51,7 @@ env:
     value: local
   - name: PGSO_CPU_MIN
     value: 1
-  - name: PGSO_POSTGRESQL_VERSION
+  - name: PGSO_POSTGRES_VERSION
     value: 16
   - name: PGSO_AWS_ACCESS_KEY_ID
     value: aaaa

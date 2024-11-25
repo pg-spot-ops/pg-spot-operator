@@ -2,8 +2,8 @@
 api_version: v1  # Required
 kind: pg_spot_operator_instance  # Required
 cloud: aws  # Required
-region: eu-south-2  # Optional if availability_zone set
-availability_zone: eu-south-2b  # Optional
+#region: eu-south-2  # Optional if availability_zone set
+#availability_zone: eu-south-2b  # Optional
 instance_name: hello-aws  # Required
 description: My play instance # Optional
 assign_public_ip: true  # Default: true. False = internal / VPC access only. PS Public IPs cost ~$4 per month.
@@ -42,7 +42,7 @@ os:
 user_tags:  # In addition to user tags the engine will add a pg-spot-operator-tag + pg-spot-operator-expiration-date
             # in case expiration_date set
   app: backend
-postgresql:
+postgres:
   version: 16  # Optional. Minimum supported version is v14. Defaults to latest stable
   admin_is_superuser: true
   admin_user: admin

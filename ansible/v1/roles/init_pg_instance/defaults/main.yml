@@ -15,7 +15,7 @@ postgresql:
     - "cluster_name = 'spot'"
 
 # Not exposed in the manifest currently
-postgres_version: "{{ postgresql.version | d(16) }}"
+postgres_version: "{{ postgres.version | d(16) }}"
 postgres_cluster_name: "{{ instance_name | d('') | replace('-', '_') or def.instance_name }}"  # Dashes don't work with pg_createcluster
 postgres_base_settings:
   - "archive_mode = on"

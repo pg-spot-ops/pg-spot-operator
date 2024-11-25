@@ -24,7 +24,7 @@
 
 ## Non-features
 
-* No automated major version upgrades (stop the engine, do some magic, update the manifest `postgresql.version`)
+* No automated major version upgrades (stop the engine, do some magic, update the manifest `postgres.version`)
 * No persistent state keeping by default - relying on a local SQLite DB file. User can solve that though by setting
   `--config-dir` to some persistent volume for example. Without that some superfluous work will be performed and
   instance state change and pricing history will be lost, in case of the engine node loss.

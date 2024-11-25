@@ -17,7 +17,7 @@
 * **--region / PGSO_REGION** Required for modes that actually do something, as we don't assume a persistent config store. Optional if --zone set.
   *PS* Note that it can also be a regex in `--check-price` mode, to select the cheapest region of a continent, e.g. 'eu-'
 * **--zone / PGSO_ZONE** To fix the placement within the region. Not recommended, as prices differ considerably within regions' zones.
-* **--postgresql-version / PGSO_POSTGRESQL_VERSION** (Default: 16)
+* **--postgres-version / PGSO_POSTGRES_VERSION** (Default: 16)
 * **--manifest-path / PGSO_MANIFEST_PATH** Full user manifest YAML path if not using the CLI / single params
 * **--manifest / PGSO_MANIFEST** Full manifest input as YAML text
 * **--teardown / PGSO_TEARDOWN** Delete VM and any other created resources for the give instance

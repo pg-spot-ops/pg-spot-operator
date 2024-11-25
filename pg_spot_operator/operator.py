@@ -471,20 +471,17 @@ echo "Done at `date`"
 def apply_tuning_profile(
     mf: InstanceManifest, tuning_profiles_path: str = "./tuning_profiles"
 ) -> list[str]:
-    """Executes the tuning profile if exists and returns lines that would be added to postgresql.config_lines"""
-    if (
-        not mf.postgresql.tuning_profile
-        or mf.postgresql.tuning_profile == "none"
-    ):
+    """Executes the tuning profile if exists and returns lines that would be added to postgres.config_lines"""
+    if not mf.postgres.tuning_profile or mf.postgres.tuning_profile == "none":
         return []
     profile_path_to_run = os.path.join(
         tuning_profiles_path,
-        mf.postgresql.tuning_profile.strip().lower() + ".py",
+        mf.postgres.tuning_profile.strip().lower() + ".py",
     )
     if not os.path.exists(profile_path_to_run):
         logger.warning(
             "Tuning profile %s not found from %s, skipping tuning for instance %s",
-            mf.postgresql.tuning_profile,
+            mf.postgres.tuning_profile,
             profile_path_to_run,
             mf.instance_name,
         )
@@ -510,7 +507,7 @@ def apply_tuning_profile(
             )
 
     tuning_input["cloud"] = mf.cloud
-    tuning_input["postgres_version"] = mf.postgresql.version
+    tuning_input["postgres_version"] = mf.postgres.version
     tuning_input["user_tags"] = mf.user_tags
     logger.debug("Config tuning input: %s", tuning_input)
 
@@ -522,7 +519,7 @@ def apply_tuning_profile(
     if rc != 0:
         logger.warning(
             "Failed to apply tuning profile %s to instance %s. Output: %s",
-            mf.postgresql.tuning_profile,
+            mf.postgres.tuning_profile,
             mf.instance_name,
             output,
         )
@@ -535,12 +532,12 @@ def apply_postgres_config_tuning_to_manifest(
 ) -> None:
     if (
         action == constants.ACTION_INSTANCE_SETUP
-        and m.postgresql.tuning_profile
-        and m.postgresql.tuning_profile.strip().lower() != "none"
+        and m.postgres.tuning_profile
+        and m.postgres.tuning_profile.strip().lower() != "none"
     ):
         logger.info(
             "Applying Postgres tuning profile '%s' to given hardware ...",
-            m.postgresql.tuning_profile,
+            m.postgres.tuning_profile,
         )
         tuned_config_lines = apply_tuning_profile(m)
         logger.info(
@@ -550,13 +547,13 @@ def apply_postgres_config_tuning_to_manifest(
         merged_config_lines = (
             merge_user_and_tuned_non_conflicting_config_params(
                 tuned_config_lines,
-                m.postgresql.config_lines.copy(),
+                m.postgres.config_lines.copy(),
             )
         )
         if merged_config_lines:
-            if "postgresql" not in m.session_vars:
-                m.session_vars["postgresql"] = {}
-            m.session_vars["postgresql"]["config_lines"] = merged_config_lines
+            if "postgres" not in m.session_vars:
+                m.session_vars["postgres"] = {}
+            m.session_vars["postgres"]["config_lines"] = merged_config_lines
 
 
 def clean_up_old_logs_if_any(

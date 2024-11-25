@@ -50,7 +50,7 @@ class SectionAnsible(BaseModel):
     private_key: str = ""
 
 
-class SectionPostgresql(BaseModel):
+class SectionPostgres(BaseModel):
     version: int = DEFAULT_POSTGRES_MAJOR_VER
     tuning_profile: str = "default"
     admin_user: str | None = None
@@ -188,7 +188,7 @@ class InstanceManifest(BaseModel):
     vm_only: bool = False  # No Postgres setup
     is_paused: bool = False
     # *Sections*
-    postgresql: SectionPostgresql = field(default_factory=SectionPostgresql)
+    postgres: SectionPostgres = field(default_factory=SectionPostgres)
     vm: SectionVm = field(default_factory=SectionVm)
     backup: SectionBackup = field(default_factory=SectionBackup)
     os: SectionOs = field(default_factory=SectionOs)
@@ -274,7 +274,7 @@ class InstanceManifest(BaseModel):
         secrets_found = decrypted = 0
         # There are also some secret backup section fields also but they're touched only in Ansible
         secret_fields = [
-            ("postgresql", "admin_user_password"),
+            ("postgres", "admin_user_password"),
             ("aws", "access_key_id"),
             ("aws", "secret_access_key"),
         ]

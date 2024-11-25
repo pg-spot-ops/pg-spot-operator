@@ -6,7 +6,7 @@ adding *timescaledb* to `--extensions` is not enough.
 
 ## Relevant parameters
 
-* --postgresql-version / PGSO_POSTGRESQL_VERSION - Recommended if explicitly enabling extensions   
+* --postgres-version / PGSO_POSTGRES_VERSION - Recommended if explicitly enabling extensions
 * --extensions / PGSO_EXTENSIONS - List of extensions to pre-create during setup via *CREATE EXTENSION*. Not really necessary
   when using a real superuser admin user that has the according powers. 
 * --shared-preload-libraries / PGSO_SHARED_PRELOAD_LIBRARIES - List of extensions to pre-load on Postgres startup
