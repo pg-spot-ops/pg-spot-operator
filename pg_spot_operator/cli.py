@@ -228,6 +228,9 @@ def compile_manifest_from_cmdline_params(
     m.vm.ram_min = args.ram_min
     m.vm.storage_min = args.storage_min
     m.vm.storage_type = args.storage_type
+    m.vm.volume_type = args.volume_type
+    m.vm.volume_iops = args.volume_iops
+    m.vm.volume_throughput = args.volume_throughput
     if args.instance_types:
         for ins_type in args.instance_types.split(","):
             m.vm.instance_types.append(ins_type)
