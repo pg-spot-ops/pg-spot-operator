@@ -154,9 +154,16 @@ PS The SSH key is optional, to be able to access the cloud VM directly from your
 ## Via Python
 
 ```bash
-pipx install pg-spot-operator
 # PS Assuming local AWS CLI is configured!
-pg_spot_operator --region=eu-north-1 --ram-min=16 --storage-min=1000 --storage-type=local --check-price
+pipx install pg-spot-operator
+# Let's run a world-global price check for some in-memory analytics to get some insane $$ value
+# PS in default --storage-type=network mode we though still pay normal price for the EBS volumes
+pg_spot_operator --check-price --ram-min=256
+...
+Main specs - vCPU: 32, RAM: 256 GB, instance storage: EBS only
+Current monthly Spot price for r6a.8xlarge in region ap-south-2: $95.0
+Current Spot vs Ondemand discount rate: -88.5% ($95.0 vs $823.7), approx. 14x to non-HA RDS
+Current expected monthly eviction rate range: <5%
 ```
 
 # Integrating with user applications

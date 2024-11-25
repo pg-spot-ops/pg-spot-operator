@@ -396,7 +396,7 @@ def resolve_hardware_requirements_to_instance_types(
 ) -> list[InstanceTypeInfo]:
     """Returns a price-sorted list"""
     if not all_instances:
-        raise Exception("Need all_instances to select cheapest")
+        raise Exception("Need all_instances set to apply a selection strategy")
 
     logger.debug(
         "Filtering through %s instances types to match HW reqs ...",
