@@ -127,7 +127,7 @@ class ArgumentParser(Tap):
     user_tags: str = os.getenv("PGSO_USER_TAGS", "")  # key=val,key2=val2
     app_db_name: str = os.getenv("PGSO_APP_DB_NAME", "")
     admin_user: str = os.getenv("PGSO_ADMIN_USER", "")
-    admin_password: str = os.getenv("PGSO_ADMIN_USER_PASSWORD", "")
+    admin_password: str = os.getenv("PGSO_ADMIN_PASSWORD", "")
     admin_is_superuser: str = os.getenv("PGSO_ADMIN_IS_SUPERUSER", "false")
     os_extra_packages: str = os.getenv(
         "PGSO_OS_EXTRA_PACKAGES", ""
@@ -385,7 +385,7 @@ def check_cli_args_valid(args: ArgumentParser):
     if args.admin_user or args.admin_password:
         if not (args.admin_user and args.admin_password):
             logger.error(
-                "Both --admin-user / --admin-user-password need to be provided",
+                "Both --admin-user / --admin-password need to be provided",
             )
             exit(1)
     if args.instance_types and "." not in args.instance_types:

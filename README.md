@@ -63,7 +63,7 @@ Groups and ports can be found in the [Security](https://github.com/pg-spot-ops/p
 psql $(pg_spot_operator --region=eu-south-2 --ram-min=128 \
   --storage-min=500 --storage-type=local \
   --instance-name=analytics --connstr-output-only \
-  --admin-user=pgspotops --admin-user-password=topsecret123
+  --admin-user=pgspotops --admin-password=topsecret123
 )
 
 2024-11-19 11:47:32,362 INFO Processing manifest for instance 'analytics' set via CLI / ENV ...

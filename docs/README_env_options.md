@@ -48,7 +48,7 @@
 # Postgres
 
 * **--admin-user / PGSO_ADMIN_USER** If set, a Postgres user for external access is created.
-* **--admin-user-password / PGSO_ADMIN_USER_PASSWORD** Required when --admin-user set. Better make it a strong one for public instances.
+* **--admin-password / PGSO_ADMIN_PASSWORD** Required when --admin-user set. Better make it a strong one for public instances.
 * **--admin-is-superuser / PGSO_ADMIN_IS_SUPERUSER** (Default: false) If set, the --admin-user will be a real unrestricted Postgres superuser (with OS access)
 * **--tuning-profile / PGSO_TUNING_PROFILE** Default: "default". Allowed values: \[ none | default | oltp | analytics | web \].
 * **--app-db-name / PGSO_APP_DB_NAME** If set, an extra DB named --app-db-name will be created 
