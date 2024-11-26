@@ -214,7 +214,9 @@ def compile_manifest_from_cmdline_params(
         cloud="aws",
         kind="pg_spot_operator_instance",
         instance_name=args.instance_name,
-        region=args.region,
+        region=(
+            args.region if args.region else ".*" if args.check_price else ""
+        ),
         availability_zone=args.zone,
     )
 
