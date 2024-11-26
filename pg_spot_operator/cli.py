@@ -122,6 +122,9 @@ class ArgumentParser(Tap):
         os.getenv("PGSO_ASSIGN_PUBLIC_IP", "true")
     )
     cpu_arch: str = os.getenv("PGSO_CPU_ARCH", "")  # [ arm | x86 ]
+    instance_family: str = os.getenv(
+        "PGSO_INSTANCE_FAMILY", ""
+    )  # Regex, e.g. 'r(6|7)'
     ssh_keys: str = os.getenv("PGSO_SSH_KEYS", "")  # Comma separated
     tuning_profile: str = os.getenv("PGSO_TUNING_PROFILE", "default")
     user_tags: str = os.getenv("PGSO_USER_TAGS", "")  # key=val,key2=val2
@@ -234,6 +237,7 @@ def compile_manifest_from_cmdline_params(
     if args.instance_types:
         for ins_type in args.instance_types.split(","):
             m.vm.instance_types.append(ins_type)
+    m.vm.instance_family = args.instance_family
     m.vm.host = args.vm_host
     m.vm.login_user = args.vm_login_user
     m.vm.instance_selection_strategy = args.selection_strategy

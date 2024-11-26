@@ -111,22 +111,23 @@ and feed the output into `--aws-vpc-id`, `--aws-access-key-id` and `--aws-secret
 # General idea
 
 * The user:
-  - Specifies a few key parameters like region, minimum CPUs/RAM and storage size and type (network EBS volumes
-    or local volatile storage) and maybe also the Postgres version (defaults to latest stable). User input can come in 3 forms:
-    - CLI/Env parameters a la `--instance-name`, `--region`, `--cpu-min`, `--storage-min`. Note that in CLI mode not all
+  - Specifies a few key parameters like region (required), and optionally some minimum hardware specs - CPU, RAM, target instance
+  families / generations, or a list of suitable instance types explicitly and for local storage also the min. storage size, and maybe also
+  the Postgres version (defaults to latest stable) and some addon extensions. User input can come in 3 forms:
+    - CLI/Env parameters a la `--region`, `--instance-name`, `--ram-min`, `--assign-public-ip`. Note that in CLI mode not all
       features can be configured and some common choices are made for the user
     - A YAML manifest as literal text via `--manifest`/`PGSO_MANIFEST`
     - A YAML manifest file via `--manifest-path`/`PGSO_MANIFEST_PATH`. To get an idea of all possible options/features
       one could take a look at an example manifest [here](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/example_manifests/hello_aws.yaml)
-  - Specifies or mounts (Docker) the cloud credentials if no default AWS CLI (`~/.aws/credentials`) set up
-  - Can optionally specify also a callback (executable file) to do something/integrate with the resulting connect
-    string (just displayed by default) or just run in `--connstr-output-only` mode to be pipe-friendly
+  - Specifies AWS credentials if no default AWS CLI (`~/.aws/credentials`) set up or if using Docker
+  - Optionally specifies a callback (executable file) to do something with the resulting Postgres connect
+    string (just displayed by default), or just runs in `--connstr-output-only` mode to be pipe-friendly
 * The operator:
   - Finds the cheapest Spot instance with OK eviction rate (the default "balanced" `--selection-strategy`) for given HW
     requirements and launches a VM
   - Runs Ansible to set up Postgres
-  - Keeps checking the VM health every minute (configurable) and if evicted, launches a new one, re-mounts the data
-    volume or does a PITR restore from S3 and resurrects Postgres
+  - Keeps checking the VM health every minute (configurable via `--main-loop-interval-s`) and if eviction detected, launches
+    a new VM, re-mounts the data volume or does a PITR restore from S3 (if `--storage-type=local` + S3 creds set) and resurrects Postgres
 
 # Usage
 

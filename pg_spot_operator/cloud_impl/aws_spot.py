@@ -43,7 +43,7 @@ logging.getLogger("urllib3").setLevel(logging.ERROR)
 
 
 @timed_cache(seconds=3600)
-def describe_instance_type(instance_type: str, region: str) -> dict:
+def describe_instance_type_boto3(instance_type: str, region: str) -> dict:
     try:
         client = get_client("ec2", region)
         resp = client.describe_instance_types(InstanceTypes=[instance_type])
@@ -61,7 +61,7 @@ def resolve_instance_type_info(
 ) -> InstanceTypeInfo:
     """i_desc = AWS API response dict. e.g.: aws ec2 describe-instance-types --instance-types i3en.xlarge"""
     if not i_desc:
-        i_desc = describe_instance_type(instance_type, region)
+        i_desc = describe_instance_type_boto3(instance_type, region)
     if not i_desc:
         raise Exception(
             f"Could not describe instance type {instance_type} in region {region}"
@@ -212,16 +212,23 @@ def filter_instance_types_by_hw_req(
     storage_speed_class: str | None = "any",
     instance_types: list[str] | None = None,
     instance_types_to_avoid: list[str] | None = None,
+    instance_family: str = "",
 ) -> list[InstanceTypeInfo]:
     """Returns qualified SKUs sorted by (CPU, RAM) or (CPU, Total instance storage DESC)"""
     ret: list[InstanceTypeInfo] = []
+    instance_family_regex: re.Pattern | None = None
 
     if instance_types:
         logger.debug(
             "Only considering following instance types: %s",
             instance_types,
         )
-
+    if instance_family:
+        logger.debug(
+            "Only considering instance families matching regex: %s",
+            instance_family,
+        )
+        instance_family_regex = re.compile(instance_family)
     if instance_types_to_avoid:
         logger.debug(
             "NOT considering following instance types: %s",
@@ -241,6 +248,13 @@ def filter_instance_types_by_hw_req(
         if (
             instance_types_to_avoid
             and ii.instance_type in instance_types_to_avoid
+        ):
+            continue
+
+        if (
+            instance_family
+            and instance_family_regex
+            and not instance_family_regex.search(ii.instance_type)
         ):
             continue
 
@@ -393,6 +407,7 @@ def resolve_hardware_requirements_to_instance_types(
     instance_types: list[str] | None = None,
     instance_types_to_avoid: list[str] | None = None,
     instance_selection_strategy: str = "cheapest",
+    instance_family: str = "",
 ) -> list[InstanceTypeInfo]:
     """Returns a price-sorted list"""
     if not all_instances:
@@ -415,6 +430,7 @@ def resolve_hardware_requirements_to_instance_types(
             storage_speed_class=storage_speed_class,
             instance_types=instance_types,
             instance_types_to_avoid=instance_types_to_avoid,
+            instance_family=instance_family,
         )
     )
 

@@ -20,7 +20,7 @@ from pg_spot_operator.cloud_impl.aws_s3 import (
     s3_try_create_bucket_if_not_exists,
 )
 from pg_spot_operator.cloud_impl.aws_spot import (
-    describe_instance_type,
+    describe_instance_type_boto3,
     get_backing_vms_for_instances_if_any,
     get_current_hourly_spot_price,
     resolve_instance_type_info,
@@ -118,7 +118,7 @@ def preprocess_ensure_vm_action(
                 )
             )
 
-        i_desc = describe_instance_type(selected_instance_type, m.region)
+        i_desc = describe_instance_type_boto3(selected_instance_type, m.region)
         sku = InstanceTypeInfo(
             instance_type=selected_instance_type,
             cloud=CLOUD_AWS,

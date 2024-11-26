@@ -589,10 +589,20 @@ def test_filter_instances():
     )
     assert len(filtered) == 2
 
-    filtered = filter_instance_types_by_hw_req(
+    filtered_no_filters = filter_instance_types_by_hw_req(
         iti,
     )
-    assert len(filtered) == 4
+    assert len(filtered_no_filters) == 4
+
+    filtered_instance_family = filter_instance_types_by_hw_req(
+        iti, instance_family="t4"
+    )
+    assert len(filtered_instance_family) == 1
+
+    filtered_instance_family = filter_instance_types_by_hw_req(
+        iti, instance_family="gd"
+    )
+    assert len(filtered_instance_family) == 2
 
 
 def test_get_avg_spot_price_from_pricing_history_data_by_sku_and_az():

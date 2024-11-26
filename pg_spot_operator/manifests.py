@@ -65,6 +65,9 @@ class SectionPostgres(BaseModel):
 
 class SectionVm(BaseModel):
     cpu_arch: str = ""
+    instance_family: str = (
+        ""  # Regex on 1st part of instance names, i.e. i4g of i4g.2xlarge
+    )
     allow_burstable: bool = (
         False  # T-class instances tend to get killed more often, thus exclude by default
     )
