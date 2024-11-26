@@ -234,15 +234,15 @@ def register_instance_or_get_uuid(
         i.cloud = m.cloud
         i.region = m.region
         i.instance_name = m.instance_name
-        i.postgres_version = m.postgresql.version
+        i.postgres_version = m.postgres.version
         i.cpu_min = m.vm.cpu_min
         i.storage_min = m.vm.storage_min
         i.storage_type = m.vm.storage_type
         i.storage_speed_class = m.vm.storage_speed_class
-        i.tuning_profile = m.postgresql.tuning_profile
+        i.tuning_profile = m.postgres.tuning_profile
         i.user_tags = m.user_tags
-        i.admin_user = m.postgresql.admin_user
-        i.admin_is_real_superuser = m.postgresql.admin_is_superuser
+        i.admin_user = m.postgres.admin_user
+        i.admin_is_real_superuser = m.postgres.admin_is_superuser
 
         session.add(i)
         session.commit()
@@ -451,12 +451,12 @@ def get_instance_connect_string(m: InstanceManifest) -> str:
             )
         main_ip = vm.ip_public if vm.ip_public else vm.ip_private
 
-    if m.postgresql.admin_user and m.postgresql.admin_user_password:
+    if m.postgres.admin_user and m.postgres.admin_password:
         return util.compose_postgres_connstr_uri(
             main_ip,
-            m.postgresql.admin_user,
-            m.postgresql.admin_user_password,
-            dbname=m.postgresql.app_db_name or "postgres",
+            m.postgres.admin_user,
+            m.postgres.admin_password,
+            dbname=m.postgres.app_db_name or "postgres",
         )
     else:
         return util.get_local_postgres_connstr()
@@ -474,19 +474,19 @@ def get_instance_connect_strings(m: InstanceManifest) -> tuple[str, str]:
 
     connstr_private = util.get_local_postgres_connstr()
     connstr_public = ""
-    if m.postgresql.admin_user and m.postgresql.admin_user_password:
+    if m.postgres.admin_user and m.postgres.admin_password:
         connstr_private = util.compose_postgres_connstr_uri(
             vm.ip_private if vm else m.vm.host,
-            m.postgresql.admin_user,
-            m.postgresql.admin_user_password,
-            dbname=m.postgresql.app_db_name or "postgres",
+            m.postgres.admin_user,
+            m.postgres.admin_password,
+            dbname=m.postgres.app_db_name or "postgres",
         )
         if m.assign_public_ip and vm and vm.ip_public and m:
             connstr_public = util.compose_postgres_connstr_uri(
                 vm.ip_public if vm.ip_public else m.vm.host,
-                m.postgresql.admin_user,
-                m.postgresql.admin_user_password,
-                dbname=m.postgresql.app_db_name or "postgres",
+                m.postgres.admin_user,
+                m.postgres.admin_password,
+                dbname=m.postgres.app_db_name or "postgres",
             )
     return connstr_private, connstr_public
 

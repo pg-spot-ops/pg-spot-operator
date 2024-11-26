@@ -63,7 +63,7 @@ Groups and ports can be found in the [Security](https://github.com/pg-spot-ops/p
 psql $(pg_spot_operator --region=eu-south-2 --ram-min=128 \
   --storage-min=500 --storage-type=local \
   --instance-name=analytics --connstr-output-only \
-  --admin-user=pgspotops --admin-user-password=topsecret123
+  --admin-user=pgspotops --admin-password=topsecret123
 )
 
 2024-11-19 11:47:32,362 INFO Processing manifest for instance 'analytics' set via CLI / ENV ...
@@ -143,7 +143,7 @@ docker run --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
   -e PGSO_EXPIRATION_DATE=$(date --utc --date="+1 day" +%Y-%m-%d) \
   -e PGSO_STORAGE_MIN=100 -e PGSO_STORAGE_TYPE=local -e PGSO_CPU_MIN=2 \
   -e PGSO_EXTENSIONS=vector,pg_stat_statements -e PGSO_OS_EXTRA_PACKAGES=postgresql-16-pgvector \
-  -e PGSO_SSH_KEYS="$(cat ~/.ssh/id_rsa.pub)" -e PGSO_POSTGRESQL_VERSION=16 \
+  -e PGSO_SSH_KEYS="$(cat ~/.ssh/id_rsa.pub)" -e PGSO_POSTGRES_VERSION=16 \
   -e PGSO_AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
   -e PGSO_AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
   pgspotops/pg-spot-operator:latest

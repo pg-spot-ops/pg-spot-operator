@@ -21,7 +21,7 @@
 
 - name: Apply override manifest sections if any
   set_fact:
-    postgresql: "{{ instance_manifest.postgresql | d({}) | ansible.builtin.combine(engine_overrides.postgresql | d({}), recursive=true) }}"
+    postgres: "{{ instance_manifest.postgres | d({}) | ansible.builtin.combine(engine_overrides.postgres | d({}), recursive=true) }}"
     vm: "{{ instance_manifest.vm | d({}) | ansible.builtin.combine(engine_overrides.vm | d({}), recursive=true) }}"
     os: "{{ instance_manifest.os | d({}) | ansible.builtin.combine(engine_overrides.os | d({}), recursive=true) }}"
     backup: "{{ instance_manifest.backup | d({}) | ansible.builtin.combine(engine_overrides.backup | d({}), recursive=true) }}"
@@ -43,7 +43,7 @@
   debug:
     msg: "Section {{ item.section_name }}: {{ item.section_data }}"
   loop:
-    - { section_name: postgresql, section_data: "{{ postgresql | d({}) }}"}
+    - { section_name: postgres, section_data: "{{ postgres | d({}) }}"}
     - { section_name: vm, section_data: "{{ vm | d({}) }}"}
     - { section_name: os, section_data: "{{ os | d({}) }}"}
     - { section_name: backup, section_data: "{{ backup | d({}) }}"}

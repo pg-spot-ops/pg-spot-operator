@@ -1,7 +1,7 @@
 ---
 # Manifest
 instance_name: spot
-postgresql:
+postgres:
   version: 16
 
 # Private

@@ -2,7 +2,7 @@
 # Manifest
 instance_name: hello_aws
 region: eu-north-1
-postgresql:
+postgres:
   version: 16
 backup:
   type: pgbackrest

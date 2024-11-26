@@ -33,7 +33,7 @@
 
 - name: Install postgres
   ansible.builtin.apt:
-    name: postgresql-{{ postgresql.version | d(16) }}
+    name: postgresql-{{ postgres.version | d(16) }}
     state: present
   register: result
   until: result is success

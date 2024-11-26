@@ -126,7 +126,7 @@ def resolve_hardware_requirements_to_instance_types(
                     cpu_min=m.vm.cpu_min,
                     cpu_max=m.vm.cpu_max,
                     ram_min=m.vm.ram_min,
-                    architecture=m.vm.cpu_architecture,
+                    architecture=m.vm.cpu_arch,
                     storage_type=m.vm.storage_type,
                     storage_min=m.vm.storage_min,
                     allow_burstable=m.vm.allow_burstable,

@@ -88,7 +88,7 @@ class ArgumentParser(Tap):
     instance_name: str = os.getenv(
         "PGSO_INSTANCE_NAME", ""
     )  # If set other below params become relevant
-    postgresql_version: int = int(os.getenv("PGSO_POSTGRESQL_VERSION", "16"))
+    postgres_version: int = int(os.getenv("PGSO_POSTGRES_VERSION", "16"))
     instance_types: str = os.getenv(
         "PGSO_INSTANCE_TYPES", ""
     )  # i3.xlarge,i3.2xlarge
@@ -115,19 +115,19 @@ class ArgumentParser(Tap):
     expiration_date: str = os.getenv(
         "PGSO_EXPIRATION_DATE", ""
     )  # ISO 8601 datetime
-    self_terminate: bool = str_to_bool(
-        os.getenv("PGSO_SELF_TERMINATE", "false")
+    self_termination: bool = str_to_bool(
+        os.getenv("PGSO_SELF_TERMINATION", "false")
     )
     assign_public_ip: bool = str_to_bool(
         os.getenv("PGSO_ASSIGN_PUBLIC_IP", "true")
     )
-    cpu_architecture: str = os.getenv("PGSO_CPU_ARCHITECTURE", "")
+    cpu_arch: str = os.getenv("PGSO_CPU_ARCH", "")  # [ arm | x86 ]
     ssh_keys: str = os.getenv("PGSO_SSH_KEYS", "")  # Comma separated
     tuning_profile: str = os.getenv("PGSO_TUNING_PROFILE", "default")
     user_tags: str = os.getenv("PGSO_USER_TAGS", "")  # key=val,key2=val2
     app_db_name: str = os.getenv("PGSO_APP_DB_NAME", "")
     admin_user: str = os.getenv("PGSO_ADMIN_USER", "")
-    admin_user_password: str = os.getenv("PGSO_ADMIN_USER_PASSWORD", "")
+    admin_password: str = os.getenv("PGSO_ADMIN_PASSWORD", "")
     admin_is_superuser: str = os.getenv("PGSO_ADMIN_IS_SUPERUSER", "false")
     os_extra_packages: str = os.getenv(
         "PGSO_OS_EXTRA_PACKAGES", ""
@@ -146,11 +146,11 @@ class ArgumentParser(Tap):
         "PGSO_AWS_VPC_ID", ""
     )  # If not set default VPC in region used
     aws_subnet_id: str = os.getenv("PGSO_AWS_SUBNET_ID", "")
-    self_terminate_access_key_id: str = os.getenv(
-        "PGSO_SELF_TERMINATE_ACCESS_KEY_ID", ""
+    self_termination_access_key_id: str = os.getenv(
+        "PGSO_SELF_TERMINATION_ACCESS_KEY_ID", ""
     )
-    self_terminate_secret_access_key: str = os.getenv(
-        "PGSO_SELF_TERMINATE_SECRET_ACCESS_KEY", ""
+    self_termination_secret_access_key: str = os.getenv(
+        "PGSO_SELF_TERMINATION_SECRET_ACCESS_KEY", ""
     )
     vm_host: str = os.getenv(
         "PGSO_VM_HOST", ""
@@ -222,7 +222,7 @@ def compile_manifest_from_cmdline_params(
     m.assign_public_ip = args.assign_public_ip
     m.setup_finished_callback = args.setup_finished_callback
     m.vm_only = args.vm_only
-    m.vm.cpu_architecture = args.cpu_architecture
+    m.vm.cpu_arch = args.cpu_arch
     m.vm.cpu_min = args.cpu_min
     m.vm.cpu_max = args.cpu_max
     m.vm.ram_min = args.ram_min
@@ -250,30 +250,32 @@ def compile_manifest_from_cmdline_params(
     m.aws.access_key_id = args.aws_access_key_id
     m.aws.secret_access_key = args.aws_secret_access_key
     m.aws.key_pair_name = args.aws_key_pair_name
-    m.self_terminate = args.self_terminate
-    if args.self_terminate:
-        m.aws.self_terminate_access_key_id = args.self_terminate_access_key_id
-        m.aws.self_terminate_secret_access_key = (
-            args.self_terminate_secret_access_key
+    m.self_termination = args.self_termination
+    if args.self_termination:
+        m.aws.self_termination_access_key_id = (
+            args.self_termination_access_key_id
+        )
+        m.aws.self_termination_secret_access_key = (
+            args.self_termination_secret_access_key
         )
     if args.user_tags:
         for tag_set in args.user_tags.split(","):
             key_val = tag_set.split("=")
             m.user_tags[key_val[0]] = key_val[1]
-    m.postgresql.version = args.postgresql_version
-    m.postgresql.admin_user = args.admin_user
-    m.postgresql.admin_user_password = args.admin_user_password
-    m.postgresql.admin_is_superuser = str_to_bool(args.admin_is_superuser)
-    m.postgresql.app_db_name = args.app_db_name
-    m.postgresql.tuning_profile = args.tuning_profile
+    m.postgres.version = args.postgres_version
+    m.postgres.admin_user = args.admin_user
+    m.postgres.admin_password = args.admin_password
+    m.postgres.admin_is_superuser = str_to_bool(args.admin_is_superuser)
+    m.postgres.app_db_name = args.app_db_name
+    m.postgres.tuning_profile = args.tuning_profile
     if args.shared_preload_libraries:
-        m.postgresql.config_lines.append(
+        m.postgres.config_lines.append(
             "shared_preload_libraries = '"
             + args.shared_preload_libraries.rstrip("'").lstrip("'")
             + "'"
         )
     if args.extensions:
-        m.postgresql.extensions = args.extensions.strip().split(",")
+        m.postgres.extensions = args.extensions.strip().split(",")
     if args.os_extra_packages:
         m.os.extra_packages = args.os_extra_packages.strip().split(",")
 
@@ -382,10 +384,10 @@ def check_cli_args_valid(args: ArgumentParser):
                     args.user_tags,
                 )
                 exit(1)
-    if args.admin_user or args.admin_user_password:
-        if not (args.admin_user and args.admin_user_password):
+    if args.admin_user or args.admin_password:
+        if not (args.admin_user and args.admin_password):
             logger.error(
-                "Both --admin-user / --admin-user-password need to be provided",
+                "Both --admin-user / --admin-password need to be provided",
             )
             exit(1)
     if args.instance_types and "." not in args.instance_types:
@@ -402,17 +404,17 @@ def check_cli_args_valid(args: ArgumentParser):
             "Enabling backups (--backup-s3-bucket) requires --backup-s3-key / --backup-s3-key-secret",
         )
         exit(1)
-    if args.self_terminate and not args.expiration_date:
+    if args.self_termination and not args.expiration_date:
         logger.error(
-            "--self-terminate assumes also --expiration-date set",
+            "--self-termination assumes also --expiration-date set",
         )
         exit(1)
-    if args.self_terminate and not (
-        args.self_terminate_access_key_id
-        and args.self_terminate_secret_access_key
+    if args.self_termination and not (
+        args.self_termination_access_key_id
+        and args.self_termination_secret_access_key
     ):
         logger.error(
-            "Self-termination on expiration date requires --self-terminate-access-key-id and --self-terminate-secret-access-key",
+            "Self-termination on expiration date requires --self-termination-access-key-id and --self-termination-secret-access-key",
         )
         exit(1)
     if args.ssh_private_key and not (

@@ -6,10 +6,10 @@ cloud: aws
 region: eu-north-1
 instance_name: hello-aws
 #expiration_date: now
-postgresql:
+postgres:
   version: 16
   admin_user: admin
-  admin_user_password: seitselehma
+  admin_password: seitselehma
   config_lines:
     - "statement_timeout = '5min'"
 backup:  # Only supported backup tool is pgBackRest currently

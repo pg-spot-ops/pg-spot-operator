@@ -9,10 +9,10 @@ on creating one: https://docs.aws.amazon.com/vpc/latest/userguide/create-vpc.htm
 
 ```commandline
 public_ip_address: true
-postgresql:
+postgres:
   admin_is_superuser: true
   admin_user: ''  # Meaning only local access possible
-  admin_user_password: ''
+  admin_password: ''
   pg_hba_lines:  # Defaults allow non-postgres world access
     - "host all postgres 0.0.0.0/0 reject"
     - "hostssl all all 0.0.0.0/0 scram-sha-256"

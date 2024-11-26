@@ -9,9 +9,9 @@ terminates itself.
 
 Relevant CLI/Env flags:
 
-  * --self-terminate / PGSO_SELF_TERMINATE
-  * --self-terminate-access-key-id / PGSO_SELF_TERMINATE_ACCESS_KEY_ID
-  * --self-terminate-secret-access-key / PGSO_SELF_TERMINATE_SECRET_ACCESS_KEY
+  * --self-termination / PGSO_SELF_TERMINATION
+  * --self-termination-access-key-id / PGSO_SELF_TERMINATION_ACCESS_KEY_ID
+  * --self-termination-secret-access-key / PGSO_SELF_TERMINATION_SECRET_ACCESS_KEY
 
 **PS** It is strongly recommended to generate a distinct key/secret for self-termination, only with limited EC2 privileges, and
 not to re-use the engine credentials, as the keys will be actually placed on the Postgres VMs to be able to work self-sufficiently.

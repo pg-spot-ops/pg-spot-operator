@@ -3,8 +3,8 @@
 instance_name: spot  # Used to identify any attached EBS volumes / Elastic IP Adresses
 expiration_date: "2024-12-22 00:00+03"  # ISO-8601 | now
 aws:
-  self_terminate_access_key_id: x  # WARNING! The credentials used should have minimal IAM policies attached
-  self_terminate_secret_access_key: y
+  self_termination_access_key_id: x  # WARNING! The credentials used should have minimal IAM policies attached
+  self_termination_secret_access_key: y
 
 # Testing
 dry_run: false

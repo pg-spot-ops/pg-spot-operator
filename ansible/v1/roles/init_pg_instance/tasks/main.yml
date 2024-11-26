@@ -57,7 +57,7 @@
   ansible.builtin.lineinfile:
     path: "/etc/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}/postgresql.conf"
     line: "{{ item }}"
-  loop: "{{ postgresql.config_lines | d([]) }}"
+  loop: "{{ postgres.config_lines | d([]) }}"
   notify:
     - "init_pg_instance : Reload postgres"
 

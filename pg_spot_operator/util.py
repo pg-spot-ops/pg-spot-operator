@@ -131,12 +131,12 @@ def timed_cache(**timedelta_kwargs):
 def compose_postgres_connstr_uri(
     ip_address: str,
     admin_user: str,
-    admin_user_password: str = "",
+    admin_password: str = "",
     port: int = 5432,
     dbname: str = "postgres",
     sslmode="require",
 ) -> str:
-    return f"postgresql://{admin_user}:{admin_user_password}@{ip_address}:{port}/{dbname}?sslmode={sslmode}"
+    return f"postgresql://{admin_user}:{admin_password}@{ip_address}:{port}/{dbname}?sslmode={sslmode}"
 
 
 def get_local_postgres_connstr() -> str:

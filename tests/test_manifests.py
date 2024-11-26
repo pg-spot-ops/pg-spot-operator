@@ -13,7 +13,7 @@ region: eu-west-1
 instance_name: hello
 #vault_password_file:
 expiration_date: now
-postgresql:
+postgres:
   version: 16
   tuning_profile: oltp  # builtins: oltp | warehouse | web | mixed  
   admin_user: dev
@@ -64,8 +64,8 @@ kind: pg_spot_operator_instance
 cloud: aws
 region: eu-west-1
 instance_name: hello
-postgresql:
-  admin_user_password: !vault |
+postgres:
+  admin_password: !vault |
     $ANSIBLE_VAULT;1.1;AES256
     30643364356334303739626534623937613733386535346661363166323138636537353666653262
     3462353138393366393537643733666337353762363763620a333436343730373936343830646431
@@ -97,7 +97,7 @@ def test_parse_manifest():
     assert m
     assert m.cloud == "aws"
     assert m.instance_name == "hello"
-    assert m.postgresql.admin_is_superuser
+    assert m.postgres.admin_is_superuser
     assert m.is_expired()
     m.expiration_date = "2099-01-01"
     assert not m.is_expired()
@@ -125,8 +125,8 @@ def test_decrypt_vault_secrets():
         m: manifests.InstanceManifest = manifests.load_manifest_from_string(
             TEST_MANIFEST_VAULT_SECRETS
         )
-        assert m.postgresql.admin_user_password
-        assert m.postgresql.admin_user_password.startswith("$ANSIBLE_VAULT")
+        assert m.postgres.admin_password
+        assert m.postgres.admin_password.startswith("$ANSIBLE_VAULT")
         m.vault_password_file = tmpfile.name
         secrets_found, decrypted = m.decrypt_secrets_if_any()
         assert secrets_found > 0 and decrypted == 1

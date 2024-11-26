@@ -1,5 +1,5 @@
 ---
-postgresql:
+postgres:
   version: 16
 packages_general:
 #  - python3-pip

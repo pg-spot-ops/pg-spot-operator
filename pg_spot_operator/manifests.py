@@ -50,11 +50,11 @@ class SectionAnsible(BaseModel):
     private_key: str = ""
 
 
-class SectionPostgresql(BaseModel):
+class SectionPostgres(BaseModel):
     version: int = DEFAULT_POSTGRES_MAJOR_VER
     tuning_profile: str = "default"
     admin_user: str | None = None
-    admin_user_password: str | None = None
+    admin_password: str | None = None
     admin_is_superuser: bool = False
     app_db_name: str | None = None
     config_lines: list[str] = field(default_factory=list)
@@ -64,7 +64,7 @@ class SectionPostgresql(BaseModel):
 
 
 class SectionVm(BaseModel):
-    cpu_architecture: str = ""
+    cpu_arch: str = ""
     allow_burstable: bool = (
         False  # T-class instances tend to get killed more often, thus exclude by default
     )
@@ -133,8 +133,8 @@ class SectionAws(BaseModel):
     subnet_id: str = ""
     profile_name: str = ""
     key_pair_name: str = ""
-    self_terminate_access_key_id: str = ""
-    self_terminate_secret_access_key: str = ""
+    self_termination_access_key_id: str = ""
+    self_termination_secret_access_key: str = ""
 
 
 class SubSectionMonitoringPrometheus(BaseModel):
@@ -175,7 +175,7 @@ class InstanceManifest(BaseModel):
     instance_name: str
     # Optional fields
     assign_public_ip: bool = True
-    floating_ips: bool = (
+    ip_floating: bool = (
         True  # If False NIC resources can be left hanging if not cleaned up properly
     )
     description: str = ""
@@ -184,11 +184,11 @@ class InstanceManifest(BaseModel):
     vault_password_file: str = ""
     setup_finished_callback: str = ""  # An executable passed to Ansible
     expiration_date: str = ""  # now | '2024-06-11 10:40'
-    self_terminate: bool = False
+    self_termination: bool = False
     vm_only: bool = False  # No Postgres setup
     is_paused: bool = False
     # *Sections*
-    postgresql: SectionPostgresql = field(default_factory=SectionPostgresql)
+    postgres: SectionPostgres = field(default_factory=SectionPostgres)
     vm: SectionVm = field(default_factory=SectionVm)
     backup: SectionBackup = field(default_factory=SectionBackup)
     os: SectionOs = field(default_factory=SectionOs)
@@ -274,7 +274,7 @@ class InstanceManifest(BaseModel):
         secrets_found = decrypted = 0
         # There are also some secret backup section fields also but they're touched only in Ansible
         secret_fields = [
-            ("postgresql", "admin_user_password"),
+            ("postgres", "admin_password"),
             ("aws", "access_key_id"),
             ("aws", "secret_access_key"),
         ]
