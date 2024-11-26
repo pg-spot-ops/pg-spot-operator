@@ -115,8 +115,8 @@ class ArgumentParser(Tap):
     expiration_date: str = os.getenv(
         "PGSO_EXPIRATION_DATE", ""
     )  # ISO 8601 datetime
-    self_terminate: bool = str_to_bool(
-        os.getenv("PGSO_SELF_TERMINATE", "false")
+    self_termination: bool = str_to_bool(
+        os.getenv("PGSO_SELF_TERMINATION", "false")
     )
     assign_public_ip: bool = str_to_bool(
         os.getenv("PGSO_ASSIGN_PUBLIC_IP", "true")
@@ -146,11 +146,11 @@ class ArgumentParser(Tap):
         "PGSO_AWS_VPC_ID", ""
     )  # If not set default VPC in region used
     aws_subnet_id: str = os.getenv("PGSO_AWS_SUBNET_ID", "")
-    self_terminate_access_key_id: str = os.getenv(
-        "PGSO_SELF_TERMINATE_ACCESS_KEY_ID", ""
+    self_termination_access_key_id: str = os.getenv(
+        "PGSO_SELF_TERMINATION_ACCESS_KEY_ID", ""
     )
-    self_terminate_secret_access_key: str = os.getenv(
-        "PGSO_SELF_TERMINATE_SECRET_ACCESS_KEY", ""
+    self_termination_secret_access_key: str = os.getenv(
+        "PGSO_SELF_TERMINATION_SECRET_ACCESS_KEY", ""
     )
     vm_host: str = os.getenv(
         "PGSO_VM_HOST", ""
@@ -250,11 +250,13 @@ def compile_manifest_from_cmdline_params(
     m.aws.access_key_id = args.aws_access_key_id
     m.aws.secret_access_key = args.aws_secret_access_key
     m.aws.key_pair_name = args.aws_key_pair_name
-    m.self_terminate = args.self_terminate
-    if args.self_terminate:
-        m.aws.self_terminate_access_key_id = args.self_terminate_access_key_id
-        m.aws.self_terminate_secret_access_key = (
-            args.self_terminate_secret_access_key
+    m.self_termination = args.self_termination
+    if args.self_termination:
+        m.aws.self_termination_access_key_id = (
+            args.self_termination_access_key_id
+        )
+        m.aws.self_termination_secret_access_key = (
+            args.self_termination_secret_access_key
         )
     if args.user_tags:
         for tag_set in args.user_tags.split(","):
@@ -402,17 +404,17 @@ def check_cli_args_valid(args: ArgumentParser):
             "Enabling backups (--backup-s3-bucket) requires --backup-s3-key / --backup-s3-key-secret",
         )
         exit(1)
-    if args.self_terminate and not args.expiration_date:
+    if args.self_termination and not args.expiration_date:
         logger.error(
-            "--self-terminate assumes also --expiration-date set",
+            "--self-termination assumes also --expiration-date set",
         )
         exit(1)
-    if args.self_terminate and not (
-        args.self_terminate_access_key_id
-        and args.self_terminate_secret_access_key
+    if args.self_termination and not (
+        args.self_termination_access_key_id
+        and args.self_termination_secret_access_key
     ):
         logger.error(
-            "Self-termination on expiration date requires --self-terminate-access-key-id and --self-terminate-secret-access-key",
+            "Self-termination on expiration date requires --self-termination-access-key-id and --self-termination-secret-access-key",
         )
         exit(1)
     if args.ssh_private_key and not (

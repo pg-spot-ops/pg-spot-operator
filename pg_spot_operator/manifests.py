@@ -133,8 +133,8 @@ class SectionAws(BaseModel):
     subnet_id: str = ""
     profile_name: str = ""
     key_pair_name: str = ""
-    self_terminate_access_key_id: str = ""
-    self_terminate_secret_access_key: str = ""
+    self_termination_access_key_id: str = ""
+    self_termination_secret_access_key: str = ""
 
 
 class SubSectionMonitoringPrometheus(BaseModel):
@@ -184,7 +184,7 @@ class InstanceManifest(BaseModel):
     vault_password_file: str = ""
     setup_finished_callback: str = ""  # An executable passed to Ansible
     expiration_date: str = ""  # now | '2024-06-11 10:40'
-    self_terminate: bool = False
+    self_termination: bool = False
     vm_only: bool = False  # No Postgres setup
     is_paused: bool = False
     # *Sections*

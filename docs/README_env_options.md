@@ -23,7 +23,7 @@
 * **--teardown / PGSO_TEARDOWN** Delete VM and any other created resources for the give instance
 * **--teardown-region / PGSO_TEARDOWN_REGION** Delete all operator tagged resources in the whole region. Not safe if there are multiple Spot Operator users under the account!
 * **--expiration-date / PGSO_EXPIRATION_DATE** ISO 8601 datetime.
-* **--self-terminate / PGSO_SELF_TERMINATE** On --expiration-date. Assumes --self-terminate-access-key-id / --self-terminate-secret-access-key set. 
+* **--self-termination / PGSO_SELF_TERMINATION** On --expiration-date. Assumes --self-termination-access-key-id / --self-termination-secret-access-key set.
 * **--user-tags / PGSO_USER_TAGS** Any custom tags / labels to attach to the VM. E.g. team=backend
 
 ## Integration
@@ -61,8 +61,8 @@
 
 * **--aws-access-key-id / PGSO_AWS_ACCESS_KEY_ID** AWS creds. If not set the default profile is used.  
 * **--aws-secret-access-key / PGSO_AWS_SECRET_ACCESS_KEY** AWS creds. If not set the default profile is used.
-* **--self-terminate-access-key-id / PGSO_SELF_TERMINATE_ACCESS_KEY_ID** AWS creds to be placed on the VM if --self-terminate set
-* **--self-terminate-secret-access-key / PGSO_SELF_TERMINATE_SECRET_ACCESS_KEY** AWS creds to be placed on the VM if --self-terminate set
+* **--self-termination-access-key-id / PGSO_SELF_TERMINATION_ACCESS_KEY_ID** AWS creds to be placed on the VM if --self-termination set
+* **--self-termination-secret-access-key / PGSO_SELF_TERMINATION_SECRET_ACCESS_KEY** AWS creds to be placed on the VM if --self-termination set
 * **--assign-public-ip / PGSO_ASSIGN_PUBLIC_IP** (Default: true) If "false" then only VPC accessible.
 * **--vault-password-file / PGSO_VAULT_PASSWORD_FILE** Needed if using Ansible Vault encrypted strings in the manifest
 * **--aws-security-group-ids / PGSO_AWS_SECURITY_GROUP_IDS** SG rules (a firewall essentially) are "merged" if multiple provided
