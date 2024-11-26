@@ -127,7 +127,7 @@ class ArgumentParser(Tap):
     user_tags: str = os.getenv("PGSO_USER_TAGS", "")  # key=val,key2=val2
     app_db_name: str = os.getenv("PGSO_APP_DB_NAME", "")
     admin_user: str = os.getenv("PGSO_ADMIN_USER", "")
-    admin_user_password: str = os.getenv("PGSO_ADMIN_USER_PASSWORD", "")
+    admin_password: str = os.getenv("PGSO_ADMIN_USER_PASSWORD", "")
     admin_is_superuser: str = os.getenv("PGSO_ADMIN_IS_SUPERUSER", "false")
     os_extra_packages: str = os.getenv(
         "PGSO_OS_EXTRA_PACKAGES", ""
@@ -262,7 +262,7 @@ def compile_manifest_from_cmdline_params(
             m.user_tags[key_val[0]] = key_val[1]
     m.postgres.version = args.postgres_version
     m.postgres.admin_user = args.admin_user
-    m.postgres.admin_user_password = args.admin_user_password
+    m.postgres.admin_password = args.admin_password
     m.postgres.admin_is_superuser = str_to_bool(args.admin_is_superuser)
     m.postgres.app_db_name = args.app_db_name
     m.postgres.tuning_profile = args.tuning_profile
@@ -382,8 +382,8 @@ def check_cli_args_valid(args: ArgumentParser):
                     args.user_tags,
                 )
                 exit(1)
-    if args.admin_user or args.admin_user_password:
-        if not (args.admin_user and args.admin_user_password):
+    if args.admin_user or args.admin_password:
+        if not (args.admin_user and args.admin_password):
             logger.error(
                 "Both --admin-user / --admin-user-password need to be provided",
             )

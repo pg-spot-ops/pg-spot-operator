@@ -9,7 +9,7 @@ instance_name: hello-aws
 postgres:
   version: 16
   admin_user: admin
-  admin_user_password: seitselehma
+  admin_password: seitselehma
   config_lines:
     - "statement_timeout = '5min'"
 backup:  # Only supported backup tool is pgBackRest currently

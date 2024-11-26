@@ -54,7 +54,7 @@ class SectionPostgres(BaseModel):
     version: int = DEFAULT_POSTGRES_MAJOR_VER
     tuning_profile: str = "default"
     admin_user: str | None = None
-    admin_user_password: str | None = None
+    admin_password: str | None = None
     admin_is_superuser: bool = False
     app_db_name: str | None = None
     config_lines: list[str] = field(default_factory=list)
@@ -274,7 +274,7 @@ class InstanceManifest(BaseModel):
         secrets_found = decrypted = 0
         # There are also some secret backup section fields also but they're touched only in Ansible
         secret_fields = [
-            ("postgres", "admin_user_password"),
+            ("postgres", "admin_password"),
             ("aws", "access_key_id"),
             ("aws", "secret_access_key"),
         ]

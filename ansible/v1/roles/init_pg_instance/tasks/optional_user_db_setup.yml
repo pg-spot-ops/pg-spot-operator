@@ -2,7 +2,7 @@
 - block:
   - name: Assert admin pass
     ansible.builtin.assert:
-      that: postgres.admin_user_password|d('')
+      that: postgres.admin_password|d('')
       quiet: true
     when: postgres.admin_user|d('')
 
@@ -15,7 +15,7 @@
     community.postgresql.postgresql_user:
       state: present
       name: "{{ postgres.admin_user }}"
-      password: "{{ postgres.admin_user_password }}"
+      password: "{{ postgres.admin_password }}"
       role_attr_flags: "{{ postgres.admin_is_superuser | d(False) | ternary('SUPERUSER', 'NOSUPERUSER,CREATEDB,CREATEROLE') }}"
       login_host: /var/run/postgresql
       login_port: "5432"

@@ -451,11 +451,11 @@ def get_instance_connect_string(m: InstanceManifest) -> str:
             )
         main_ip = vm.ip_public if vm.ip_public else vm.ip_private
 
-    if m.postgres.admin_user and m.postgres.admin_user_password:
+    if m.postgres.admin_user and m.postgres.admin_password:
         return util.compose_postgres_connstr_uri(
             main_ip,
             m.postgres.admin_user,
-            m.postgres.admin_user_password,
+            m.postgres.admin_password,
             dbname=m.postgres.app_db_name or "postgres",
         )
     else:
@@ -474,18 +474,18 @@ def get_instance_connect_strings(m: InstanceManifest) -> tuple[str, str]:
 
     connstr_private = util.get_local_postgres_connstr()
     connstr_public = ""
-    if m.postgres.admin_user and m.postgres.admin_user_password:
+    if m.postgres.admin_user and m.postgres.admin_password:
         connstr_private = util.compose_postgres_connstr_uri(
             vm.ip_private if vm else m.vm.host,
             m.postgres.admin_user,
-            m.postgres.admin_user_password,
+            m.postgres.admin_password,
             dbname=m.postgres.app_db_name or "postgres",
         )
         if m.assign_public_ip and vm and vm.ip_public and m:
             connstr_public = util.compose_postgres_connstr_uri(
                 vm.ip_public if vm.ip_public else m.vm.host,
                 m.postgres.admin_user,
-                m.postgres.admin_user_password,
+                m.postgres.admin_password,
                 dbname=m.postgres.app_db_name or "postgres",
             )
     return connstr_private, connstr_public
