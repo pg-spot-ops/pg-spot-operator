@@ -4,6 +4,44 @@ Changelog
 
 (unreleased)
 ------------
+- Merge pull request #97 from pg-spot-ops/add-instance-family-filtering.
+  [Kaarel Moppel]
+
+  Add option to select / filter suitable instances based on instance type family regex
+- Reflect the new --instance-family option in the README. [Kaarel
+  Moppel]
+- Implement --instance-family regex based filtering if provided. [Kaarel
+  Moppel]
+- Add --instance-family dummy attribute. [Kaarel Moppel]
+- Merge pull request #96 from pg-spot-ops/api-improvements. [Kaarel
+  Moppel]
+
+  API - attribute naming improvements
+- API rename: self-terminate -> self-termination. [Kaarel Moppel]
+- Admin-user-password -> admin-password. [Kaarel Moppel]
+- Admin_user_password -> admin_password. [Kaarel Moppel]
+- More postgresql -> postgres. [Kaarel Moppel]
+- API: postgresql -> postgres. [Kaarel Moppel]
+
+  Nobody really calls it postgresql I guess
+- API: floating_ips -> ip_floating. [Kaarel Moppel]
+- API: cpu_architecture -> cpu_arch. [Kaarel Moppel]
+
+  Just a bit too cumbersome on the CLI
+- Disable Github Docker workflow as using / testing Docker Hub
+  integration. [Kaarel Moppel]
+- Merge pull request #95 from pg-spot-ops/cli-add-volume-type-iops-
+  bandwith. [Kaarel Moppel]
+
+  CLI - add flags to set volume type, iops, bandwith
+- Wire new volume params to the manifest. [Kaarel Moppel]
+- Add new flags: --volume-type, --volume-iops, --volume-throughput.
+  [Kaarel Moppel]
+
+
+0.9.0 (2024-11-25)
+------------------
+- Release: version 0.9.0 🚀 [Kaarel Moppel]
 - In CLI input mode infer --region automatically from --zone if not set.
   [Kaarel Moppel]
 
