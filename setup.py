@@ -32,7 +32,7 @@ def read_requirements(path):
 setup(
     name="pg_spot_operator",
     version=read("pg_spot_operator", "VERSION"),
-    description="Awesome pg_spot_operator created by pg-spot-ops",
+    description="Maintains stateful Postgres on Spot VMs",
     url="https://github.com/pg-spot-ops/pg-spot-operator/",
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
