@@ -23,6 +23,7 @@ vm:
   ram_min: 4  # Optional
   allow_burstable: true
   instance_types: [m6gd.xlarge]  # cpu_min etc will be ignored then and cheapest of listed used
+#  instance_family: r(6|7)  # Regex to filter on the first part of instance type names, i.e. "r6g" part of "r6g.medium"
   storage_min: 100  # Required, as no auto-growth for now
   storage_type: local  # local | network. PS Using network volumes pins you to a specific AZ
   storage_speed_class: ssd  # hdd | ssd | nvme. For instance storage (storage_type=local)
