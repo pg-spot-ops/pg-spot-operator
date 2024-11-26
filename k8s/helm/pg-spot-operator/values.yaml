@@ -57,3 +57,11 @@ env:
     value: aaaa
   - name: PGSO_AWS_SECRET_ACCESS_KEY
     value: bbbb
+  - name: PGSO_ADMIN_USER
+    value: "mypostgres"
+  - name: PGSO_ADMIN_PASSWORD
+    value: "mypostgressecret"
+  - name: PGSO_ASSIGN_PUBLIC_IP
+    value: "true"
+  - name: PGSO_SSH_KEYS
+    value: "ssh-rsa ..."
