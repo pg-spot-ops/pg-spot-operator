@@ -672,13 +672,13 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
             and (vm.ip_public == ip_pub if ip_pub else True)
         ):  # Already registered in CMDB
             logger.info(
-                "Backing instance %s %s (%s / %s) found and CMDB registered",
+                "Backing instance %s %s (%s / %s) found",
                 vm.provider_id,
                 vm.sku,
                 vm.ip_public,
                 vm.ip_private,
             )
-            return False, vm.provider_id
+            return False, str(vm.provider_id)
         logger.info("Backing instance found: %s", instance_id)
     else:
         logger.warning(
