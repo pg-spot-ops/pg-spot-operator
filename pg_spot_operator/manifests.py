@@ -382,6 +382,12 @@ class InstanceManifest(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def check_valid_region_or_az(self) -> Self:
+        if not self.region and not self.availability_zone:
+            raise ValueError("region or availability_zone must be set")
+        return self
+
 
 def load_manifest_from_string(manifest_yaml_str: Any) -> InstanceManifest:
     m = yaml.safe_load(manifest_yaml_str)

@@ -214,11 +214,11 @@ def compile_manifest_from_cmdline_params(
         cloud="aws",
         kind="pg_spot_operator_instance",
         instance_name=args.instance_name,
+        region=args.region,
+        availability_zone=args.zone,
     )
 
     m.instance_name = args.instance_name
-    m.region = args.region
-    m.availability_zone = args.zone
     if not m.region and m.availability_zone:
         m.region = extract_region_from_az(m.availability_zone)
     m.expiration_date = args.expiration_date
@@ -478,11 +478,11 @@ def try_load_manifest(manifest_str: str) -> InstanceManifest | None:
 def check_manifest_and_exit(args: ArgumentParser):
     m = get_manifest_from_args(args)
     if not m:
-        logger.error("Failed to manifest")
+        logger.error("Failed to get / compile manifest")
         exit(1)
 
     m.model_validate(m)
-    logger.debug("model_validate() OK")
+    logger.debug("Pydantic model_validate() OK")
     if not args.manifest and not args.manifest_path:
         logger.debug("Compiled manifest: %s", m.original_manifest)
 
@@ -722,10 +722,10 @@ def main():  # pragma: no cover
     if args.list_regions:
         list_regions_and_exit()
 
-    check_cli_args_valid(args)
-
     if args.check_manifest:
         check_manifest_and_exit(args)
+
+    check_cli_args_valid(args)
 
     logger.debug("Args: %s", args.as_dict()) if args.verbose else None
 

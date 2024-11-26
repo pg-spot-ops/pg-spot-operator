@@ -7,6 +7,7 @@ from pg_spot_operator.cli import (
 def test_compile_manifest():
     args: ArgumentParser = ArgumentParser()
     args.instance_name = "x"
+    args.region = "y"
 
     args.aws_security_group_ids = "x,y"
     m = compile_manifest_from_cmdline_params(args)
