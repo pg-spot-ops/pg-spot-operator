@@ -24,7 +24,7 @@ postgres_base_settings:
   - "logging_collector = on"
   - "log_filename = 'postgresql-%a.log'"
   - "log_truncate_on_rotation = on"
-add_dummy_data: true  # For dev testing restores
+add_dummy_data: false  # For dev testing restores
 default_initdb_opts:
   - --data-checksums
   - --locale-provider=icu
