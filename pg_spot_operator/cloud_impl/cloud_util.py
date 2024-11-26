@@ -175,3 +175,12 @@ def is_explicit_aws_region_code(region: str) -> bool:
     if not region or not region.strip():
         return False
     return len(region.split("-")) == 3 and "|" not in region
+
+
+def extract_instance_family_from_instance_type_code(instance_type: str) -> str:
+    """i4g.2xlarge -> i4g"""
+    if not instance_type or "." not in instance_type:
+        raise Exception(
+            f"Unexpected instance_type input - expecting '.' as family separator. Got: {instance_type}"
+        )
+    return instance_type.strip().lower().split(".")[0]

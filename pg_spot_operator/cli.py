@@ -237,6 +237,7 @@ def compile_manifest_from_cmdline_params(
     if args.instance_types:
         for ins_type in args.instance_types.split(","):
             m.vm.instance_types.append(ins_type)
+    m.vm.instance_family = args.instance_family
     m.vm.host = args.vm_host
     m.vm.login_user = args.vm_login_user
     m.vm.instance_selection_strategy = args.selection_strategy

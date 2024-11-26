@@ -2,7 +2,7 @@
 api_version: v1  # Required
 kind: pg_spot_operator_instance  # Required
 cloud: aws  # Required
-#region: eu-south-2  # Optional if availability_zone set
+region: eu-south-2  # Optional if availability_zone set
 #availability_zone: eu-south-2b  # Optional
 instance_name: hello-aws  # Required
 description: My play instance # Optional
