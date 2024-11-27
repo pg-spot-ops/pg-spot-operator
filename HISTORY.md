@@ -4,6 +4,38 @@ Changelog
 
 (unreleased)
 ------------
+- Require --storage-min set in non-price-check modes. [Kaarel Moppel]
+
+  When not using a fixed VM or teardown modes
+- Improve PyPI Ansible setup files downloading - follow tags. [Kaarel
+  Moppel]
+
+  This allows to introduce breaking Ansible changes seamlessly.
+
+  WARNING - Old PyPI setups should clean ~/.pg-spot-operator/ansible
+  to benefit from this change
+- Fix static VM Ansible inventory generation. [Kaarel Moppel]
+
+  When --vm-host / --vm-login-user set
+- PyPI - a more meaningul description. [Kaarel Moppel]
+- Correct 4e2122831 - don't require region for --check-price. [Kaarel
+  Moppel]
+- Shorten main loop message a bit when all OK. [Kaarel Moppel]
+- --check-manifest: require region or availability_zone set. [Kaarel
+  Moppel]
+
+  Also move check_manifest_and_exit before check_cli_args_valid(), as most
+  CLI flags are not effective in --check-manifest
+- Ansible: don't add the dummy test table by default. [Kaarel Moppel]
+- K8s / Helm sample deployments - add more main attributes. [Kaarel
+  Moppel]
+
+  For a more easier get-go
+
+
+0.9.5 (2024-11-26)
+------------------
+- Release: version 0.9.5 🚀 [Kaarel Moppel]
 - Merge pull request #97 from pg-spot-ops/add-instance-family-filtering.
   [Kaarel Moppel]
 
