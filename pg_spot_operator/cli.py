@@ -348,6 +348,13 @@ def check_cli_args_valid(args: ArgumentParser):
             )
             exit(1)
         if (
+            not (args.teardown or args.teardown_region)
+            and not args.check_price
+            and not args.storage_min
+        ):
+            logger.error("--storage-min input expected")
+            exit(1)
+        if (
             args.region
             and not args.check_price
             and len(args.region.split("-")) != 3
