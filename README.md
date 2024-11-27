@@ -165,6 +165,10 @@ Main specs - vCPU: 32, RAM: 256 GB, instance storage: EBS only
 Current monthly Spot price for r6a.8xlarge in region ap-south-2: $95.0
 Current Spot vs Ondemand discount rate: -88.5% ($95.0 vs $823.7), approx. 14x to non-HA RDS
 Current expected monthly eviction rate range: <5%
+
+pg_spot_operator --ram-min=256 --region=ap-south-2 --instance-name=play
+# Note that when installing from PyPI, on first real setup run the Ansible setup files are downloaded
+# from Github into ~/.pg-spot-operator/ansible. If this seems too fishy, one can also pre-download.
 ```
 
 # Integrating with user applications

@@ -3,6 +3,7 @@ import logging
 import math
 import os.path
 
+import requests
 import yaml
 from tap import Tap
 
@@ -644,36 +645,135 @@ def download_ansible_from_github_if_not_set_locally(
     args: ArgumentParser,
 ) -> None:
     if (
-        not args.ansible_path
-        and not (
-            args.check_price
-            or args.check_manifest
-            or args.teardown
-            or args.teardown_region
-        )
-        and not os.path.exists("./ansible")
+        args.ansible_path
+        or args.check_price
+        or args.check_manifest
+        or args.teardown
+        or args.teardown_region
+        or os.path.exists("./ansible")
     ):
-        if not os.path.exists(
-            os.path.expanduser(
-                os.path.join(
-                    args.config_dir, "ansible/v1/single_instance_setup.yml"
-                )
+        return
+
+    # Written after successful Ansible DL from a tag
+    local_ansible_release_tag_file_path = os.path.expanduser(
+        os.path.join(args.config_dir, "ansible", "release_tag")
+    )
+
+    # If no release_tag file but setup file exists probably user pre-downloaded Ansible.
+    # Leaves a slight chance for a race condition though when we DL but crash before writing the release_tag file, but good enough probably for now...
+    if os.path.exists(
+        os.path.expanduser(
+            os.path.join(
+                args.config_dir, "ansible", "v1/single_instance_setup.yml"
             )
-        ):
-            dl_ok = try_download_ansible_from_github(
-                "https://github.com/pg-spot-ops/pg-spot-operator/archive/refs/heads/main.zip",
-                args.config_dir,
-            )
-            if not dl_ok:
-                logger.error(
-                    "--ansible-path not set and also failed to download from Github, cannot proceed"
-                )
-                exit(1)
-        logger.debug(
-            "Setting --ansible-path to %s",
+        )
+    ) and not os.path.exists(local_ansible_release_tag_file_path):
+        logger.info(
+            "Assuming manually downloaded Ansible files in %s as release_tag not found (remove the folder to auto re-download)",
             os.path.join(args.config_dir, "ansible"),
         )
-        args.ansible_path = os.path.join(args.config_dir, "ansible")
+        return
+
+    target_tag: str = ""
+    zip_url: str = ""
+
+    try:  # If installed via pip/pipx can read out the version easily
+        from importlib.metadata import version
+
+        pkg_ver = version("pg-spot-operator")
+        if pkg_ver:
+            logger.debug(
+                "Package version %s identified via importlib.metadata.version",
+                pkg_ver,
+            )
+            target_tag = pkg_ver
+            zip_url = f"https://github.com/pg-spot-ops/pg-spot-operator/archive/refs/tags/{pkg_ver}.zip"
+    except Exception:
+        logger.debug(
+            "Failed to inquiry package version via importlib.metadata.version"
+        )
+
+    if (
+        not zip_url
+    ):  # Let's try to fetch the latest tag directly from the Github API
+        url = "https://api.github.com/repos/pg-spot-ops/pg-spot-operator/releases/latest"
+        try:
+            f = requests.get(
+                url, headers={"Content-Type": "application/json"}, timeout=5
+            )
+            if f.status_code != 200:
+                logger.debug(
+                    "Failed to retrieve Github repo releases listing - retcode: %s, URL: %s",
+                    f.status_code,
+                    url,
+                )
+            data = f.json()
+            if data.get("tag_name"):
+                target_tag = data["tag_name"]
+                zip_url = f"https://github.com/pg-spot-ops/pg-spot-operator/archive/refs/tags/{data["tag_name"]}.zip"
+        except Exception as e:
+            logger.debug(
+                "Failed to retrieve Github repo releases listing from %s. Error: %s",
+                url,
+                e,
+            )
+
+    if (
+        not target_tag
+    ):  # Check if tag already downloaded, "main" always re-downloaded
+        target_tag = "main"
+        zip_url = "https://github.com/pg-spot-ops/pg-spot-operator/archive/refs/heads/main.zip"
+
+    if os.path.exists(local_ansible_release_tag_file_path):
+        try:
+            currently_dl_ver = (
+                open(local_ansible_release_tag_file_path).read().strip()
+            )
+            if (
+                currently_dl_ver == target_tag
+                and target_tag != "main"
+                and os.path.exists(
+                    os.path.expanduser(
+                        os.path.join(
+                            args.config_dir,
+                            "ansible",
+                            "v1/single_instance_setup.yml",
+                        )
+                    )
+                )
+            ):
+                logger.info(
+                    "Found Ansible files for tag %s from %s",
+                    target_tag,
+                    os.path.join(args.config_dir, "ansible"),
+                )
+                return
+        except Exception:
+            logger.debug(
+                "Failed to read path %s",
+                local_ansible_release_tag_file_path,
+            )
+
+    # Download or re-download if could not determine a tag
+    dl_ok = try_download_ansible_from_github(
+        target_tag,
+        zip_url,
+        args.config_dir,
+    )
+    if not dl_ok:
+        logger.error(
+            "--ansible-path not set, cwd .ansible dir not found and also failed to download from Github, cannot proceed"
+        )
+        exit(1)
+
+    with open(local_ansible_release_tag_file_path, "w") as fp:
+        fp.write(target_tag)
+
+    logger.debug(
+        "Setting --ansible-path to %s",
+        os.path.join(args.config_dir, "ansible"),
+    )
+    args.ansible_path = os.path.join(args.config_dir, "ansible")
 
 
 def init_cmdb_and_apply_schema_migrations_if_needed(

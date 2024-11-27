@@ -213,34 +213,51 @@ def read_file(file_path: str) -> str:
 
 
 def try_download_ansible_from_github(
-    zip_url: str, config_dir: str, ansible_subdir: str = "ansible"
+    tag: str, zip_url: str, config_dir: str, ansible_subdir: str = "ansible"
 ) -> bool:
     """Returns True on success"""
-    TMP_ZIP_LOC = "/tmp/pg-spot-operator_main.zip"
-    TMP_UNPACKED_PATH = "/tmp/pg-spot-operator-main"
+    TMP_ZIP_LOC = f"/tmp/pg-spot-operator_{tag}.zip"
+    TMP_UNPACKED_PATH = f"/tmp/pg-spot-operator-{tag}"
     try:
         ansible_storage_path = os.path.expanduser(
-            os.path.join(config_dir, "ansible")
+            os.path.join(config_dir, ansible_subdir)
         )
         logger.info(
-            "Downloading the Ansible setup files from %s to %s ...",
+            "Downloading and extracting Ansible setup files from %s to %s",
             zip_url,
-            ansible_storage_path,
+            os.path.join(config_dir, ansible_subdir),
         )
 
         os.makedirs(os.path.expanduser(config_dir), exist_ok=True)
 
-        # Download master ZIP. TODO embed exact Git version somehow
         r = requests.get(zip_url, allow_redirects=True)
+        if r.status_code != 200:
+            logger.error("Github download failed, retcode: %s", r.status_code)
+            return False
+        logger.debug(
+            "OK. Writing to a temp file %s ...",
+            TMP_ZIP_LOC,
+        )
         open(TMP_ZIP_LOC, "wb").write(r.content)
 
         # Unpack
         with zipfile.ZipFile(TMP_ZIP_LOC) as zip_ref:
             zip_ref.extractall("/tmp")
 
+        logger.debug(
+            "Cleaning up old Ansible files from %s if any ...",
+            ansible_storage_path,
+        )
+        shutil.rmtree(ansible_storage_path, ignore_errors=True)
+        os.makedirs(ansible_storage_path, exist_ok=True)
         # Copy only the ansible folder to ansible_storage_path
+        logger.debug(
+            "Copying temp Ansible files from %s to %s ...",
+            os.path.join(TMP_UNPACKED_PATH, ansible_subdir),
+            ansible_storage_path,
+        )
         shutil.copytree(
-            os.path.join(TMP_UNPACKED_PATH, "ansible"),
+            os.path.join(TMP_UNPACKED_PATH, ansible_subdir),
             ansible_storage_path,
             dirs_exist_ok=True,
         )
@@ -254,7 +271,10 @@ def try_download_ansible_from_github(
             os.unlink(TMP_ZIP_LOC)
             shutil.rmtree(TMP_UNPACKED_PATH, ignore_errors=True)
         except Exception:
-            logger.exception("Failed to clean up properly")
+            logger.error(
+                "Failed to clean tmp Ansible files up properly from %s",
+                (TMP_ZIP_LOC, TMP_UNPACKED_PATH),
+            )
     except Exception:
         logger.exception(
             f"Failed to download the repo from Github URL: {zip_url}"
