@@ -717,7 +717,7 @@ def download_ansible_from_github_if_not_set_locally(
             data = f.json()
             if data.get("tag_name"):
                 target_tag = data["tag_name"]
-                zip_url = f"https://github.com/pg-spot-ops/pg-spot-operator/archive/refs/tags/{data["tag_name"]}.zip"
+                zip_url = f"https://github.com/pg-spot-ops/pg-spot-operator/archive/refs/tags/{target_tag}.zip"
         except Exception as e:
             logger.debug(
                 "Failed to retrieve Github repo releases listing from %s. Error: %s",
