@@ -4,6 +4,22 @@ Changelog
 
 (unreleased)
 ------------
+- Don't require --region to be set in explicit VM host mode. [Kaarel
+  Moppel]
+
+  when --vm-host set
+- Fix latest 0.9.6 release for Python < 3.12. [Kaarel Moppel]
+
+  Seems e4391718de3cf9c27 hit some weird f-string handling difference not
+  picked up by linter, got:
+
+  File "/home/krl/.local/pipx/venvs/pg-spot-operator/lib/python3.10/site-packages/pg_spot_operator/cli.py", line 720
+    zip_url = f"https://github.com/pg-spot-ops/pg-spot-operator/archive/refs/tags/{data["tag_name"]}.zip"
+
+
+0.9.6 (2024-11-27)
+------------------
+- Release: version 0.9.6 🚀 [Kaarel Moppel]
 - Require --storage-min set in non-price-check modes. [Kaarel Moppel]
 
   When not using a fixed VM or teardown modes
