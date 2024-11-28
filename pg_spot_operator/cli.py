@@ -216,7 +216,9 @@ def compile_manifest_from_cmdline_params(
         kind="pg_spot_operator_instance",
         instance_name=args.instance_name,
         region=(
-            args.region if args.region else ".*" if args.check_price else ""
+            args.region
+            if args.region
+            else ".*" if args.check_price else args.vm_host
         ),
         availability_zone=args.zone,
     )
@@ -463,8 +465,8 @@ def check_cli_args_valid(args: ArgumentParser):
             "Invalid --aws-vpc-id, expecting to start with 'vpc-'",
         )
         exit(1)
-    if (
-        not args.check_price or args.teardown or args.teardown_region
+    if not (
+        args.check_price or args.vm_host
     ) and not is_explicit_aws_region_code(args.region):
         logger.error(
             "Fuzzy or regex --region input only allowed in --check-price mode",
