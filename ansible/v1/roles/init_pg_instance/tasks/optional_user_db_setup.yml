@@ -21,7 +21,7 @@
       login_port: "5432"
     when: postgres.admin_user | d('') | length > 0
 
-  - name: Create the "app" user if requested
+  - name: Add "power" grants to the admin user if not a superuser
     become: yes
     become_user: postgres
     community.postgresql.postgresql_privs:

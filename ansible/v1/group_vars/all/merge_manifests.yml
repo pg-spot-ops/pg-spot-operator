@@ -5,7 +5,7 @@ api_version: "{{ instance_manifest.api_version | d('v1') }}"
 kind: "{{ instance_manifest.kind | d('pg_spot_operator_instance') }}"
 instance_name: "{{ instance_manifest.instance_name | d(engine_overrides.instance_name) }}"
 description: "{{ instance_manifest.description | d('') }}"
-cloud: "{{ instance_manifest.cloud | d('vagrant-libvirt') }}"
+cloud: "{{ instance_manifest.cloud | d('aws') }}"
 region: "{{ instance_manifest.region | d('local') }}"
 is_paused: "{{ instance_manifest.is_paused | d(False) }}"
 user_tags: "{{ instance_manifest.user_tags | d({}) | ansible.builtin.combine(engine_overrides.user_tags | d({})) }}"
@@ -15,9 +15,9 @@ connstr_private: "{{ engine_overrides.connstr_private | d('') }}"
 connstr_public: "{{ engine_overrides.connstr_public | d('') }}"
 
 # Apply override manifest sections if any
-postgresql: "{{ default_manifest.postgresql | d({})
-            | ansible.builtin.combine(instance_manifest.postgresql | d({}), recursive=true)
-            | ansible.builtin.combine(engine_overrides.postgresql | d({}), recursive=true) }}"
+postgres: "{{ default_manifest.postgres | d({})
+            | ansible.builtin.combine(instance_manifest.postgres | d({}), recursive=true)
+            | ansible.builtin.combine(engine_overrides.postgres | d({}), recursive=true) }}"
 vm: "{{ default_manifest.vm | d({})
     | ansible.builtin.combine(instance_manifest.vm | d({}), recursive=true)
     | ansible.builtin.combine(engine_overrides.vm | d({}), recursive=true) }}"
@@ -30,7 +30,9 @@ backup: "{{ default_manifest.backup | d({})
 aws: "{{ default_manifest.aws | d({})
     | ansible.builtin.combine(instance_manifest.aws | d({}), recursive=true)
     | ansible.builtin.combine(engine_overrides.aws | d({}), recursive=true) }}"
-
+monitoring: "{{ default_manifest.monitoring | d({})
+    | ansible.builtin.combine(instance_manifest.monitoring | d({}), recursive=true)
+    | ansible.builtin.combine(engine_overrides.monitoring | d({}), recursive=true) }}"
 
 postgres_cluster_name: "{{ instance_name | d('') | replace('-', '_') }}" # Dashes don't work with pg_createcluster"
 postgres_data_directory: "/var/lib/postgresql/{{ postgres_version }}/{{ postgres_cluster_name }}"

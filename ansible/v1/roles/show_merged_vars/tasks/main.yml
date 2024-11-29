@@ -1,0 +1,21 @@
+- name: Show merged vars - top lvl
+  debug:
+    msg: "{{ item.name }}: {{ item.value }}"
+  when: item.value
+  loop:
+    - { name: uuid, value: "{{ uuid | d('') }}"}
+    - { name: instance_name, value: "{{ instance_name | d('') }}"}
+    - { name: cloud, value: "{{ cloud | d('') }}"}
+    - { name: region, value: "{{ region | d('') }}"}
+    - { name: expiration_date, value: "{{ expiration_date | d('') }}"}
+
+- name: Show merged var sections
+  debug:
+    msg: "Section {{ item.section_name }}: {{ item.section_data }}"
+  loop:
+    - { section_name: postgres, section_data: "{{ postgres | d({}) }}"}
+    - { section_name: vm, section_data: "{{ vm | d({}) }}"}
+    - { section_name: os, section_data: "{{ os | d({}) }}"}
+    - { section_name: backup, section_data: "{{ backup | d({}) }}"}
+    - { section_name: aws, section_data: "{{ aws | d({}) }}"}
+    - { section_name: monitoring, section_data: "{{ monitoring | d({}) }}"}

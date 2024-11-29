@@ -1,6 +1,6 @@
 
-{% for _param in postgresql.config_lines | d({}, True) %}
-{% if postgresql.config_lines[_param] != None %}
-{{ _param }} = '{{ postgresql.config_lines[_param] }}'
+{% for _param in postgres.config_lines | d({}, True) %}
+{% if postgres.config_lines[_param] != None %}
+{{ _param }} = '{{ postgres.config_lines[_param] }}'
 {% endif %}
 {% endfor %}

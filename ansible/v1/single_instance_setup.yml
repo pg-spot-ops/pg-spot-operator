@@ -7,6 +7,7 @@
   gather_facts: true
 
   roles:
+    - role: show_merged_vars
     - role: mount_unattached_disks
     - role: install_os_pg_prereqs
     - role: os_setup
