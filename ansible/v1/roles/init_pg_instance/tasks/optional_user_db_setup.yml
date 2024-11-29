@@ -37,6 +37,22 @@
       login_port: "5432"
     when: not postgres.admin_is_superuser|d(False)
 
+  when: postgres.admin_user | d('')
+
+- name: Create the "app" DB if requested
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_db:
+    state: present
+    name: "{{ postgres.app_db_name }}"
+    owner: "{{ postgres.admin_user | default('') or 'postgres' }}"
+    template: template1
+    login_host: /var/run/postgresql
+    login_port: "5432"
+  when: postgres.app_db_name | d('') | length > 0
+
+- block:
+
   - name: Add DB privs to non-superuser
     become: yes
     become_user: postgres
@@ -66,18 +82,6 @@
       - "{{ postgres.app_db_name | d('') }}"
 
   when: postgres.admin_user | d('')
-
-- name: Create the "app" DB if requested
-  become: true
-  become_user: postgres
-  community.postgresql.postgresql_db:
-    state: present
-    name: "{{ postgres.app_db_name }}"
-    owner: "{{ postgres.admin_user | default('') or 'postgres' }}"
-    template: template1
-    login_host: /var/run/postgresql
-    login_port: "5432"
-  when: postgres.app_db_name | d('') | length > 0
 
 - name: Add user listed extensions to the default or app db
   become: true
