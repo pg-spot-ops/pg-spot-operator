@@ -8,7 +8,9 @@ from pg_spot_operator.util import (
     extract_region_from_az,
     get_aws_region_code_to_name_mapping,
     region_regex_to_actual_region_codes,
+    space_pad_manifest,
 )
+from tests.test_manifests import TEST_MANIFEST_VAULT_SECRETS
 
 
 def test_merge_action_output_params():
@@ -64,3 +66,12 @@ def test_region_regex_to_actual_region_codes():
     for regex_input, expected in test_values:
         regs = region_regex_to_actual_region_codes(regex_input)
         assert regs == expected
+
+
+def test_space_pad_manifest():
+    padded = space_pad_manifest(TEST_MANIFEST_VAULT_SECRETS)
+    assert (
+        len(padded.splitlines())
+        == len(TEST_MANIFEST_VAULT_SECRETS.splitlines()) - 1
+    )  # +1 to account for removed ---
+    assert padded.splitlines()[0].startswith("  ")

@@ -337,3 +337,14 @@ def region_regex_to_actual_region_codes(region_regex: str) -> list[str]:
         if r.search(code) or r.search(name):
             ret.append(code)
     return sorted(ret)
+
+
+def space_pad_manifest(mfs: str, spaces_to_add: int = 2) -> str:
+    """Add two leading spaces so that the manifest could be sub-keyed for Ansible vars merging
+    Remove YAML --- markers if present
+    """
+    splits = mfs.splitlines()
+    new_splits = [
+        " " * spaces_to_add + s for s in splits if s.strip() != "---"
+    ]
+    return "\n".join(new_splits)

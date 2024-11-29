@@ -54,6 +54,7 @@ from pg_spot_operator.util import (
     merge_action_output_params,
     merge_user_and_tuned_non_conflicting_config_params,
     run_process_with_output,
+    space_pad_manifest,
     try_rm_file_if_exists,
 )
 
@@ -304,13 +305,8 @@ def populate_temp_workdir_for_action_exec(
         "w",
     ) as f:
         f.write(
-            yaml.dump(
-                {
-                    "instance_manifest": yaml.safe_load(
-                        manifest.original_manifest
-                    )
-                }
-            )
+            "---\ninstance_manifest:\n"
+            + space_pad_manifest(manifest.original_manifest)
         )
 
     if manifest.session_vars:
