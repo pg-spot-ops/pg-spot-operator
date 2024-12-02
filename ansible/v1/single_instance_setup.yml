@@ -8,6 +8,7 @@
 
   roles:
     - role: show_merged_vars
+      when: verbose | d(False)
     - role: mount_unattached_disks
     - role: install_os_pg_prereqs
     - role: os_setup

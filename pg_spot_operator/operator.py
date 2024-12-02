@@ -309,6 +309,8 @@ def populate_temp_workdir_for_action_exec(
             + space_pad_manifest(manifest.original_manifest)
         )
 
+    if logger.root.level == logging.DEBUG:  # Some extra Ansible log output
+        manifest.session_vars["debug"] = True
     if manifest.session_vars:
         with open(
             os.path.join(
@@ -451,6 +453,8 @@ def generate_ansible_run_script_for_action(
         m.vault_password_file = os.path.expanduser(default_vault_password_file)
     if m.vault_password_file:
         extra_args = "--vault-password-file " + m.vault_password_file
+    if logger.root.level == logging.DEBUG:  # Some extra Ansible log output
+        extra_args += " -v"
     run_template = f"""#!/bin/bash
 
 echo "Starting at `date`"
@@ -635,6 +639,7 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
         m.instance_name,
         os.path.join(temp_workdir, "ansible.log"),
     )
+    logger.info("SSH connect string: %s", get_ssh_connstr(m))
 
     rc, outputs = run_ansible_handler(
         action, temp_workdir, executable_full_path, m
