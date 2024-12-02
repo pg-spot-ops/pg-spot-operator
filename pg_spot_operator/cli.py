@@ -834,7 +834,8 @@ def main():  # pragma: no cover
     if args.check_manifest:
         check_manifest_and_exit(args)
 
-    check_cli_args_valid(args)
+    if not (args.manifest_path or args.manifest):
+        check_cli_args_valid(args)
 
     logger.debug("Args: %s", args.as_dict()) if args.verbose else None
 
