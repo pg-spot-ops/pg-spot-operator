@@ -16,7 +16,7 @@
       state: present
       name: "{{ postgres.admin_user }}"
       password: "{{ postgres.admin_password }}"
-      role_attr_flags: "{{ postgres.admin_is_superuser | d(False) | ternary('SUPERUSER', 'NOSUPERUSER,CREATEDB,CREATEROLE') }}"
+      role_attr_flags: "{{ postgres.admin_is_superuser | d(False) | ternary('SUPERUSER', 'NOSUPERUSER,CREATEDB,CREATEROLE,REPLICATION') }}"
       login_host: /var/run/postgresql
       login_port: "5432"
     when: postgres.admin_user | d('') | length > 0

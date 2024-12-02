@@ -46,7 +46,7 @@ user_tags:  # In addition to user tags the engine will add: pg-spot-operator-ins
   app: backend
 postgres:
   version: 16  # Optional. Minimum supported version is v14. Defaults to latest stable
-  admin_is_superuser: true
+  admin_is_superuser: false
   admin_user: admin
   admin_password: kah8aiThuXegh1neingee5go  # Needs to be provided if admin_user set
 #  admin_password: !vault |
