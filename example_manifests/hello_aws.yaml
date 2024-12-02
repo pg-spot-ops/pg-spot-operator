@@ -13,7 +13,7 @@ ip_floating: true  # Default: true. If true we get a new IP after eviction i.e. 
 expiration_date: "2024-12-22 00:00+03"  # Optional. Instance will be deleted after that (if engine running)
 self_termination: false  # Optional. Instance will auto-destroy itself (needs according separate AWS keys set)
 is_paused: false  # No engine actions on the instance
-#vault_password_file: /tmp/vault_password_file # If Ansible encrypted strings are used. Can also be set globally via --vault-password-file
+#vault_password_file: ~/vault_password_file # If Ansible encrypted strings are used. Can also be set globally via --vault-password-file
 vm:
 #  host: 192.168.121.221  # Target VM override (local testing)
 #  login_user: vagrant  # Target VM override (local testing)
@@ -49,6 +49,13 @@ postgres:
   admin_is_superuser: true
   admin_user: admin
   admin_password: kah8aiThuXegh1neingee5go  # Needs to be provided if admin_user set
+#  admin_password: !vault |
+#    $ANSIBLE_VAULT;1.1;AES256
+#    30643364356334303739626534623937613733386535346661363166323138636537353666653262
+#    3462353138393366393537643733666337353762363763620a333436343730373936343830646431
+#    37363766353163666666613863363461656131646662653035336139383261643966323966633333
+#    3532653838393935650a643666333361383465623463643563626337386235336166393966663733
+#    3839
   app_db_name: app  # App / user DB to be created if set
   initdb_opts:  # Defaults
     - --data-checksums
