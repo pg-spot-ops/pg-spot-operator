@@ -113,7 +113,7 @@ and feed the output into `--aws-vpc-id`, `--aws-access-key-id` and `--aws-secret
 * The user:
   - Specifies a few key parameters like region (required), and optionally some minimum hardware specs - CPU, RAM, target instance
   families / generations, or a list of suitable instance types explicitly and for local storage also the min. storage size, and maybe also
-  the Postgres version (defaults to latest stable) and some addon extensions. User input can come in 3 forms:
+  the Postgres version (v15+ supported, defaults to latest stable) and some addon extensions. User input can come in 3 forms:
     - CLI/Env parameters a la `--region`, `--instance-name`, `--ram-min`, `--assign-public-ip`. Note that in CLI mode not all
       features can be configured and some common choices are made for the user
     - A YAML manifest as literal text via `--manifest`/`PGSO_MANIFEST`

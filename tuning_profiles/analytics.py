@@ -44,13 +44,8 @@ if __name__ == "__main__":
         o["max_worker_processes"] = cpus
         o["max_parallel_workers"] = min(cpus / 4, 4)
         o["max_parallel_maintenance_workers"] = min(cpus / 4, 4)
-    o["wal_compression"] = "on"
     o["backend_flush_after"] = "2MB"
-    o["track_io_timing"] = "on"
-    o["track_functions"] = "pl"
-    o["wal_keep_size"] = "1GB"
     o["jit"] = "on"
-    o["track_wal_io_timing"] = "on"
 
     print(f"# Applied tuning profile: {PROFILE}")
     for k, v in sorted(o.items()):

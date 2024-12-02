@@ -45,11 +45,6 @@ max_connections = 100
 max_wal_size = 4GB
 random_page_cost = 1.5
 shared_buffers = 204MB
-track_functions = pl
-track_io_timing = on
-track_wal_io_timing = on
-wal_compression = on
-wal_keep_size = 1GB
 ```
 
 

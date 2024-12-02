@@ -2,7 +2,7 @@
 api_version: v1  # Required
 kind: pg_spot_operator_instance  # Required
 cloud: aws  # Required
-region: eu-south-2  # Optional if availability_zone set
+region: eu-south-2  # Optional if availability_zone or vm.host set
 #availability_zone: eu-south-2b  # Optional
 instance_name: hello-aws  # Required
 description: My play instance # Optional
@@ -10,12 +10,12 @@ assign_public_ip: true  # Default: true. False = internal / VPC access only. PS 
 ip_floating: true  # Default: true. If true we get a new IP after eviction i.e. don't reserve / manage a NIC.
                     # If false and assign_public_ip set an Elastic IPs will be used (given available, very limited per account)
                     # Note that non-floating IPs take longer to recover after an eviction due to some AWS NIC state refresh lag
-expiration_date: "2024-12-22 00:00+03"  # Optional. Instance will be deleted after that (if engine running)
+#expiration_date: "2024-12-22 00:00+03"  # Optional. Instance will be deleted after that (if engine running)
 self_termination: false  # Optional. Instance will auto-destroy itself (needs according separate AWS keys set)
 is_paused: false  # No engine actions on the instance
 #vault_password_file: ~/vault_password_file # If Ansible encrypted strings are used. Can also be set globally via --vault-password-file
 vm:
-#  host: 192.168.121.221  # Target VM override (local testing)
+#  host: 192.168.121.178  # Target VM override (local testing)
 #  login_user: vagrant  # Target VM override (local testing)
 #  cpu_arch: arm  # [ arm | amd | x86 | intel ]  # amd | x86 | intel all resolve to same -> non-arm
   cpu_min: 2  # Optional
@@ -63,10 +63,11 @@ postgres:
     - --icu-locale=en
     - --locale=en_US.utf8
   tuning_profile: default  # none | default | oltp | analytics | web. Set to 'none' for Postgres defaults.
-  config_lines:  # Literal postgresql.conf lines for custom overrides / tuning. Takes precedence over tuning_profile outputs.
-    log_connections: on
-    shared_preload_libraries: pg_stat_statements,auth_delay
-    auth_delay.milliseconds: '500'
+  config_lines:  # postgresql.conf settings for custom overrides / tuning. Takes precedence over tuning_profile outputs.
+    log_connections: 'off'
+    shared_preload_libraries: 'pg_stat_statements,auth_delay,pg_prewarm'
+    log_autovacuum_min_duration: '0'
+    statement_timeout: '5min'
   pg_hba_lines:  # Defaults allow non-postgres world access
     - "host all postgres 0.0.0.0/0 reject"
     - "hostssl all all 0.0.0.0/0 scram-sha-256"

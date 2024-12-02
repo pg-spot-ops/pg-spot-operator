@@ -492,6 +492,8 @@ def get_instance_connect_strings(m: InstanceManifest) -> tuple[str, str]:
 
 
 def get_ssh_connstr(m: InstanceManifest) -> str:
+    if m.vm.host and m.vm.login_user:
+        return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -l {m.vm.login_user} {m.vm.host}"
     vm = get_latest_vm_by_uuid(m.uuid)
     if not vm:
         return ""

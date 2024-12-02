@@ -57,7 +57,6 @@ default_manifest:
     tuning_profile: default  # none | default | oltp | analytics | web. Set to 'none' for Postgres defaults.
     config_lines:  # Literal postgresql.conf lines for custom overrides / tuning. Takes precedence over tuning_profile outputs.
       cluster_name: "{{ postgres_cluster_name }}"
-      statement_timeout: '5min'
       shared_preload_libraries: 'pg_stat_statements,auth_delay'
       auth_delay.milliseconds: '500'
       archive_mode: 'on'
@@ -67,6 +66,10 @@ default_manifest:
       log_filename: 'postgresql-%a.log'
       log_truncate_on_rotation: 'on'
       log_connections: 'on'
+      wal_compression: 'zstd'
+      track_functions: 'pl'
+      track_io_timing: 'on'
+      wal_keep_size: '1GB'
     pg_hba_lines:  # Defaults allow non-postgres world access
       - "host all postgres 0.0.0.0/0 reject"
       - "hostssl all all 0.0.0.0/0 scram-sha-256"

@@ -137,7 +137,7 @@ class ArgumentParser(Tap):
         "PGSO_OS_EXTRA_PACKAGES", ""
     )  # Comma separated, e.g. postgresql-16-postgis-3,postgresql-16-pgrouting
     shared_preload_libraries: str = os.getenv(
-        "PGSO_SHARED_PRELOAD_LIBRARIES", "pg_stat_statements"
+        "PGSO_SHARED_PRELOAD_LIBRARIES", "pg_stat_statements,auth_delay"
     )  # Comma separated
     extensions: str = os.getenv("PGSO_EXTENSIONS", "pg_stat_statements")
     aws_access_key_id: str = os.getenv("PGSO_AWS_ACCESS_KEY_ID", "")
