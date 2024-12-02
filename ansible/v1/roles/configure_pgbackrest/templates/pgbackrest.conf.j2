@@ -6,7 +6,7 @@ pg1-port=5432
 {% if 'process-max' not in backup.pgbackrest.global_settings|default({}) %}
 # Use up to half of vCPUs for backups / archiving
 # Current vCPUs (ansible_processor_vcpus): {{ ansible_processor_vcpus }}
-process-max={{ (ansible_processor_vcpus // 2) if (ansible_processor_vcpus // 2) > 0 else 1 }}
+process-max={{ [(ansible_processor_vcpus // 2) if (ansible_processor_vcpus // 2) > 0 else 1, 16] | min }}
 {% endif %}
 {% if 'start-fast' not in backup.pgbackrest.global_settings|default({}) %}
 start-fast=y
