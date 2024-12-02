@@ -59,7 +59,7 @@ class SectionPostgres(BaseModel):
     app_db_name: str | None = None
     config_lines: dict = field(default_factory=dict)
     extensions: list[str] = field(default_factory=list)
-    pg_hba_lines: list[str] = field(default_factory=list)
+    pg_hba_lines: list[str] | None = None
     initdb_opts: list[str] = field(default_factory=list)
 
 

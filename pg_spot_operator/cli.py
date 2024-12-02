@@ -140,6 +140,9 @@ class ArgumentParser(Tap):
         "PGSO_SHARED_PRELOAD_LIBRARIES", "pg_stat_statements,auth_delay"
     )  # Comma separated
     extensions: str = os.getenv("PGSO_EXTENSIONS", "pg_stat_statements")
+    pg_hba_lines: str = os.getenv(
+        "PGSO_PG_HBA_LINES", ""
+    )  # To override operator default pg_hba access rules. CSV
     aws_access_key_id: str = os.getenv("PGSO_AWS_ACCESS_KEY_ID", "")
     aws_secret_access_key: str = os.getenv("PGSO_AWS_SECRET_ACCESS_KEY", "")
     aws_key_pair_name: str = os.getenv("PGSO_AWS_KEY_PAIR_NAME", "")
@@ -254,6 +257,8 @@ def compile_manifest_from_cmdline_params(
         if args.aws_security_group_ids
         else []
     )
+    if args.pg_hba_lines:
+        m.postgres.pg_hba_lines = args.pg_hba_lines.split(",")
     m.aws.vpc_id = args.aws_vpc_id
     m.aws.subnet_id = args.aws_subnet_id
     m.aws.access_key_id = args.aws_access_key_id

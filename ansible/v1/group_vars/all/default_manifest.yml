@@ -70,7 +70,7 @@ default_manifest:
       track_functions: 'pl'
       track_io_timing: 'on'
       wal_keep_size: '1GB'
-    pg_hba_lines:  # Defaults allow non-postgres world access
+    pg_hba_lines:  # In addition to Debian defaults. Spot Operator defaults allow non-postgres world access
       - "host all postgres 0.0.0.0/0 reject"
       - "hostssl all all 0.0.0.0/0 scram-sha-256"
   backup:  # Only supported backup tool is pgBackRest currently
