@@ -80,8 +80,8 @@ default_manifest:
     retention_days: 2
     schedule_full: "0 3 * * 1,3,5"
     schedule_diff: "0 3 * * 0,2,4,6"
-    encryption: false
-  #  cipher_password:  # Supports Ansible vault encrypted strings
+    encryption: true
+    cipher_password:  pgspotops  # Supports Ansible vault encrypted strings
   #  cipher_password_file:  # Plain text file accessible on the engine if don't want to use vault
   #  s3_key:
   #  s3_key_file:
