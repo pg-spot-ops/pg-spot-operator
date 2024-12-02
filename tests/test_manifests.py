@@ -20,8 +20,8 @@ postgres:
   admin_password: dev
   admin_is_superuser: true  # Assign all safe built-in roles + make DB owner
   config_lines:  # Possibly overrides any tuned values
-    - "pg_stat_statements.max = 1000"
-    - "pg_stat_statements.track_utility = off"
+    pg_stat_statements.max: 1000
+    pg_stat_statements.track_utility: off
   pg_hba_lines:
     - "hostssl all all 0.0.0.0/0 scram-sha-256"      
   initdb_opts:

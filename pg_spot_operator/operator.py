@@ -54,6 +54,7 @@ from pg_spot_operator.util import (
     merge_action_output_params,
     merge_user_and_tuned_non_conflicting_config_params,
     run_process_with_output,
+    space_pad_manifest,
     try_rm_file_if_exists,
 )
 
@@ -300,15 +301,24 @@ def populate_temp_workdir_for_action_exec(
         os.makedirs(dir, exist_ok=True)
 
     with open(
-        os.path.join(temp_workdir, "vars", "instance_manifest.yml"), "w"
+        os.path.join(temp_workdir, "group_vars/all", "instance_manifest.yml"),
+        "w",
     ) as f:
-        f.write(str(manifest.original_manifest))
+        f.write(
+            "---\ninstance_manifest:\n"
+            + space_pad_manifest(manifest.original_manifest)
+        )
 
+    if logger.root.level == logging.DEBUG:  # Some extra Ansible log output
+        manifest.session_vars["debug"] = True
     if manifest.session_vars:
         with open(
-            os.path.join(temp_workdir, "vars", "engine_overrides.yml"), "w"
+            os.path.join(
+                temp_workdir, "group_vars/all", "engine_overrides.yml"
+            ),
+            "w",
         ) as f:
-            f.write(yaml.dump(manifest.session_vars))
+            f.write(yaml.dump({"engine_overrides": manifest.session_vars}))
 
     return temp_workdir
 
@@ -443,6 +453,8 @@ def generate_ansible_run_script_for_action(
         m.vault_password_file = os.path.expanduser(default_vault_password_file)
     if m.vault_password_file:
         extra_args = "--vault-password-file " + m.vault_password_file
+    if logger.root.level == logging.DEBUG:  # Some extra Ansible log output
+        extra_args += " -v"
     run_template = f"""#!/bin/bash
 
 echo "Starting at `date`"
@@ -627,6 +639,7 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
         m.instance_name,
         os.path.join(temp_workdir, "ansible.log"),
     )
+    logger.info("SSH connect string: %s", get_ssh_connstr(m))
 
     rc, outputs = run_ansible_handler(
         action, temp_workdir, executable_full_path, m

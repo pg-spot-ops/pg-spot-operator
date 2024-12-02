@@ -1,22 +1,14 @@
 ---
+
 - hosts: all
   become: yes
   become_method: sudo
   any_errors_fatal: true
   gather_facts: true
 
-  pre_tasks:
-    - name: Include instance manifest
-      ansible.builtin.include_vars:
-        file: "vars/instance_manifest.yml"
-        name: instance_manifest
-    - name: Include engine override vars if any
-      ansible.builtin.include_vars:
-        file: "vars/engine_overrides.yml"
-        name: engine_overrides
-
   roles:
-    - role: merge_vars
+    - role: show_merged_vars
+      when: verbose | d(False)
     - role: mount_unattached_disks
     - role: install_os_pg_prereqs
     - role: os_setup

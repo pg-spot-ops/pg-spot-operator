@@ -13,17 +13,18 @@ ip_floating: true  # Default: true. If true we get a new IP after eviction i.e. 
 expiration_date: "2024-12-22 00:00+03"  # Optional. Instance will be deleted after that (if engine running)
 self_termination: false  # Optional. Instance will auto-destroy itself (needs according separate AWS keys set)
 is_paused: false  # No engine actions on the instance
-vault_password_file: /tmp/vault_password_file # If Ansible encrypted strings are used. Can also be set globally via --vault-password-file
+#vault_password_file: ~/vault_password_file # If Ansible encrypted strings are used. Can also be set globally via --vault-password-file
 vm:
-  host: 192.168.121.221  # Target VM override (local testing)
-  login_user: vagrant  # Target VM override (local testing)
-  cpu_arch: arm  # [ arm | amd | x86 | intel ]  # amd | x86 | intel all resolve to same -> non-arm
+#  host: 192.168.121.221  # Target VM override (local testing)
+#  login_user: vagrant  # Target VM override (local testing)
+#  cpu_arch: arm  # [ arm | amd | x86 | intel ]  # amd | x86 | intel all resolve to same -> non-arm
   cpu_min: 2  # Optional
   cpu_max: 8  # Optional
   ram_min: 4  # Optional
   allow_burstable: true
-  instance_types: [m6gd.xlarge]  # cpu_min etc will be ignored then and cheapest of listed used
+#  instance_types: [m6gd.xlarge]  # cpu_min etc will be ignored then and cheapest of listed used
 #  instance_family: r(6|7)  # Regex to filter on the first part of instance type names, i.e. "r6g" part of "r6g.medium"
+  instance_selection_strategy: balanced  # [ balanced | cheapest | eviction-rate ]
   storage_min: 100  # Required, as no auto-growth for now
   storage_type: local  # local | network. PS Using network volumes pins you to a specific AZ
   storage_speed_class: ssd  # hdd | ssd | nvme. For instance storage (storage_type=local)
@@ -48,6 +49,13 @@ postgres:
   admin_is_superuser: true
   admin_user: admin
   admin_password: kah8aiThuXegh1neingee5go  # Needs to be provided if admin_user set
+#  admin_password: !vault |
+#    $ANSIBLE_VAULT;1.1;AES256
+#    30643364356334303739626534623937613733386535346661363166323138636537353666653262
+#    3462353138393366393537643733666337353762363763620a333436343730373936343830646431
+#    37363766353163666666613863363461656131646662653035336139383261643966323966633333
+#    3532653838393935650a643666333361383465623463643563626337386235336166393966663733
+#    3839
   app_db_name: app  # App / user DB to be created if set
   initdb_opts:  # Defaults
     - --data-checksums
@@ -56,8 +64,9 @@ postgres:
     - --locale=en_US.utf8
   tuning_profile: default  # none | default | oltp | analytics | web. Set to 'none' for Postgres defaults.
   config_lines:  # Literal postgresql.conf lines for custom overrides / tuning. Takes precedence over tuning_profile outputs.
-    - "log_connections = on"
-    - "shared_preload_libraries = 'pg_stat_statements,pg_cron'"
+    log_connections: on
+    shared_preload_libraries: pg_stat_statements,auth_delay
+    auth_delay.milliseconds: '500'
   pg_hba_lines:  # Defaults allow non-postgres world access
     - "host all postgres 0.0.0.0/0 reject"
     - "hostssl all all 0.0.0.0/0 scram-sha-256"
