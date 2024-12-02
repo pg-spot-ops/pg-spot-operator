@@ -111,6 +111,12 @@ default_manifest:
   #  self_terminate_secret_access_key:
   monitoring:
     prometheus_node_exporter:
-      enabled: true
+      enabled: false
+      externally_accessible: false
     grafana:
-      enabled: true
+      enabled: false
+      externally_accessible: true
+      admin_user: "pgspotops"
+      admin_password: ""
+      anonymous_access: true
+      protocol: https
