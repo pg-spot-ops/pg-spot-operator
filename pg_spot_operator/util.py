@@ -43,7 +43,7 @@ def merge_user_and_tuned_non_conflicting_config_params(
         if not tuned_line.startswith("#"):
             splits = tuned_line.partition("=")
             key = splits[0].strip()
-            if key in config_lines_user or len(splits) < 2:
+            if key in config_lines_user or len(splits) != 3:
                 continue
             merged[key] = splits[2].strip()
     return merged

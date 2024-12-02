@@ -9,6 +9,7 @@ from pg_spot_operator.util import (
     get_aws_region_code_to_name_mapping,
     region_regex_to_actual_region_codes,
     space_pad_manifest,
+    merge_user_and_tuned_non_conflicting_config_params,
 )
 from tests.test_manifests import TEST_MANIFEST_VAULT_SECRETS
 
@@ -75,3 +76,14 @@ def test_space_pad_manifest():
         == len(TEST_MANIFEST_VAULT_SECRETS.splitlines()) - 1
     )  # +1 to account for removed ---
     assert padded.splitlines()[0].startswith("  ")
+
+
+def test_merge_user_and_tuned_non_conflicting_config_params():
+    """User config params override tuning output"""
+    config_lines_tuned = ["param1 = 100", "param2 = 'on'", "param3=xxx"]
+    config_lines_user = {"param3": "yyy", "p4": "a"}
+    merged = merge_user_and_tuned_non_conflicting_config_params(
+        config_lines_tuned, config_lines_user
+    )
+    assert len(merged) == 4
+    assert merged["param3"] == "yyy"
