@@ -1,8 +1,6 @@
 ---
 # Available in manifests
-instance_name: spot
-postgres:
-  version: 16
+postgres_cluster_name: spot
 
 # Internal
 def_pg_hba_lines:

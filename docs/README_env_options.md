@@ -57,7 +57,6 @@
 * **--shared-preload-libraries / PGSO_SHARED_PRELOAD_LIBRARIES** (Default: pg_stat_statements). Comma separated
 * **--extensions / PGSO_EXTENSIONS** (Default: pg_stat_statements). Comma separated
 
-
 # Security / Access
 
 * **--aws-access-key-id / PGSO_AWS_ACCESS_KEY_ID** AWS creds. If not set the default profile is used.  
@@ -71,7 +70,8 @@
 * **--aws-subnet-id / PGSO_AWS_SUBNET_ID** To place the created VMs into a specific network
 * **--ssh-keys / PGSO_SSH_KEYS** Comma separated SSH pubkeys to add to the backing VM
 * **--ssh-private-key / PGSO_SSH_PRIVATE_KEY** (Default: ~/.ssh/id_rsa) To use a non-default SSH key to access the VM
-* **--aws-key-pair-name / PGSO_AWS_KEY_PAIR_NAME** To grant an existing AWS SSH key pair SSH access the VM. Must have the private key for actual access 
+* **--aws-key-pair-name / PGSO_AWS_KEY_PAIR_NAME** To grant an existing AWS SSH key pair SSH access the VM. Must have the private key for actual access
+* **--pg-hba-lines / PGSO_PG_HBA_LINES** Valid pg_hba.conf lines to override operator world-access defaults. Comma separated
 
 # Backup
 
