@@ -96,7 +96,9 @@ class SectionOs(BaseModel):
         True  # Might result in nightly restarts
     )
     kernel_tuning: bool = True  # Basic memory over-commit tuning only for now
-    ssh_brute_force_protection: bool = True  # Ban SSH brute-force attempts by default
+    ssh_brute_force_protection: bool = (
+        True  # Ban SSH brute-force attempts by default
+    )
     extra_packages: list[str] = field(default_factory=list)
     ssh_pub_keys: list[str] = field(default_factory=list)
     ssh_pub_key_paths: list[str] = field(default_factory=list)

@@ -121,6 +121,7 @@ def resolve_hardware_requirements_to_instance_types(
                 aws_spot.resolve_hardware_requirements_to_instance_types(
                     all_regional_spots,
                     region,
+                    max_skus_to_get,
                     use_boto3=use_boto3,
                     availability_zone=m.availability_zone,
                     cpu_min=m.vm.cpu_min,

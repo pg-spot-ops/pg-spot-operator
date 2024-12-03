@@ -394,6 +394,7 @@ def get_filtered_instances_by_price_no_az(
 def resolve_hardware_requirements_to_instance_types(
     all_instances: list[InstanceTypeInfo],
     region: str,
+    max_skus_to_get: int,
     use_boto3: bool = False,
     availability_zone: str | None = None,
     cpu_min: int = 0,
@@ -533,13 +534,13 @@ def resolve_hardware_requirements_to_instance_types(
         instance_selection_strategy,
     )
 
-    # The final select instance type with pricing info
-    siti: InstanceTypeInfo = instance_selection_strategy_cls.execute(
+    strategy_sorted_instance_types = instance_selection_strategy_cls.execute(
         qualified_instances_with_price_info
     )
-
-    if not siti:
+    if not strategy_sorted_instance_types:
         raise Exception("Should not happen")
+
+    siti: InstanceTypeInfo = strategy_sorted_instance_types[0]
 
     if not siti.monthly_spot_price:
         siti.monthly_spot_price = round(siti.hourly_spot_price * 24 * 30, 1)

@@ -12,7 +12,7 @@ class InstanceTypeSelectionStrategy:
     @classmethod
     def execute(
         cls, qualified_instance_types: list[InstanceTypeInfo]
-    ) -> InstanceTypeInfo:
+    ) -> list[InstanceTypeInfo]:
         raise NotImplementedError(
             f"{cls.__name__} has not implemented the execute method"
         )
@@ -23,7 +23,7 @@ class InstanceTypeSelectionCheapest(InstanceTypeSelectionStrategy):
     @classmethod
     def execute(
         cls, instance_types: list[InstanceTypeInfo]
-    ) -> InstanceTypeInfo:
+    ) -> list[InstanceTypeInfo]:
         """Don't consider the worst eviction rate bracket instance types still"""
         non_zero_price = [
             x
@@ -34,7 +34,7 @@ class InstanceTypeSelectionCheapest(InstanceTypeSelectionStrategy):
             raise Exception(
                 "No qualified instances with hourly_spot_price set"
             )
-        return sorted(non_zero_price, key=lambda x: x.hourly_spot_price)[0]
+        return sorted(non_zero_price, key=lambda x: x.hourly_spot_price)
 
 
 class InstanceTypeSelectionRandom(InstanceTypeSelectionStrategy):
@@ -42,8 +42,9 @@ class InstanceTypeSelectionRandom(InstanceTypeSelectionStrategy):
     @classmethod
     def execute(
         cls, qualified_instance_types: list[InstanceTypeInfo]
-    ) -> InstanceTypeInfo:
-        return random.choice(qualified_instance_types)
+    ) -> list[InstanceTypeInfo]:
+        random.shuffle(qualified_instance_types)
+        return qualified_instance_types
 
 
 class InstanceTypeSelectionEvictionRate(InstanceTypeSelectionStrategy):
@@ -51,7 +52,7 @@ class InstanceTypeSelectionEvictionRate(InstanceTypeSelectionStrategy):
     @classmethod
     def execute(
         cls, instance_types: list[InstanceTypeInfo]
-    ) -> InstanceTypeInfo:
+    ) -> list[InstanceTypeInfo]:
         valid_instances = [
             x
             for x in instance_types
@@ -64,7 +65,7 @@ class InstanceTypeSelectionEvictionRate(InstanceTypeSelectionStrategy):
         valid_instances.sort(
             key=lambda x: (x.max_eviction_rate, x.hourly_spot_price)
         )
-        return valid_instances[0]
+        return valid_instances
 
 
 class InstanceTypeSelectionBalanced(InstanceTypeSelectionStrategy):
@@ -73,7 +74,7 @@ class InstanceTypeSelectionBalanced(InstanceTypeSelectionStrategy):
     @classmethod
     def execute(
         cls, instance_types: list[InstanceTypeInfo]
-    ) -> InstanceTypeInfo:
+    ) -> list[InstanceTypeInfo]:
         valid_instances = [
             x
             for x in instance_types
@@ -104,7 +105,7 @@ class InstanceTypeSelectionBalanced(InstanceTypeSelectionStrategy):
         #         for x in balanced
         #     ],
         # )
-        return balanced[0]
+        return balanced
 
 
 class InstanceTypeSelection:
