@@ -56,6 +56,26 @@ def describe_instance_type_boto3(instance_type: str, region: str) -> dict:
     return {}
 
 
+def try_get_monthly_ondemand_price_for_sku(region: str, sku: str) -> float:
+    hourly: float = 0
+    try:
+        hourly = get_current_hourly_ondemand_price(region, sku)
+        return round(hourly * 24 * 30, 1)
+    except Exception as e:
+        logger.error(
+            "Failed to get ondemand instance pricing from AWS, trying ec2.shop fallback. Error: %s",
+            e,
+        )
+    try:
+        hourly = get_current_hourly_ondemand_price_fallback(region, sku)
+        return round(hourly * 24 * 30, 1)
+    except Exception as e:
+        logger.error(
+            "Failed to get fallback pricing from ec2.shop. Error: %s", e
+        )
+    return 0
+
+
 def resolve_instance_type_info(
     instance_type: str, region: str, i_desc: dict | None = None
 ) -> InstanceTypeInfo:
@@ -123,7 +143,7 @@ def get_all_ec2_spot_instance_types(
 
 
 # TODO some caching
-def get_current_hourly_spot_price(
+def get_current_hourly_spot_price_boto3(
     region: str,
     instance_type: str,
     az: str = "",
@@ -171,6 +191,7 @@ def get_ondemand_price_for_instance_type_from_aws_regional_pricing_info(
     return 0
 
 
+@timed_cache(seconds=1800)
 def get_current_hourly_ondemand_price(
     region: str,
     instance_type: str,
@@ -235,8 +256,6 @@ def filter_instance_types_by_hw_req(
             instance_types_to_avoid,
         )
 
-    all_instance_types = {x.instance_type for x in all_instances}
-    logger.debug(all_instance_types)
     for ii in all_instances:
 
         if instance_types:
@@ -391,6 +410,29 @@ def get_filtered_instances_by_price_no_az(
     return sorted(by_cpu, key=lambda x: x[2])
 
 
+def attach_pricing_info_to_instance_type_info(
+    instance_types: list[InstanceTypeInfo], use_boto3: bool = False
+) -> list[InstanceTypeInfo]:
+    for iti in instance_types:
+        if not iti.hourly_spot_price:
+            if use_boto3:
+                iti.hourly_spot_price = get_current_hourly_spot_price_boto3(
+                    region=iti.region,
+                    instance_type=iti.instance_type,
+                    az=iti.availability_zone,
+                )
+        if not iti.monthly_spot_price:
+            iti.monthly_spot_price = round(iti.hourly_spot_price * 24 * 30, 1)
+        if not iti.hourly_ondemand_price:
+            iti.monthly_ondemand_price = (
+                try_get_monthly_ondemand_price_for_sku(
+                    iti.region, iti.instance_type
+                )
+            )
+
+    return instance_types
+
+
 def resolve_hardware_requirements_to_instance_types(
     all_instances: list[InstanceTypeInfo],
     region: str,
@@ -524,6 +566,8 @@ def resolve_hardware_requirements_to_instance_types(
             "Could not fetch eviction rate information from AWS, can't display expected eviction rate info"
         )
 
+    logger.debug("Instances / Prices in selection: %s", avg_by_sku_az)
+
     instance_selection_strategy_cls = (
         InstanceTypeSelection.get_selection_strategy(
             instance_selection_strategy
@@ -540,22 +584,13 @@ def resolve_hardware_requirements_to_instance_types(
     if not strategy_sorted_instance_types:
         raise Exception("Should not happen")
 
-    siti: InstanceTypeInfo = strategy_sorted_instance_types[0]
-
-    if not siti.monthly_spot_price:
-        siti.monthly_spot_price = round(siti.hourly_spot_price * 24 * 30, 1)
-
-    logger.debug(
-        "Cheapest SKU found - %s (%s) in %s a for monthly Spot price of $%s",
-        siti.instance_type,
-        siti.arch,
-        siti.availability_zone or siti.region,
-        siti.monthly_spot_price,
+    strategy_sorted_instance_types_with_pricing = (
+        attach_pricing_info_to_instance_type_info(
+            strategy_sorted_instance_types, use_boto3
+        )
     )
-    logger.debug("Instances / Prices in selection: %s", avg_by_sku_az)
 
-    # TODO respect max_skus
-    return [siti]
+    return strategy_sorted_instance_types_with_pricing[:max_skus_to_get]
 
 
 @timed_cache(seconds=30)

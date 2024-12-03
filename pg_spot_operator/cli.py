@@ -9,6 +9,9 @@ from tap import Tap
 
 from pg_spot_operator import cloud_api, cmdb, manifests, operator
 from pg_spot_operator.cloud_impl.aws_client import set_access_keys
+from pg_spot_operator.cloud_impl.aws_spot import (
+    try_get_monthly_ondemand_price_for_sku,
+)
 from pg_spot_operator.cloud_impl.cloud_util import is_explicit_aws_region_code
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.constants import MF_SEC_VM_STORAGE_TYPE_LOCAL
@@ -587,9 +590,6 @@ def resolve_manifest_and_display_price(
         )
         exit(1)
 
-    cheapest_skus = sorted(cheapest_skus, key=lambda x: x.monthly_spot_price)
-    cheapest_skus = cheapest_skus[:3]
-
     if not is_explicit_aws_region_code(m.region):
         logger.info(
             "Top 3 cheapest regions pricing info for selection strategy '%s'",
@@ -627,7 +627,7 @@ def resolve_manifest_and_display_price(
 
         if not sku.monthly_ondemand_price:
             sku.monthly_ondemand_price = (
-                cloud_api.try_get_monthly_ondemand_price_for_sku(
+                try_get_monthly_ondemand_price_for_sku(
                     sku.region, sku.instance_type
                 )
             )

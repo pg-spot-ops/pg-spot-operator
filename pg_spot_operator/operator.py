@@ -22,8 +22,9 @@ from pg_spot_operator.cloud_impl.aws_s3 import (
 from pg_spot_operator.cloud_impl.aws_spot import (
     describe_instance_type_boto3,
     get_backing_vms_for_instances_if_any,
-    get_current_hourly_spot_price,
+    get_current_hourly_spot_price_boto3,
     resolve_instance_type_info,
+    try_get_monthly_ondemand_price_for_sku,
 )
 from pg_spot_operator.cloud_impl.aws_vm import (
     delete_network_interface,
@@ -137,7 +138,7 @@ def preprocess_ensure_vm_action(
 
     if not sku.monthly_spot_price:
         sku.monthly_spot_price = round(
-            get_current_hourly_spot_price(
+            get_current_hourly_spot_price_boto3(
                 m.region, selected_instance_type, m.availability_zone
             )
             * 24
@@ -162,10 +163,8 @@ def preprocess_ensure_vm_action(
         sku.storage_speed_class if sku.instance_storage else "",
     )
     if not sku.monthly_ondemand_price:
-        sku.monthly_ondemand_price = (
-            cloud_api.try_get_monthly_ondemand_price_for_sku(
-                m.region, sku.instance_type
-            )
+        sku.monthly_ondemand_price = try_get_monthly_ondemand_price_for_sku(
+            m.region, sku.instance_type
         )
 
     if sku.monthly_ondemand_price and sku.monthly_spot_price:
