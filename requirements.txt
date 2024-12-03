@@ -15,3 +15,4 @@ pyyaml
 types-PyYAML
 sqlalchemy
 unidecode
+tabulate
