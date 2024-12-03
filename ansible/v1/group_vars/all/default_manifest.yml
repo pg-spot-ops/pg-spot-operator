@@ -35,6 +35,7 @@ default_manifest:
   os:
     unattended_security_upgrades: true  # Might result in nightly restarts
     kernel_tuning: true  # Basic memory over-commit tuning for databases
+    ssh_brute_force_protection: true  # via fail2ban
     extra_packages: []  # Default: []
 #      - pgbadger
 #      - postgresql-16-cron

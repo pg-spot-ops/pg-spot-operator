@@ -1,0 +1,9 @@
+---
+
+- hosts: all
+  become: yes
+  any_errors_fatal: true
+  gather_facts: no
+
+  roles:
+    - role: fail2ban

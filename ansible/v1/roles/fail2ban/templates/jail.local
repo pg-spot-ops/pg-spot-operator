@@ -1,0 +1,13 @@
+[DEFAULT]
+# Debian 12 has no log files, just journalctl
+backend = systemd
+
+# "bantime" is the number of seconds that a host is banned.
+bantime  = 2h
+# "maxretry" is the number of failures before a host get banned.
+maxretry = 5
+# A host is banned if it has generated "maxretry" during the last "findtime"
+findtime  = 1h
+
+[sshd]
+enabled = true

@@ -1,0 +1,21 @@
+---
+# Ideally would use https://docs.debops.org/en/stable-3.2/ansible/roles/fail2ban/index.html here but seems
+# Debian-12 doesn't work out-of-the-box :/ (https://github.com/debops/debops/issues/2565)
+# Thus following a workaround from: https://github.com/fail2ban/fail2ban/issues/3292#issuecomment-1678844644
+- name: Install fail2ban + python3-systemd prereq
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  delay: 10
+  retries: 1
+  loop:
+    - python3-systemd
+    - fail2ban
+
+- name: Use our custom config
+  ansible.builtin.template:
+    src: jail.local
+    dest: /etc/fail2ban/jail.local
+
+- name: Ensure fail2ban started
+  ansible.builtin.service: name=fail2ban state=started

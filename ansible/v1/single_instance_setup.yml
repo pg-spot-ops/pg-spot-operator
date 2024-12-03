@@ -9,6 +9,8 @@
   roles:
     - role: show_merged_vars
       when: verbose | d(False)
+    - role: fail2ban
+      when: os.ssh_brute_force_protection | d(True)
     - role: mount_unattached_disks
     - role: install_os_pg_prereqs
     - role: os_setup
