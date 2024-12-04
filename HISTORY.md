@@ -4,6 +4,14 @@ Changelog
 
 (unreleased)
 ------------
+- Fix unterminated string literal for Python 3.10. [Kaarel Moppel]
+
+  From last PR: approx_rds_x = f"{math.ceil(
+
+
+0.9.8 (2024-12-04)
+------------------
+- Release: version 0.9.8 🚀 [Kaarel Moppel]
 - Appease linter. [Kaarel Moppel]
 
   pg_spot_operator/cli.py:619: error: Argument 1 to "add_rows" of "PrettyTable" has incompatible type "list[tuple[Any, ...]]"; expected "Iterable[list[Any]]"  [arg-type]
