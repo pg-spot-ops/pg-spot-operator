@@ -173,7 +173,6 @@ class InstanceManifest(BaseModel):
     manifest_snapshot_id: int = 0
     uuid: str | None = None  # CMDB ID
     session_vars: dict = field(default_factory=dict)
-    resolved_instances: list[InstanceTypeInfo] = field(default_factory=list)
     # *Top-level instance fields*
     # Required fields
     api_version: str
@@ -212,7 +211,6 @@ class InstanceManifest(BaseModel):
             "uuid",
             "original_manifest",
             "session_vars",
-            "resolved_instances",
         }
 
     def is_expired(self) -> bool:
