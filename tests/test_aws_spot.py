@@ -8,7 +8,7 @@ from pg_spot_operator.cloud_api import (
 )
 from pg_spot_operator.cloud_impl import aws_spot
 from pg_spot_operator.cloud_impl.aws_spot import (
-    get_current_hourly_spot_price,
+    get_current_hourly_spot_price_boto3,
     get_current_hourly_ondemand_price,
     filter_instance_types_by_hw_req,
     resolve_instance_type_info,
@@ -616,7 +616,7 @@ def test_get_avg_spot_price_from_pricing_history_data_by_sku_and_az():
 
 
 def test_get_current_spot_price():
-    sp = get_current_hourly_spot_price(
+    sp = get_current_hourly_spot_price_boto3(
         "eu-north-1", "m6idn.large", "eu-north-1a", PRICING_DATA
     )
     assert 0.01 < sp < 1

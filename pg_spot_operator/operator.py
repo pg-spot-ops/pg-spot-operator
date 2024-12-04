@@ -20,10 +20,9 @@ from pg_spot_operator.cloud_impl.aws_s3 import (
     s3_try_create_bucket_if_not_exists,
 )
 from pg_spot_operator.cloud_impl.aws_spot import (
-    describe_instance_type_boto3,
     get_backing_vms_for_instances_if_any,
-    get_current_hourly_spot_price,
     resolve_instance_type_info,
+    try_get_monthly_ondemand_price_for_sku,
 )
 from pg_spot_operator.cloud_impl.aws_vm import (
     delete_network_interface,
@@ -37,13 +36,9 @@ from pg_spot_operator.cloud_impl.aws_vm import (
     terminate_instances_in_region,
 )
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
-from pg_spot_operator.cloud_impl.cloud_util import (
-    extract_cpu_arch_from_sku_desc,
-)
 from pg_spot_operator.cmdb import get_instance_connect_string, get_ssh_connstr
 from pg_spot_operator.constants import (
     BACKUP_TYPE_PGBACKREST,
-    CLOUD_AWS,
     DEFAULT_CONFIG_DIR,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
     SPOT_OPERATOR_EXPIRES_TAG,
@@ -84,66 +79,31 @@ class UserExit(Exception):
 def preprocess_ensure_vm_action(
     m: InstanceManifest,
     existing_instance_info: dict | None = None,
-) -> InstanceTypeInfo:
-    """Fill in the "blanks" that are not set by the user but still needed, like the SKU"""
-    sku: InstanceTypeInfo
-    selected_instance_type = (
-        m.vm.instance_types[0] if len(m.vm.instance_types) == 1 else ""
-    )
+) -> list[InstanceTypeInfo]:
+    """Resolve the manifest HW reqs to instance types.
+    If existing / running instance info given, only consider that InstanceType - just need the CPU etc details
+    """
+
     if existing_instance_info:
-        selected_instance_type = existing_instance_info["InstanceType"]
+        cheapest_skus = [
+            resolve_instance_type_info(
+                existing_instance_info["InstanceType"],
+                m.region,
+                existing_instance_info,
+            )
+        ]
     else:
-        logger.info(
-            "Resolving HW requirements in region %s using --selection-strategy=%s ...",
-            m.region,
-            m.vm.instance_selection_strategy,
-        )
-    if not m.vm.instance_types and not existing_instance_info:
         cheapest_skus = (
             cloud_api.resolve_hardware_requirements_to_instance_types(m)
         )
-        if not cheapest_skus:
-            raise Exception(
-                f"No SKUs matching HW requirements found for instance {m.instance_name} in {m.cloud} region {m.region}"
-            )
-        sku = cheapest_skus[
-            0
-        ]  # TODO implement multi-sku, to retry if first type booked out
-        m.vm.instance_types.append(sku.instance_type)
-        selected_instance_type = sku.instance_type
-    else:
-        if len(m.vm.instance_types) > 1 and not existing_instance_info:
-            selected_instance_type = (
-                cloud_api.get_cheapest_instance_type_from_selection(
-                    m.cloud, m.vm.instance_types, m.region, m.availability_zone
-                )
-            )
 
-        i_desc = describe_instance_type_boto3(selected_instance_type, m.region)
-        sku = InstanceTypeInfo(
-            instance_type=selected_instance_type,
-            cloud=CLOUD_AWS,
-            region=m.region,
-            arch=extract_cpu_arch_from_sku_desc(CLOUD_AWS, i_desc),
-            provider_description=i_desc,
-            availability_zone=m.availability_zone,
-            cpu=i_desc.get("VCpuInfo", {}).get("DefaultVCpus", 0),
-            ram_mb=i_desc.get("MemoryInfo", {}).get("SizeInMiB", 0),
-            instance_storage=i_desc.get("InstanceStorageInfo", {}).get(
-                "TotalSizeInGB", 0
-            ),
+    if not cheapest_skus:
+        raise Exception(
+            f"No SKUs matching HW requirements found for instance {m.instance_name} in {m.cloud} region {m.region}"
         )
-    m.vm.cpu_arch = sku.arch
 
-    if not sku.monthly_spot_price:
-        sku.monthly_spot_price = round(
-            get_current_hourly_spot_price(
-                m.region, selected_instance_type, m.availability_zone
-            )
-            * 24
-            * 30,
-            1,
-        )
+    sku = cheapest_skus[0]
+
     logger.info(
         "%s SKU %s (%s) in availability zone %s for a monthly Spot price of $%s",
         "Found existing" if existing_instance_info else "Selected new",
@@ -162,10 +122,8 @@ def preprocess_ensure_vm_action(
         sku.storage_speed_class if sku.instance_storage else "",
     )
     if not sku.monthly_ondemand_price:
-        sku.monthly_ondemand_price = (
-            cloud_api.try_get_monthly_ondemand_price_for_sku(
-                m.region, sku.instance_type
-            )
+        sku.monthly_ondemand_price = try_get_monthly_ondemand_price_for_sku(
+            m.region, sku.instance_type
         )
 
     if sku.monthly_ondemand_price and sku.monthly_spot_price:
@@ -189,7 +147,7 @@ def preprocess_ensure_vm_action(
             sku.eviction_rate_group_label,
         )
 
-    return sku
+    return cheapest_skus
 
 
 class NoAliasDumper(yaml.SafeDumper):
@@ -503,14 +461,14 @@ def apply_tuning_profile(
     )  # Default fall back of tuning by HW min reqs from user
     if mf.vm.instance_types:  # Use actual HW specs for tuning if available
         try:
-            i_info = resolve_instance_type_info(
+            ins_type_info = resolve_instance_type_info(
                 mf.vm.instance_types[0], mf.region
             )
             tuning_input = {
-                "cpu_min": i_info.cpu,
-                "ram_min": int(i_info.ram_mb / 1000),
+                "cpu_min": ins_type_info.cpu,
+                "ram_min": int(ins_type_info.ram_mb / 1000),
                 "storage_type": mf.vm.storage_type,
-                "storage_speed_class": i_info.storage_speed_class,
+                "storage_speed_class": ins_type_info.storage_speed_class,
             }
         except Exception:
             logger.error(
@@ -694,24 +652,23 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
         logger.info("Backing instance found: %s", instance_id)
     else:
         logger.warning(
-            "Detected a missing VM for instance '%s' in region %s - %s ...",
+            "Detected a missing VM for instance '%s' in region %s",
             m.instance_name,
             m.region,
-            "NOT creating (--dry-run)" if dry_run else "creating",
         )
         cmdb.mark_any_active_vms_as_deleted(m)
 
-    instance_info = preprocess_ensure_vm_action(
+    resolved_instance_types = preprocess_ensure_vm_action(
         m, backing_instances[0] if backing_instances else None
     )
-    if not m.availability_zone:
-        m.availability_zone = instance_info.availability_zone
 
-    cloud_vm, created = ensure_spot_vm(m, dry_run=dry_run)
+    cloud_vm, created = ensure_spot_vm(
+        m, resolved_instance_types, dry_run=dry_run
+    )
     if dry_run:
         return False, "dummy"
 
-    cmdb.finalize_ensure_vm(m, instance_info, cloud_vm)
+    cmdb.finalize_ensure_vm(m, cloud_vm)
 
     return True if not backing_instances else False, cloud_vm.provider_id
 

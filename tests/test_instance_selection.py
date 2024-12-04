@@ -40,7 +40,7 @@ def test_strategy_cheapest():
 
     siti: InstanceTypeInfo = instance_selection_strategy_cls.execute(
         INSTANCE_TYPES
-    )
+    )[0]
     assert siti.instance_type == "i1"
 
 
@@ -51,7 +51,7 @@ def test_strategy_eviction_rate():
 
     siti: InstanceTypeInfo = instance_selection_strategy_cls.execute(
         INSTANCE_TYPES
-    )
+    )[0]
     assert siti.instance_type == "i2"
 
 
@@ -62,5 +62,5 @@ def test_strategy_balanced():
 
     siti: InstanceTypeInfo = instance_selection_strategy_cls.execute(
         INSTANCE_TYPES
-    )
+    )[0]
     assert siti.instance_type == "i4"

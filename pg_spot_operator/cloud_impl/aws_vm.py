@@ -7,7 +7,7 @@ from typing import Any
 import botocore
 
 from pg_spot_operator.cloud_impl.aws_client import get_client
-from pg_spot_operator.cloud_impl.cloud_structs import CloudVM
+from pg_spot_operator.cloud_impl.cloud_structs import CloudVM, InstanceTypeInfo
 from pg_spot_operator.constants import CLOUD_AWS
 from pg_spot_operator.manifests import InstanceManifest
 
@@ -353,17 +353,20 @@ def wait_until_nic_available(
 
 
 def ec2_launch_instance(
-    m: InstanceManifest, user_data: str = "", dry_run: bool = False
+    m: InstanceManifest,
+    rit: InstanceTypeInfo,
+    user_data: str = "",
+    dry_run: bool = False,
 ) -> dict:
     """https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2/client/run_instances.html
     Returns full instance description dict from the API
     """
     instance_name: str = m.instance_name
     region: str = m.region
-    availability_zone: str = m.availability_zone
+    availability_zone: str = rit.availability_zone
     user_tags: dict = m.user_tags
-    architecture: str = m.vm.cpu_arch
-    instance_type: str = m.vm.instance_types[0]
+    architecture: str = rit.arch
+    instance_type: str = rit.instance_type
     key_pair_name: str = m.aws.key_pair_name
     security_group_ids: list[str] = m.aws.security_group_ids
     subnet_id: str = m.aws.subnet_id
@@ -865,12 +868,23 @@ def get_default_vpc(region: str) -> str:
 
 
 def ensure_spot_vm(
-    m: InstanceManifest, dry_run: bool = False
+    m: InstanceManifest,
+    resolved_instance_types: list[InstanceTypeInfo],
+    dry_run: bool = False,
 ) -> tuple[CloudVM, bool]:
-    """Returns [CloudVM, was_actually_created]"""
+    """Returns [CloudVM, was_actually_created].
+    Tries resolved instance types one-by-one if fails due to no capacity available
+    """
     instance_name = m.instance_name
     region = m.region
-    logger.debug("Ensuring a Spot VM for instance %s ...", instance_name)
+    logger.debug("Ensuring a Spot VM for instance '%s' ...", instance_name)
+    logger.debug(
+        "Instance types to be tried: %s",
+        [
+            (x.instance_type, x.availability_zone)
+            for x in resolved_instance_types
+        ],
+    )
 
     i_desc = get_running_instance_by_tags(
         m.region, {SPOT_OPERATOR_ID_TAG: instance_name}
@@ -883,51 +897,69 @@ def ensure_spot_vm(
             f"Instance {i_desc['InstanceId']} already running for instance {instance_name}, skipping create"
         )
     else:
-        pub_key_file = "~/.ssh/id_rsa.pub"
-        if m.ansible.private_key:
-            if m.ansible.private_key.endswith(".pub"):
-                pub_key_file = m.ansible.private_key
-            else:
-                pub_key_file = m.ansible.private_key + ".pub"
-        user_data = compile_cloud_init_user_data_config(
-            region,
-            LOGIN_USER,
-            pub_key_file,
-            m.os.ssh_pub_keys,
-            m.aws.key_pair_name,
-        )
-        if m.aws.vpc_id and not m.aws.subnet_id:
-            if m.aws.vpc_id != get_default_vpc(region):
-                m.aws.subnet_id = get_subnet_id_for_vpc_az(
-                    region, m.aws.vpc_id, m.availability_zone
+        for rit in resolved_instance_types:
+            try:
+                pub_key_file = "~/.ssh/id_rsa.pub"
+                if m.ansible.private_key:
+                    if m.ansible.private_key.endswith(".pub"):
+                        pub_key_file = m.ansible.private_key
+                    else:
+                        pub_key_file = m.ansible.private_key + ".pub"
+                user_data = compile_cloud_init_user_data_config(
+                    region,
+                    LOGIN_USER,
+                    pub_key_file,
+                    m.os.ssh_pub_keys,
+                    m.aws.key_pair_name,
                 )
+                if m.aws.vpc_id and not m.aws.subnet_id:
+                    if m.aws.vpc_id != get_default_vpc(region):
+                        m.aws.subnet_id = get_subnet_id_for_vpc_az(
+                            region, m.aws.vpc_id, m.availability_zone
+                        )
 
-        i_desc = ec2_launch_instance(m, dry_run=dry_run, user_data=user_data)
-        if not dry_run:
-            new_vm_created = True
-            logger.debug("VM %s created", i_desc["InstanceId"])
+                i_desc = ec2_launch_instance(
+                    m, rit, dry_run=dry_run, user_data=user_data
+                )
+                if not dry_run:
+                    new_vm_created = True
+                    logger.debug("VM %s created", i_desc["InstanceId"])
 
-    if dry_run:
-        logger.info("Dry-run launch OK")
-        return (
-            CloudVM(
-                provider_id="dummy",
-                cloud=CLOUD_AWS,
-                region=region,
-                instance_type=(
-                    i_desc["InstanceType"]
-                    if i_desc
-                    else (
-                        m.vm.instance_types[0]
-                        if m.vm.instance_types
-                        else "N/A"
+                if dry_run:
+                    logger.info("Dry-run launch OK")
+                    return (
+                        CloudVM(
+                            provider_id="dummy",
+                            cloud=CLOUD_AWS,
+                            region=region,
+                            instance_type=(
+                                i_desc["InstanceType"]
+                                if i_desc
+                                else (
+                                    m.vm.instance_types[0]
+                                    if m.vm.instance_types
+                                    else "N/A"
+                                )
+                            ),
+                            login_user=LOGIN_USER,
+                            ip_private="dummy",
+                        ),
+                        False,
                     )
-                ),
-                login_user=LOGIN_USER,
-                ip_private="dummy",
-            ),
-            False,
-        )
+                break
+            except Exception as e:
+                if "InsufficientInstanceCapacity" in str(e):
+                    logger.error(
+                        "Failed to launch - no Spot capacity available for %s in AZ %s",
+                        rit.instance_type,
+                        rit.availability_zone,
+                    )
+                else:
+                    logger.exception("Failed to launch an instance")
+                time.sleep(1)
+
+    if not i_desc:
+        raise Exception("No running instance found / failed to launch")
 
     if m.vm.storage_type == STORAGE_TYPE_NETWORK:
         vol_desc = ensure_volume_attached(m, i_desc)

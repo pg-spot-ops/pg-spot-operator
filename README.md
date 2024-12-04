@@ -31,26 +31,33 @@ Just in case let's check the pricing beforehand, though - in most cases it will 
 # Step 0 - install the pg-spot-operator package via pip/pipx:
 pipx install pg-spot-operator
 
-# Resolve user requirements to actual EC2 instance types and show the cheapest instances.
-# Note that in this example we only consider EU regions, to get OK latencies, globally one could save even more
+# Resolve user requirements to actual EC2 instance types and show the best (cheap and with good eviction rates) instances.
+# Here we only consider North American regions, assuming were located there and want good latencies as well.
 pg_spot_operator --check-price \
-  --region='eu-' --ram-min=128 \
+  --region='^(us|ca)' --ram-min=128 \
   --storage-min=500 --storage-type=local
 
 Resolving HW requirements to actual instance types / prices using --selection-strategy=balanced ...
-Looking for the top 3 cheapest regions for given HW reqs within: ['eu-central-1', 'eu-central-2', 'eu-north-1', 'eu-south-1', 'eu-south-2', 'eu-west-1', 'eu-west-2', 'eu-west-3']
-Top 3 cheapest regions pricing info for selection strategy 'balanced':
-===== REGION eu-south-2 =====
-Instance type selected for region eu-south-2: gr6.4xlarge (arm)
-Main specs - vCPU: 16, RAM: 128 GB, instance storage: 600 GB nvme
-Current monthly Spot price for gr6.4xlarge in region eu-south-2: $155.7
-Current Spot vs Ondemand discount rate: -86.7% ($155.7 vs $1167.7), approx. 12x to non-HA RDS
-Current expected monthly eviction rate range: 5-10%
-...
+Regions in consideration based on --region='^(us|ca)' input: ['ca-central-1', 'ca-west-1', 'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
+Top 10 cheapest instances found for strategy 'balanced':
++-----------+--------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
+|   Region  |     SKU      | Arch | vCPU |  RAM   | Instance storage | Spot $ (Mo) | On-Demand $ (Mo) | EC2 discount | Approx. RDS win | Evic. rate (Mo) |
++-----------+--------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
+| us-east-1 | x2gd.4xlarge | arm  |  16  | 256 GB |   950 GB ssd     |    195.6    |      961.9       |     -80%     |        8x       |      10-15%     |
+| us-east-1 | i4g.4xlarge  | arm  |  16  | 128 GB |   3750 GB ssd    |    218.4    |      889.6       |     -75%     |        7x       |       <5%       |
+| us-west-2 | i4g.4xlarge  | arm  |  16  | 128 GB |   3750 GB ssd    |    245.7    |      889.6       |     -72%     |        6x       |      5-10%      |
+| us-west-2 | x2gd.4xlarge | arm  |  16  | 256 GB |   950 GB ssd     |    259.5    |      961.9       |     -73%     |        6x       |       <5%       |
+| us-east-2 | r5d.4xlarge  | x86  |  16  | 128 GB |   600 GB nvme    |    264.1    |      829.4       |     -68%     |        5x       |      5-10%      |
+| us-east-2 | r5ad.4xlarge | x86  |  16  | 128 GB |   600 GB nvme    |    264.7    |      754.6       |     -65%     |        5x       |      5-10%      |
+| us-west-1 | r6gd.4xlarge | arm  |  16  | 128 GB |   950 GB nvme    |    267.6    |      748.8       |     -64%     |        5x       |      10-15%     |
+| us-east-1 | g6e.4xlarge  | arm  |  16  | 128 GB |   600 GB nvme    |    269.7    |      2163.1      |     -88%     |       13x       |       <5%       |
+| us-east-2 | i4g.4xlarge  | arm  |  16  | 128 GB |   3750 GB ssd    |    295.0    |      889.6       |     -67%     |        5x       |       <5%       |
+| us-west-1 | r7gd.4xlarge | arm  |  16  | 128 GB |   950 GB nvme    |    300.0    |      881.8       |     -66%     |        5x       |       <5%       |
++-----------+--------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
 ```
 
-Ok seems `eu-south-2` is best for us currently with some incredible pricing, as hinted in the log output - **a full work
-day on a very powerful instance will cost us a mere $1.7** - less than a cup of coffee!
+Ok seems `us-east-1` is best for us currently with some incredible pricing, as hinted in the log output - **a full work
+day on a very powerful instance will cost us a mere $2.2** - less than a cup of coffee!
 
 For actually launching any AWS instances we of course need a working CLI (`~/.aws/credentials`) or have some
 [privileged enough](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/scripts/terraform/create-iam-user-and-credentials/create_region_limited_user.tf#L22)
@@ -60,7 +67,7 @@ Groups and ports can be found in the [Security](https://github.com/pg-spot-ops/p
 
 ```
 # In --connstr-output-only mode we can land right into `psql`!
-psql $(pg_spot_operator --region=eu-south-2 --ram-min=128 \
+psql $(pg_spot_operator --region=us-east-1 --ram-min=128 \
   --storage-min=500 --storage-type=local \
   --instance-name=analytics --connstr-output-only \
   --admin-user=pgspotops --admin-password=topsecret123
@@ -68,7 +75,7 @@ psql $(pg_spot_operator --region=eu-south-2 --ram-min=128 \
 
 2024-11-19 11:47:32,362 INFO Processing manifest for instance 'analytics' set via CLI / ENV ...
 ...
-2024-11-19 11:47:40,778 INFO Launching a new spot instance of type gr6.4xlarge in region eu-south-2 ...
+2024-11-19 11:47:40,778 INFO Launching a new spot instance of type x2gd.4xlarge in region us-east-1 ...
 2024-11-19 11:47:54,250 INFO OK - aws VM i-07058e08fae07e50d registered for 'instance' analytics (ip_public = 51.92.44.224 , ip_private = 172.31.43.230)
 2024-11-19 11:48:04,251 INFO Applying Postgres tuning profile 'default' to given hardware ...
 ...
@@ -81,7 +88,7 @@ Type "help" for help.
 postgres=# show shared_buffers ;
  shared_buffers
 ----------------
- 26214MB
+ 65536MB
 (1 row)
 
 postgres=# \i my_dataset.sql
@@ -98,7 +105,7 @@ Wow, that task went smooth, other people's computers can be really useful someti
 the instance ...
 
 ```
-pg_spot_operator --region=eu-south-2 --instance-name=analytics --teardown
+pg_spot_operator --region=us-east-1 --instance-name=analytics --teardown
 
 2024-11-19 11:48:04,251 INFO Destroying cloud resources if any for instance analytics ...
 ...

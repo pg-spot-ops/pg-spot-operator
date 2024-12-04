@@ -8,8 +8,6 @@ from pg_spot_operator.cloud_impl.aws_cache import (
 from pg_spot_operator.cloud_impl.aws_spot import (
     get_all_ec2_spot_instance_types,
     get_all_instance_types_from_aws_regional_pricing_info,
-    get_current_hourly_ondemand_price_fallback,
-    get_current_hourly_spot_price,
     get_spot_instance_types_with_price_from_s3_pricing_json,
 )
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
@@ -56,13 +54,18 @@ def boto3_api_instance_list_to_instance_type_info(
 
 def resolve_hardware_requirements_to_instance_types(
     m: InstanceManifest,
-    max_skus_to_get: int = 1,
+    max_skus_to_get: int = 3,  # To be able to retry with a next instance if getting "There is no Spot capacity available"
     skus_to_avoid: list[str] | None = None,
     use_boto3: bool = True,
     regions: list[str] | None = None,
 ) -> list[InstanceTypeInfo]:
     """By default prefer to use the direct boto3 APIs to get the most fresh instance and pricing info.
     Use AWS static JSONs for unauthenticated price checks"""
+    logger.info(
+        "Resolving HW requirements in region %s using --selection-strategy=%s ...",
+        m.region,
+        m.vm.instance_selection_strategy,
+    )
     logger.debug(
         "Looking for Spot VMs via %s for following HW reqs: %s",
         "boto3" if use_boto3 else "S3 price listings",
@@ -121,6 +124,7 @@ def resolve_hardware_requirements_to_instance_types(
                 aws_spot.resolve_hardware_requirements_to_instance_types(
                     all_regional_spots,
                     region,
+                    max_skus_to_get,
                     use_boto3=use_boto3,
                     availability_zone=m.availability_zone,
                     cpu_min=m.vm.cpu_min,
@@ -148,6 +152,10 @@ def resolve_hardware_requirements_to_instance_types(
         logger.warning(
             "WARNING - failed to inquiry regions: %s", noinfo_regions
         )
+    if not ret:
+        logger.warning(
+            f"No SKUs matching HW requirements found for instance {m.instance_name} in {m.cloud} region {m.region}"
+        )
     return ret
 
 
@@ -164,49 +172,3 @@ def get_all_operator_vms_in_manifest_region(
                 if tag["Key"] == SPOT_OPERATOR_ID_TAG:
                     vms_in_region[tag["Value"]] = vm
     return vms_in_region
-
-
-def try_get_monthly_ondemand_price_for_sku(region: str, sku: str) -> float:
-    hourly: float = 0
-    try:
-        hourly = aws_spot.get_current_hourly_ondemand_price(region, sku)
-        return round(hourly * 24 * 30, 1)
-    except Exception as e:
-        logger.error(
-            "Failed to get ondemand instance pricing from AWS, trying ec2.shop fallback. Error: %s",
-            e,
-        )
-    try:
-        hourly = get_current_hourly_ondemand_price_fallback(region, sku)
-        return round(hourly * 24 * 30, 1)
-    except Exception as e:
-        logger.error(
-            "Failed to get fallback pricing from ec2.shop. Error: %s", e
-        )
-    return 0
-
-
-def get_cheapest_instance_type_from_selection(
-    cloud: str,
-    instance_types: list[str],
-    region: str,
-    availability_zone: str = "",
-) -> str:
-    logger.debug("Spot price comparing instance types: %s ...", instance_types)
-    cheapest_instance = ""
-    cheapest_price = 1e6
-
-    if cloud == CLOUD_AWS:
-        for ins_type in instance_types:
-            price = get_current_hourly_spot_price(
-                region, ins_type, availability_zone
-            )
-            logger.debug("%s at $ %s", ins_type, price)
-            if price < cheapest_price:
-                cheapest_price = price
-                cheapest_instance = ins_type
-        logger.debug(
-            "Cheapest instance: %s at $ %s", cheapest_instance, cheapest_price
-        )
-        return cheapest_instance
-    raise NotImplementedError

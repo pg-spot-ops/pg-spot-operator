@@ -21,3 +21,4 @@ pyyaml
 types-PyYAML
 sqlalchemy
 unidecode
+prettytable
