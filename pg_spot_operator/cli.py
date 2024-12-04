@@ -5,7 +5,7 @@ import os.path
 
 import requests
 import yaml
-from tabulate import tabulate
+from prettytable import PrettyTable
 from tap import Tap
 
 from pg_spot_operator import cloud_api, cmdb, manifests, operator
@@ -17,6 +17,7 @@ from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import is_explicit_aws_region_code
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.constants import MF_SEC_VM_STORAGE_TYPE_LOCAL
+from pg_spot_operator.instance_type_selection import InstanceTypeSelection
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.operator import clean_up_old_logs_if_any
 from pg_spot_operator.util import (
@@ -542,91 +543,69 @@ def ensure_single_instance_running(instance_name: str):
 
 
 def display_selected_skus_for_region(
-    region: str, selected_skus: list[InstanceTypeInfo]
+    selected_skus: list[InstanceTypeInfo],
 ) -> None:
-    logger.info("===== REGION %s =====", region)
-    table = [
+    table: list[tuple] = [
         (
+            "Region",
             "SKU",
             "Arch",
             "vCPU",
             "RAM",
             "Instance storage",
-            "Monthly Spot price",
-            "Monthly Ondemand price",
-            "EC2 discount rate",
-            "Approx RDS win",
+            "Spot price ($/Mo)",
+            "Ondemand price ($/Mo)",
+            "EC2 discount",
+            "Approx. RDS win",
+            "Eviction rate (Mo)",
         )
     ]
+    ec2_discount_rate = "N/A"
+    approx_rds_x = "N/A"
     for i in selected_skus:
+        if not i.monthly_ondemand_price:
+            i.monthly_ondemand_price = try_get_monthly_ondemand_price_for_sku(
+                i.region, i.instance_type
+            )
+        if i.monthly_ondemand_price and i.monthly_spot_price:
+            ec2_discount_rate = str(
+                round(
+                    100.0
+                    * (i.monthly_spot_price - i.monthly_ondemand_price)
+                    / i.monthly_ondemand_price
+                )
+            )
+            approx_rds_x = f"{math.ceil(
+                i.monthly_ondemand_price / i.monthly_spot_price * 1.5
+            )}x"
+
         table.append(
             (
+                i.region,
                 i.instance_type,
                 i.arch,
                 i.cpu,
-                i.ram_mb,
-                i.instance_storage,
-                i.monthly_spot_price,
-                i.monthly_ondemand_price,
-                3223,
-                333,
+                f"{round(i.ram_mb / 1024)} GB",
+                (
+                    f"{i.instance_storage} GB {i.storage_speed_class}"
+                    if i.instance_storage
+                    else "EBS only"
+                ),
+                f"{round(i.monthly_spot_price, 1)}",
+                f"{round(i.monthly_ondemand_price, 1)}",
+                f"{ec2_discount_rate}%",
+                approx_rds_x,
+                (
+                    i.eviction_rate_group_label
+                    if i.eviction_rate_group_label
+                    else "N/A"
+                ),
             )
         )
-    print(tabulate(table, headers="firstrow", tablefmt="fancy_grid"))
 
-    # logger.info(
-    #     "Instance type selected for region %s: %s (%s)",
-    #     sku.region,
-    #     sku.instance_type,
-    #     sku.arch,
-    # )
-    # logger.info(
-    #     "Main specs - vCPU: %s, RAM: %s %s, instance storage: %s %s",
-    #     sku.cpu,
-    #     sku.ram_mb if sku.ram_mb < 1024 else int(sku.ram_mb / 1024),
-    #     "MiB" if sku.ram_mb < 1024 else "GB",
-    #     (
-    #         f"{sku.instance_storage} GB"
-    #         if sku.instance_storage
-    #         else "EBS only"
-    #     ),
-    #     sku.storage_speed_class if sku.instance_storage else "",
-    # )
-    #
-    # logger.info(
-    #     "Current monthly Spot price for %s in %s %s: $%s",
-    #     sku.instance_type,
-    #     "AZ" if m.availability_zone else "region",
-    #     sku.availability_zone if sku.availability_zone else sku.region,
-    #     sku.monthly_spot_price,
-    # )
-    #
-    # if not sku.monthly_ondemand_price:
-    #     sku.monthly_ondemand_price = (
-    #         try_get_monthly_ondemand_price_for_sku(
-    #             sku.region, sku.instance_type
-    #         )
-    #     )
-    # if sku.monthly_ondemand_price and sku.monthly_spot_price:
-    #     spot_discount_pct = (
-    #             100.0
-    #             * (sku.monthly_spot_price - sku.monthly_ondemand_price)
-    #             / sku.monthly_ondemand_price
-    #     )
-    #     logger.info(
-    #         "Current Spot vs Ondemand discount rate: %s%% ($%s vs $%s), approx. %sx to non-HA RDS",
-    #         round(spot_discount_pct, 1),
-    #         round(sku.monthly_spot_price, 1),
-    #         round(sku.monthly_ondemand_price, 1),
-    #         math.ceil(
-    #             sku.monthly_ondemand_price / sku.monthly_spot_price * 1.5
-    #         ),
-    #     )
-    # if sku.eviction_rate_group_label:
-    #     logger.info(
-    #         "Current expected monthly eviction rate range: %s",
-    #         sku.eviction_rate_group_label,
-    #     )
+    tab = PrettyTable(table[0])
+    tab.add_rows(table[1:])
+    print(tab)
 
 
 def resolve_manifest_and_display_price(
@@ -666,7 +645,8 @@ def resolve_manifest_and_display_price(
             )
             exit(1)
         logger.info(
-            "Looking for the top 3 cheapest regions for given HW reqs within: %s",
+            "Regions in consideration based on --region=%s input: %s",
+            m.region,
             regions,
         )
 
@@ -680,71 +660,35 @@ def resolve_manifest_and_display_price(
         )
         exit(1)
 
-    if is_explicit_aws_region_code(m.region):
-        display_selected_skus_for_region(m.region, selected_skus)
-        exit(0)
-
-    logger.info(
-        "Top 3 cheapest regions pricing info for selection strategy '%s'",
-        m.vm.instance_selection_strategy,
-    )
-
-    for sku in selected_skus:
-        if not is_explicit_aws_region_code(m.region):
-            logger.info("===== REGION %s =====", sku.region)
-        logger.info(
-            "Instance type selected for region %s: %s (%s)",
-            sku.region,
-            sku.instance_type,
-            sku.arch,
+    if not is_explicit_aws_region_code(
+        m.region
+    ):  # Need an extra sort for multi-region
+        instance_selection_strategy_cls = (
+            InstanceTypeSelection.get_selection_strategy(
+                m.vm.instance_selection_strategy
+            )
         )
-        logger.info(
-            "Main specs - vCPU: %s, RAM: %s %s, instance storage: %s %s",
-            sku.cpu,
-            sku.ram_mb if sku.ram_mb < 1024 else int(sku.ram_mb / 1024),
-            "MiB" if sku.ram_mb < 1024 else "GB",
-            (
-                f"{sku.instance_storage} GB"
-                if sku.instance_storage
-                else "EBS only"
-            ),
-            sku.storage_speed_class if sku.instance_storage else "",
+        logger.debug(
+            "Applying extra sorting using strategy %s over %s instances from all regions ...",
+            m.vm.instance_selection_strategy,
+            len(selected_skus),
         )
 
+        selected_skus = instance_selection_strategy_cls.execute(selected_skus)
+    if len(selected_skus) > 10:
+        selected_skus = selected_skus[:10]
         logger.info(
-            "Current monthly Spot price for %s in %s %s: $%s",
-            sku.instance_type,
-            "AZ" if m.availability_zone else "region",
-            sku.availability_zone if sku.availability_zone else sku.region,
-            sku.monthly_spot_price,
+            "Top 10 cheapest instances found for strategy '%s':",
+            m.vm.instance_selection_strategy,
         )
+    else:
+        logger.info(
+            "Cheapest instances found for strategy '%s':",
+            m.vm.instance_selection_strategy,
+        )
+    display_selected_skus_for_region(selected_skus)
 
-        if not sku.monthly_ondemand_price:
-            sku.monthly_ondemand_price = (
-                try_get_monthly_ondemand_price_for_sku(
-                    sku.region, sku.instance_type
-                )
-            )
-        if sku.monthly_ondemand_price and sku.monthly_spot_price:
-            spot_discount_pct = (
-                100.0
-                * (sku.monthly_spot_price - sku.monthly_ondemand_price)
-                / sku.monthly_ondemand_price
-            )
-            logger.info(
-                "Current Spot vs Ondemand discount rate: %s%% ($%s vs $%s), approx. %sx to non-HA RDS",
-                round(spot_discount_pct, 1),
-                round(sku.monthly_spot_price, 1),
-                round(sku.monthly_ondemand_price, 1),
-                math.ceil(
-                    sku.monthly_ondemand_price / sku.monthly_spot_price * 1.5
-                ),
-            )
-        if sku.eviction_rate_group_label:
-            logger.info(
-                "Current expected monthly eviction rate range: %s",
-                sku.eviction_rate_group_label,
-            )
+    return
 
 
 def download_ansible_from_github_if_not_set_locally(

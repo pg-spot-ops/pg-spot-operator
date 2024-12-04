@@ -21,5 +21,4 @@ pyyaml
 types-PyYAML
 sqlalchemy
 unidecode
-tabulate
-types-tabulate
+prettytable
