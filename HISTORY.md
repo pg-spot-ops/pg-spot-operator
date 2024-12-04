@@ -4,6 +4,108 @@ Changelog
 
 (unreleased)
 ------------
+- Appease linter. [Kaarel Moppel]
+
+  pg_spot_operator/cli.py:619: error: Argument 1 to "add_rows" of "PrettyTable" has incompatible type "list[tuple[Any, ...]]"; expected "Iterable[list[Any]]"  [arg-type]
+- Merge pull request #101 from pg-spot-ops/try-next-sku-on-create-
+  failure. [Kaarel Moppel]
+
+  Better HA - try next cheapest SKU when getting InsufficientInstanceCapacity on VM create
+- Fix AZ info not being set correctly on price resolving. [Kaarel
+  Moppel]
+- Don't need the resolved_instances manifest attribute after all.
+  [Kaarel Moppel]
+- Re-try with another instance type when getting
+  InsufficientInstanceCapacity. [Kaarel Moppel]
+
+  Try up to 3 instance types during one main loop
+- Tune the pricing table output a bit more + README update. [Kaarel
+  Moppel]
+- Re-sort the price check output before display using cheapest strategy.
+  [Kaarel Moppel]
+- Add justification to the price output table. [Kaarel Moppel]
+- Use prettytable instead of tabulate. [Kaarel Moppel]
+
+  Add an additional sort if doing a multi-region price check
+- WIP pretty printing. [Kaarel Moppel]
+- Make multi-instance selection work. [Kaarel Moppel]
+- Instance selection strategies now returning lists. [Kaarel Moppel]
+- Add SSH brute force protection via fail2ban. [Kaarel Moppel]
+
+  New attribute os.ssh_brute_force_protection defaulting to True. A custom
+  Ansible implementation sadly as seems fail2ban doesn't work OOB on
+  Debian 12
+- Enable pgBackRest encryption by default. [Kaarel Moppel]
+
+  With a dummy password though but better than none
+- PgBackrest S3 backup - limit process-max to max 16 cores. [Kaarel
+  Moppel]
+
+  Doesn't seem to bring much after that
+- Merge pull request #100 from pg-spot-ops/add-hba-lines-cli-flag.
+  [Kaarel Moppel]
+
+  New CLI flag --pg-hba-lines to override operator defaults
+- New CLI flag --pg-hba-lines to override operator defaults. [Kaarel
+  Moppel]
+
+  Which might be too wide if SG not trimmed down.
+
+  https://github.com/pg-spot-ops/pg-spot-operator/issues/6
+- Gran non-superuser the built-in replication role. [Kaarel Moppel]
+
+  To be able to use Logical Replication by default
+- Better Ansible defaults and move some tuning settings to Ansible.
+  [Kaarel Moppel]
+- Remove the Docker workflow entirely as on Docker Hub. [Kaarel Moppel]
+
+  Was commented out but that doens't play nice with GH Actions seems
+- Don't validate CLI args when manifest specified explicitly. [Kaarel
+  Moppel]
+- Merge pull request #99 from pg-spot-ops/add-auth-delay-to-pgconf-3.
+  [Kaarel Moppel]
+
+  Major ansible restructuring - group_vars + other
+- Sync monitoring section Python defaults with Ansible. [Kaarel Moppel]
+
+  No monitoring by default. As get a bit faster to connect string
+- Add back example Vault encrypted password to the example manifest.
+  [Kaarel Moppel]
+- Add test for merge_user_and_tuned_non_conflicting_config_params.
+  [Kaarel Moppel]
+- Remove vars/instance_manifest.yml as using group_vars. [Kaarel Moppel]
+- Do more verbose logging also in Ansible if --verbose set. [Kaarel
+  Moppel]
+- Fix Ansible failing on app user privs not having a DB yet. [Kaarel
+  Moppel]
+- Show merged vars as 0 step for single_instance_setup.yml. [Kaarel
+  Moppel]
+
+  Add missing top sections + remove unneeded defaults from default_manifest.yml
+- Space pad the instance manifest instead of plain YAML dump. [Kaarel
+  Moppel]
+
+  To preserve vault secrets
+- Fix linter. [Kaarel Moppel]
+- Run make fmt && make lint. [Evans Akai Bekoe]
+- Rebase and fix types and references. [Evans Akai Bekoe]
+- Fix misc issues. [Evans Akai Bekoe]
+- Rebase on main branch. [Evans Akai Bekoe]
+- Change preload-libraries to dict and dump instance-manifest correctly.
+  [Evans Akai Bekoe]
+- Fix postgres_cluster_name scattering. [Evans Akai Bekoe]
+- Unify default, instance and engine manifests. [Evans Akai Bekoe]
+- Refactor roles/merge_vars into inventory group_vars. [Evans Akai
+  Bekoe]
+- Rename merge_var.yml as _preprocess.yml. [Evans Akai Bekoe]
+- Factor out and include pretasks. [Evans Akai Bekoe]
+- Copy-paste config_lines to instance_manifest. [Evans Akai Bekoe]
+- Add postgresql conf default for auth-delay. [Evans Akai Bekoe]
+
+
+0.9.7 (2024-11-28)
+------------------
+- Release: version 0.9.7 🚀 [Kaarel Moppel]
 - Don't require --region to be set in explicit VM host mode. [Kaarel
   Moppel]
 
