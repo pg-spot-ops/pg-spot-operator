@@ -81,6 +81,11 @@ def resolve_instance_type_info(
 ) -> InstanceTypeInfo:
     """i_desc = AWS API response dict. e.g.: aws ec2 describe-instance-types --instance-types i3en.xlarge"""
     if not i_desc:
+        logger.debug(
+            "Describing instance type %s in region %s ...",
+            instance_type,
+            region,
+        )
         i_desc = describe_instance_type_boto3(instance_type, region)
     if not i_desc:
         raise Exception(
@@ -541,8 +546,8 @@ def resolve_hardware_requirements_to_instance_types(
                 qiti: InstanceTypeInfo = qualified_instances_map[ins_type]
                 qiti_az = InstanceTypeInfo(**qiti.__dict__)
                 qiti_az.availability_zone = az
-                qiti.hourly_spot_price = spot_price
-                qualified_instances_with_price_info.append(qiti)
+                qiti_az.hourly_spot_price = spot_price
+                qualified_instances_with_price_info.append(qiti_az)
     else:
         qualified_instances_with_price_info = qualified_instances_cpu_sorted
         # Already have a price in InstanceTypeInfo when using public AWS pricing API, just for showing the candidates

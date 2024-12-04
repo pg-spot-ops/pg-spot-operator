@@ -8,7 +8,6 @@ from pg_spot_operator.cloud_impl.aws_cache import (
 from pg_spot_operator.cloud_impl.aws_spot import (
     get_all_ec2_spot_instance_types,
     get_all_instance_types_from_aws_regional_pricing_info,
-    get_current_hourly_spot_price_boto3,
     get_spot_instance_types_with_price_from_s3_pricing_json,
 )
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
@@ -62,6 +61,11 @@ def resolve_hardware_requirements_to_instance_types(
 ) -> list[InstanceTypeInfo]:
     """By default prefer to use the direct boto3 APIs to get the most fresh instance and pricing info.
     Use AWS static JSONs for unauthenticated price checks"""
+    logger.info(
+        "Resolving HW requirements in region %s using --selection-strategy=%s ...",
+        m.region,
+        m.vm.instance_selection_strategy,
+    )
     logger.debug(
         "Looking for Spot VMs via %s for following HW reqs: %s",
         "boto3" if use_boto3 else "S3 price listings",
@@ -148,6 +152,10 @@ def resolve_hardware_requirements_to_instance_types(
         logger.warning(
             "WARNING - failed to inquiry regions: %s", noinfo_regions
         )
+    if not ret:
+        logger.warning(
+            f"No SKUs matching HW requirements found for instance {m.instance_name} in {m.cloud} region {m.region}"
+        )
     return ret
 
 
@@ -164,29 +172,3 @@ def get_all_operator_vms_in_manifest_region(
                 if tag["Key"] == SPOT_OPERATOR_ID_TAG:
                     vms_in_region[tag["Value"]] = vm
     return vms_in_region
-
-
-def get_cheapest_instance_type_from_selection(
-    cloud: str,
-    instance_types: list[str],
-    region: str,
-    availability_zone: str = "",
-) -> str:
-    logger.debug("Spot price comparing instance types: %s ...", instance_types)
-    cheapest_instance = ""
-    cheapest_price = 1e6
-
-    if cloud == CLOUD_AWS:
-        for ins_type in instance_types:
-            price = get_current_hourly_spot_price_boto3(
-                region, ins_type, availability_zone
-            )
-            logger.debug("%s at $ %s", ins_type, price)
-            if price < cheapest_price:
-                cheapest_price = price
-                cheapest_instance = ins_type
-        logger.debug(
-            "Cheapest instance: %s at $ %s", cheapest_instance, cheapest_price
-        )
-        return cheapest_instance
-    raise NotImplementedError

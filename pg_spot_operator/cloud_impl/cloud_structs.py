@@ -33,6 +33,7 @@ class CloudVM:
     instance_type: str
     login_user: str
     ip_private: str
+    instance_type_info: InstanceTypeInfo | None = None
     ip_public: str = ""
     availability_zone: str = ""
     provider_name: str = ""

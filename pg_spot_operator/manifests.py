@@ -12,6 +12,7 @@ from dateutil.tz import tzutc
 from pydantic import BaseModel, ValidationError, model_validator
 from typing_extensions import Self
 
+from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
 from pg_spot_operator.constants import (
     BACKUP_TYPE_PGBACKREST,
     CLOUD_AWS,
@@ -172,6 +173,7 @@ class InstanceManifest(BaseModel):
     manifest_snapshot_id: int = 0
     uuid: str | None = None  # CMDB ID
     session_vars: dict = field(default_factory=dict)
+    resolved_instances: list[InstanceTypeInfo] = field(default_factory=list)
     # *Top-level instance fields*
     # Required fields
     api_version: str
@@ -204,11 +206,13 @@ class InstanceManifest(BaseModel):
 
     @staticmethod
     def get_internal_usage_attributes() -> set:
+        """Not serialized back to CMDB snapshots"""
         return {
             "manifest_snapshot_id",
             "uuid",
             "original_manifest",
             "session_vars",
+            "resolved_instances",
         }
 
     def is_expired(self) -> bool:

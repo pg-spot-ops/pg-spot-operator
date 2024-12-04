@@ -22,7 +22,7 @@ from sqlalchemy.engine.base import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from pg_spot_operator import manifests, util
-from pg_spot_operator.cloud_impl.cloud_structs import CloudVM, InstanceTypeInfo
+from pg_spot_operator.cloud_impl.cloud_structs import CloudVM
 from pg_spot_operator.cmdb_impl import sqlite
 from pg_spot_operator.manifests import InstanceManifest
 
@@ -502,9 +502,7 @@ def get_ssh_connstr(m: InstanceManifest) -> str:
     return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -l {vm.login_user} {vm.ip_public or vm.ip_private}"
 
 
-def finalize_ensure_vm(
-    m: InstanceManifest, i_info: InstanceTypeInfo, vm: CloudVM
-):
+def finalize_ensure_vm(m: InstanceManifest, vm: CloudVM):
     if not (
         vm.provider_id and vm.instance_type and vm.login_user and vm.ip_private
     ):
@@ -542,14 +540,17 @@ def finalize_ensure_vm(
         # Optional
         cmdb_vm.provider_name = vm.provider_name
         cmdb_vm.availability_zone = vm.availability_zone
-        cmdb_vm.cpu = i_info.cpu
-        cmdb_vm.ram = i_info.ram_mb
-        cmdb_vm.instance_storage = i_info.instance_storage
+        if vm.instance_type_info:
+            cmdb_vm.cpu = vm.instance_type_info.cpu
+            cmdb_vm.ram = vm.instance_type_info.ram_mb
+            cmdb_vm.instance_storage = vm.instance_type_info.instance_storage
+            cmdb_vm.price_spot = vm.instance_type_info.monthly_spot_price
+            cmdb_vm.price_ondemand = (
+                vm.instance_type_info.monthly_ondemand_price
+            )
         cmdb_vm.ip_public = vm.ip_public
         cmdb_vm.user_tags = m.user_tags
         cmdb_vm.volume_id = vm.volume_id  # If using block storage
-        cmdb_vm.price_spot = i_info.monthly_spot_price
-        cmdb_vm.price_ondemand = i_info.monthly_ondemand_price
         cmdb_vm.last_modified_on = datetime.utcnow()
 
         session.add(cmdb_vm)

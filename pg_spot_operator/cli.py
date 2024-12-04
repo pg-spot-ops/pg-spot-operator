@@ -581,7 +581,16 @@ def display_selected_skus_for_region(
 
         max_reg_len = max([len(x.region) for x in selected_skus])
         max_sku_len = max([len(x.instance_type) for x in selected_skus])
-        max_inst_stor_len = max([len(f"{x.instance_storage} GB {x.storage_speed_class}" if x.instance_storage else "EBS only") for x in selected_skus])
+        max_inst_stor_len = max(
+            [
+                len(
+                    f"{x.instance_storage} GB {x.storage_speed_class}"
+                    if x.instance_storage
+                    else "EBS only"
+                )
+                for x in selected_skus
+            ]
+        )
         table.append(
             (
                 i.region.ljust(max_reg_len, " "),
