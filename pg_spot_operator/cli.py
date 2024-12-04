@@ -553,11 +553,11 @@ def display_selected_skus_for_region(
             "vCPU",
             "RAM",
             "Instance storage",
-            "Spot price ($/Mo)",
-            "Ondemand price ($/Mo)",
+            "Spot $ (Mo)",
+            "On-Demand $ (Mo)",
             "EC2 discount",
             "Approx. RDS win",
-            "Eviction rate (Mo)",
+            "Evic. rate (Mo)",
         )
     ]
     ec2_discount_rate = "N/A"
@@ -581,6 +581,7 @@ def display_selected_skus_for_region(
 
         max_reg_len = max([len(x.region) for x in selected_skus])
         max_sku_len = max([len(x.instance_type) for x in selected_skus])
+        max_inst_stor_len = max([len(f"{x.instance_storage} GB {x.storage_speed_class}" if x.instance_storage else "EBS only") for x in selected_skus])
         table.append(
             (
                 i.region.ljust(max_reg_len, " "),
@@ -592,7 +593,7 @@ def display_selected_skus_for_region(
                     f"{i.instance_storage} GB {i.storage_speed_class}"
                     if i.instance_storage
                     else "EBS only"
-                ).ljust(16),
+                ).ljust(max_inst_stor_len),
                 f"{round(i.monthly_spot_price, 1)}",
                 f"{round(i.monthly_ondemand_price, 1)}",
                 f"{ec2_discount_rate}%",
@@ -647,7 +648,7 @@ def resolve_manifest_and_display_price(
             )
             exit(1)
         logger.info(
-            "Regions in consideration based on --region=%s input: %s",
+            "Regions in consideration based on --region='%s' input: %s",
             m.region,
             regions,
         )
