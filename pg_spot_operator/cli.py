@@ -662,21 +662,17 @@ def resolve_manifest_and_display_price(
         )
         exit(1)
 
-    if not is_explicit_aws_region_code(
-        m.region
-    ):  # Need an extra sort for multi-region
-        instance_selection_strategy_cls = (
-            InstanceTypeSelection.get_selection_strategy(
-                m.vm.instance_selection_strategy
-            )
-        )
-        logger.debug(
-            "Applying extra sorting using strategy %s over %s instances from all regions ...",
-            m.vm.instance_selection_strategy,
-            len(selected_skus),
-        )
+    # Do an extra sort in case have multi-regions or "random" strategy
+    instance_selection_strategy_cls = (
+        InstanceTypeSelection.get_selection_strategy("cheapest")
+    )
+    logger.debug(
+        "Applying extra sorting using strategy %s over %s instances from all regions ...",
+        "cheapest",
+        len(selected_skus),
+    )
 
-        selected_skus = instance_selection_strategy_cls.execute(selected_skus)
+    selected_skus = instance_selection_strategy_cls.execute(selected_skus)
     if len(selected_skus) > 10:
         selected_skus = selected_skus[:10]
         logger.info(
