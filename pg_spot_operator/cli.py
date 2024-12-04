@@ -579,10 +579,12 @@ def display_selected_skus_for_region(
                 i.monthly_ondemand_price / i.monthly_spot_price * 1.5
             )}x"
 
+        max_reg_len = max([len(x.region) for x in selected_skus])
+        max_sku_len = max([len(x.instance_type) for x in selected_skus])
         table.append(
             (
-                i.region,
-                i.instance_type,
+                i.region.ljust(max_reg_len, " "),
+                i.instance_type.ljust(max_sku_len, " "),
                 i.arch,
                 i.cpu,
                 f"{round(i.ram_mb / 1024)} GB",
@@ -590,7 +592,7 @@ def display_selected_skus_for_region(
                     f"{i.instance_storage} GB {i.storage_speed_class}"
                     if i.instance_storage
                     else "EBS only"
-                ),
+                ).ljust(16),
                 f"{round(i.monthly_spot_price, 1)}",
                 f"{round(i.monthly_ondemand_price, 1)}",
                 f"{ec2_discount_rate}%",
