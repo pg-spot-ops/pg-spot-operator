@@ -60,6 +60,7 @@ def try_get_monthly_ondemand_price_for_sku(region: str, sku: str) -> float:
     hourly: float = 0
     try:
         hourly = get_current_hourly_ondemand_price(region, sku)
+        logger.error("1 %s s%", sku, round(hourly * 24 * 30, 1))
         return round(hourly * 24 * 30, 1)
     except Exception as e:
         logger.error(
@@ -68,6 +69,7 @@ def try_get_monthly_ondemand_price_for_sku(region: str, sku: str) -> float:
         )
     try:
         hourly = get_current_hourly_ondemand_price_fallback(region, sku)
+        logger.error("2 %s s%", sku, round(hourly * 24 * 30, 1))
         return round(hourly * 24 * 30, 1)
     except Exception as e:
         logger.error(
@@ -710,9 +712,9 @@ def get_all_instance_types_from_aws_regional_pricing_info(
                         cloud=CLOUD_AWS,
                         region=region,
                         hourly_ondemand_price=float(sku_data["price"]),
-                        monthly_ondemand_price=float(sku_data["price"])
-                        * 24
-                        * 30,
+                        monthly_ondemand_price=round(
+                            float(sku_data["price"]) * 24 * 30, 1
+                        ),
                         cpu=int(sku_data["vCPU"]),
                         ram_mb=extract_memory_mb_from_aws_pricing_memory_string(
                             sku_data.get("Memory", "0")

@@ -575,9 +575,10 @@ def display_selected_skus_for_region(
                     / i.monthly_ondemand_price
                 )
             )
-            approx_rds_x = f"{math.ceil(
+            approx_rds_x_int = math.ceil(
                 i.monthly_ondemand_price / i.monthly_spot_price * 1.5
-            )}x"
+            )
+            approx_rds_x = f"{approx_rds_x_int}x"
 
         max_reg_len = max([len(x.region) for x in selected_skus])
         max_sku_len = max([len(x.instance_type) for x in selected_skus])
@@ -591,20 +592,21 @@ def display_selected_skus_for_region(
                 for x in selected_skus
             ]
         )
+        ram_gb = round(i.ram_mb / 1024)
         table.append(
             [
                 i.region.ljust(max_reg_len, " "),
                 i.instance_type.ljust(max_sku_len, " "),
                 i.arch,
                 i.cpu,
-                f"{round(i.ram_mb / 1024)} GB",
+                f"{ram_gb} GB",
                 (
                     f"{i.instance_storage} GB {i.storage_speed_class}"
                     if i.instance_storage
                     else "EBS only"
                 ).ljust(max_inst_stor_len),
-                f"{round(i.monthly_spot_price, 1)}",
-                f"{round(i.monthly_ondemand_price, 1)}",
+                f"{i.monthly_spot_price}",
+                f"{i.monthly_ondemand_price}",
                 f"{ec2_discount_rate}%",
                 approx_rds_x,
                 (
