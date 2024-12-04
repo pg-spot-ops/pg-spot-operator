@@ -96,6 +96,9 @@ def resolve_instance_type_info(
         arch=extract_cpu_arch_from_sku_desc(CLOUD_AWS, i_desc),
         cloud=CLOUD_AWS,
         region=region,
+        availability_zone=i_desc.get("Placement", {}).get(
+            "AvailabilityZone", ""
+        ),
         cpu=i_desc.get("VCpuInfo", {}).get("DefaultVCpus", 0),
         ram_mb=i_desc.get("MemoryInfo", {}).get("SizeInMiB", 0),
         instance_storage=i_desc.get("InstanceStorageInfo", {}).get(
@@ -533,6 +536,8 @@ def resolve_hardware_requirements_to_instance_types(
             for qi in qualified_instances_cpu_sorted:
                 if qi.instance_type in avg_by_sku_az_map:
                     qi.hourly_spot_price = avg_by_sku_az_map[qi.instance_type]
+                    qi.region = region
+                    qi.availability_zone = availability_zone or ""
             qualified_instances_with_price_info = (
                 qualified_instances_cpu_sorted
             )

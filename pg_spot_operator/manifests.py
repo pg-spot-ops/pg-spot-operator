@@ -12,7 +12,6 @@ from dateutil.tz import tzutc
 from pydantic import BaseModel, ValidationError, model_validator
 from typing_extensions import Self
 
-from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
 from pg_spot_operator.constants import (
     BACKUP_TYPE_PGBACKREST,
     CLOUD_AWS,

@@ -461,14 +461,14 @@ def apply_tuning_profile(
     )  # Default fall back of tuning by HW min reqs from user
     if mf.vm.instance_types:  # Use actual HW specs for tuning if available
         try:
-            i_info = resolve_instance_type_info(
+            ins_type_info = resolve_instance_type_info(
                 mf.vm.instance_types[0], mf.region
             )
             tuning_input = {
-                "cpu_min": i_info.cpu,
-                "ram_min": int(i_info.ram_mb / 1000),
+                "cpu_min": ins_type_info.cpu,
+                "ram_min": int(ins_type_info.ram_mb / 1000),
                 "storage_type": mf.vm.storage_type,
-                "storage_speed_class": i_info.storage_speed_class,
+                "storage_speed_class": ins_type_info.storage_speed_class,
             }
         except Exception:
             logger.error(
