@@ -545,8 +545,8 @@ def ensure_single_instance_running(instance_name: str):
 def display_selected_skus_for_region(
     selected_skus: list[InstanceTypeInfo],
 ) -> None:
-    table: list[tuple] = [
-        (
+    table: list[list] = [
+        [
             "Region",
             "SKU",
             "Arch",
@@ -558,7 +558,7 @@ def display_selected_skus_for_region(
             "EC2 discount",
             "Approx. RDS win",
             "Evic. rate (Mo)",
-        )
+        ]
     ]
     ec2_discount_rate = "N/A"
     approx_rds_x = "N/A"
@@ -592,7 +592,7 @@ def display_selected_skus_for_region(
             ]
         )
         table.append(
-            (
+            [
                 i.region.ljust(max_reg_len, " "),
                 i.instance_type.ljust(max_sku_len, " "),
                 i.arch,
@@ -612,7 +612,7 @@ def display_selected_skus_for_region(
                     if i.eviction_rate_group_label
                     else "N/A"
                 ),
-            )
+            ]
         )
 
     tab = PrettyTable(table[0])
