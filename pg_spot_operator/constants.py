@@ -29,3 +29,5 @@ BACKUP_TYPE_PGBACKREST = "pgbackrest"
 
 
 DEFAULT_CONFIG_DIR = "~/.pg-spot-operator"
+
+DEFAULT_INSTANCE_SELECTION_STRATEGY = "balanced"

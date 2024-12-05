@@ -40,9 +40,11 @@ from pg_spot_operator.cmdb import get_instance_connect_string, get_ssh_connstr
 from pg_spot_operator.constants import (
     BACKUP_TYPE_PGBACKREST,
     DEFAULT_CONFIG_DIR,
+    DEFAULT_INSTANCE_SELECTION_STRATEGY,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
     SPOT_OPERATOR_EXPIRES_TAG,
 )
+from pg_spot_operator.instance_type_selection import InstanceTypeSelection
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.util import (
     check_ssh_ping_ok,
@@ -614,39 +616,63 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
     return rc == 0, outputs
 
 
-def exclude_prev_short_life_time_instances_leaving_at_least_one(
+def apply_short_life_time_instances_reordering(
     resolved_instance_types: list[InstanceTypeInfo],
     short_lifetime_instance_types: list[tuple[str, str]],
+    instance_selection_strategy: str = DEFAULT_INSTANCE_SELECTION_STRATEGY,
 ) -> list[InstanceTypeInfo]:
+    """The idea here is to reorder the resolved instances shortlist so that instance types / zones that didn't live
+    too long would be tried last, even if they were cheaper
+    """
     if not short_lifetime_instance_types:
         return resolved_instance_types
+
+    logger.debug(
+        "Reordering resolved instances shortlist to prefer recently NOT evicted instance types. Original shortlist: %s",
+        [
+            (y.instance_type, y.availability_zone)
+            for y in resolved_instance_types
+        ],
+    )
+
     filtered = [
         x
         for x in resolved_instance_types
         if (x.instance_type, x.availability_zone)
         not in short_lifetime_instance_types
     ]
-    if len(filtered) != len(resolved_instance_types):
-        orig_itype_zone = {
-            (y.instance_type, y.availability_zone)
-            for y in resolved_instance_types
-        }
-        filtered_itype_zone = {
-            (y.instance_type, y.availability_zone) for y in filtered
-        }
-        logger.info(
-            "Excluding some instance types from actual VM creation due to previous short lifetime: %s",
-            orig_itype_zone - filtered_itype_zone,
-        )
-        if not filtered:
-            logger.debug(
-                "Leaving cheapest instance type %s only for creation even though had short lifetime",
-                (
-                    resolved_instance_types[0].instance_type,
-                    resolved_instance_types[0].availability_zone,
-                ),
+
+    if (
+        not filtered
+    ):  # Handle a more rare case where the whole resolved instance types short-list is suffering from
+        # Spot evictions -> prefer low eviction rate and highest price
+        if instance_selection_strategy != "eviction-rate":
+            instance_selection_strategy_cls = (
+                InstanceTypeSelection.get_selection_strategy("eviction-rate")
             )
-            return [resolved_instance_types[0]]
+
+            filtered = instance_selection_strategy_cls.execute(
+                resolved_instance_types
+            )
+            logger.warning(
+                "Temporarily preferring low eviction rate instances within the shortlist as last 30min launches had short lifetime"
+            )
+            logger.warning(
+                "Reordered shortlist: %s",
+                [(x.instance_type, x.availability_zone) for x in filtered],
+            )
+    else:
+        # Add back short life time instances
+        for y in resolved_instance_types:
+            if (
+                y.instance_type,
+                y.availability_zone,
+            ) in short_lifetime_instance_types:
+                filtered.append(y)
+    logger.debug(
+        "Reordered shortlist: %s",
+        [(x.instance_type, x.availability_zone) for x in filtered],
+    )
     return filtered
 
 
@@ -702,10 +728,10 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
         cmdb.get_short_lifetime_instance_types_with_zone_if_any(str(m.uuid))
     )
     if short_lifetime_instance_types:
-        resolved_instance_types = (
-            exclude_prev_short_life_time_instances_leaving_at_least_one(
-                resolved_instance_types, short_lifetime_instance_types
-            )
+        resolved_instance_types = apply_short_life_time_instances_reordering(
+            resolved_instance_types,
+            short_lifetime_instance_types,
+            m.vm.instance_selection_strategy,
         )
 
     cloud_vm, created = ensure_spot_vm(
