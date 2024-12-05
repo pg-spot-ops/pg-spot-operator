@@ -2,7 +2,7 @@ import copy
 import logging
 import os
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 from uuid import uuid4
 
@@ -391,6 +391,7 @@ def mark_any_active_vms_as_deleted(
             .values(deleted_on=datetime.utcnow())
         )
         session.execute(stmt)
+        session.commit()
     return
 
 
@@ -633,3 +634,36 @@ def mark_manifest_snapshot_as_succeeded(m: InstanceManifest) -> None:
             m.instance_name,
         )
         session.commit()
+
+
+def get_short_lifetime_instance_types_with_zone_if_any(
+    instance_uuid: str,
+    lookback_window_min: int = 30,
+    short_uptime_threshold_sec: int = 300,
+) -> list[tuple[str, str]]:
+    with Session(engine) as session:
+        stmt = (
+            select(Vm)
+            .where(Vm.instance_uuid == instance_uuid)
+            .where(
+                Vm.created_on
+                > (datetime.utcnow() - timedelta(minutes=lookback_window_min))
+            )
+            .where(
+                (Vm.deleted_on - Vm.created_on)
+                < timedelta(seconds=short_uptime_threshold_sec)
+            )
+            .distinct(Vm.sku, Vm.availability_zone)
+        )
+        rows = session.scalars(stmt)
+        if rows:
+            ret = [(r.sku, str(r.availability_zone)) for r in rows]
+            if ret:
+                logger.debug(
+                    "Discovered short lifetime (<%ss within last %smin) instance types: %s",
+                    short_uptime_threshold_sec,
+                    lookback_window_min,
+                    ret,
+                )
+            return ret
+    return []

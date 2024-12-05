@@ -614,6 +614,42 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
     return rc == 0, outputs
 
 
+def exclude_prev_short_life_time_instances_leaving_at_least_one(
+    resolved_instance_types: list[InstanceTypeInfo],
+    short_lifetime_instance_types: list[tuple[str, str]],
+) -> list[InstanceTypeInfo]:
+    if not short_lifetime_instance_types:
+        return resolved_instance_types
+    filtered = [
+        x
+        for x in resolved_instance_types
+        if (x.instance_type, x.availability_zone)
+        not in short_lifetime_instance_types
+    ]
+    if len(filtered) != len(resolved_instance_types):
+        orig_itype_zone = {
+            (y.instance_type, y.availability_zone)
+            for y in resolved_instance_types
+        }
+        filtered_itype_zone = {
+            (y.instance_type, y.availability_zone) for y in filtered
+        }
+        logger.info(
+            "Excluding some instance types from actual VM creation due to previous short lifetime: %s",
+            orig_itype_zone - filtered_itype_zone,
+        )
+        if not filtered:
+            logger.debug(
+                "Leaving cheapest instance type %s only for creation even though had short lifetime",
+                (
+                    resolved_instance_types[0].instance_type,
+                    resolved_instance_types[0].availability_zone,
+                ),
+            )
+            return [resolved_instance_types[0]]
+    return filtered
+
+
 def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
     """Make sure we have a VM
     Returns True if a VM was created / recreated + Provider ID
@@ -661,6 +697,16 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
     resolved_instance_types = preprocess_ensure_vm_action(
         m, backing_instances[0] if backing_instances else None
     )
+
+    short_lifetime_instance_types = (
+        cmdb.get_short_lifetime_instance_types_with_zone_if_any(str(m.uuid))
+    )
+    if short_lifetime_instance_types:
+        resolved_instance_types = (
+            exclude_prev_short_life_time_instances_leaving_at_least_one(
+                resolved_instance_types, short_lifetime_instance_types
+            )
+        )
 
     cloud_vm, created = ensure_spot_vm(
         m, resolved_instance_types, dry_run=dry_run

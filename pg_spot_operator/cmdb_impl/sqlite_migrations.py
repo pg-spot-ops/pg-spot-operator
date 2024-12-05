@@ -63,7 +63,7 @@ CREATE TABLE vm (
   ip_public text,
   ip_private text NOT NULL,
   user_tags json NOT NULL DEFAULT '{}',
-  created_on datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_on timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_modified_on timestamp,
   deleted_on timestamp
 );
