@@ -60,7 +60,6 @@ def try_get_monthly_ondemand_price_for_sku(region: str, sku: str) -> float:
     hourly: float = 0
     try:
         hourly = get_current_hourly_ondemand_price(region, sku)
-        logger.error("1 %s s%", sku, round(hourly * 24 * 30, 1))
         return round(hourly * 24 * 30, 1)
     except Exception as e:
         logger.error(
@@ -69,7 +68,6 @@ def try_get_monthly_ondemand_price_for_sku(region: str, sku: str) -> float:
         )
     try:
         hourly = get_current_hourly_ondemand_price_fallback(region, sku)
-        logger.error("2 %s s%", sku, round(hourly * 24 * 30, 1))
         return round(hourly * 24 * 30, 1)
     except Exception as e:
         logger.error(
