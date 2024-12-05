@@ -225,7 +225,7 @@ def populate_temp_workdir_for_action_exec(
     Also the original manifest + override one will be placed at "input/instance_manifest.yml",
     and for runnables additionally the manifest will be split into flat key-value files under "input"
     """
-    now_str = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d")
+    now_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
     temp_workdir = os.path.join(
         os.path.expanduser(temp_workdir_root),
         manifest.instance_name,
