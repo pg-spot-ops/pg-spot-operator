@@ -4,6 +4,36 @@ Changelog
 
 (unreleased)
 ------------
+- Ansible - fix APT cache for recently added fail2ban role. [Kaarel
+  Moppel]
+
+  1h caching for other APT updates also to speed things up a bit
+- Merge pull request #103 from pg-spot-ops/exclude-previously-fast-
+  failed-instance-types-from-creation. [Kaarel Moppel]
+
+  Better uptime - create previously fast-failed instance types as last resort only
+- Change short lifetime optimization strategy - just reorder. [Kaarel
+  Moppel]
+
+  Instead of actually removing instance types from the shortlist. If all
+  shortlist members had evictions then re-apply eviction rate based
+  sorting
+- More uptime - exclude previous short lifetime instance types on
+  create. [Kaarel Moppel]
+
+  We'll go to higher priced instance types if previous ran <5min within a
+  30min window
+- Merge pull request #102 from pg-spot-ops/python-test-matrix. [Kaarel
+  Moppel]
+
+  CI test / lint on all modern Python versions
+- Fix a Py 3.10 linter issue. [Kaarel Moppel]
+- CI test / lint on all modern Python versions. [Kaarel Moppel]
+
+
+0.9.9 (2024-12-04)
+------------------
+- Release: version 0.9.9 🚀 [Kaarel Moppel]
 - Fix unterminated string literal for Python 3.10. [Kaarel Moppel]
 
   From last PR: approx_rds_x = f"{math.ceil(
