@@ -464,7 +464,9 @@ def attach_pricing_info_to_instance_type_info(
 ) -> list[InstanceTypeInfo]:
     for iti in instance_types:
         if not iti.hourly_spot_price:
-            if iti.availability_zone:
+            if (
+                iti.availability_zone
+            ):  # AWS provided static pricing is not zonal sadly ...
                 iti.hourly_spot_price = get_current_hourly_spot_price_boto3(
                     region=iti.region,
                     instance_type=iti.instance_type,
