@@ -4,6 +4,26 @@ Changelog
 
 (unreleased)
 ------------
+- README - update the Docker usage example. [Kaarel Moppel]
+
+  Use region us-east-1 to be in sync with PyPI quickstart
+- Fix EBS volumes re-mounting. [Kaarel Moppel]
+
+  Re-attach didn't work in case device had nvme1 in name
+- Merge pull request #104 from pg-spot-ops/fix-price-fetching-for-
+  running-instances. [Kaarel Moppel]
+
+  Spot price displaying of running instances was flawed
+- Add small explanation why need to use boto3 pricing API when AZ set.
+  [Kaarel Moppel]
+- Spot price displaying of running instances was flawed. [Kaarel Moppel]
+
+  Didn't work after an engine restart
+
+
+0.9.10 (2024-12-05)
+-------------------
+- Release: version 0.9.10 🚀 [Kaarel Moppel]
 - Ansible - fix APT cache for recently added fail2ban role. [Kaarel
   Moppel]
 
