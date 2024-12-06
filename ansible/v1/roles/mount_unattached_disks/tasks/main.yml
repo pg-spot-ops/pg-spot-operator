@@ -1,12 +1,16 @@
 ---
+
+- debug:
+    var: vm.storage_type|d('network')
+
 #- name: Detect unmounted disks
 #  debug:
 #    var: item
 #  with_dict: "{{ ansible_devices}}"
 #  when:
-#    - not item.value.partitions
-#    - not 'loop' in item.key
-#    - not 'dm-' in item.key
+#    - not item.key.startswith('sr')
+#    - not item.key.startswith('dm')
+#    - not item.key.startswith('loop')
 
 - name: Var to hold unmounted disks
   set_fact:
@@ -23,7 +27,7 @@
     - not item.key.startswith('loop')
     - (vm.storage_type|d('network') == 'network' and 'EBS Controller' in item.value.host)
         or (vm.storage_type|d('network') == 'local' and not 'EBS Controller' in item.value.host)
-    - not (vm.storage_type|d('network') == 'network' and 'nvme1' in item.key)
+    - not (vm.storage_type|d('network') == 'network' and 'nvme0' in item.key)
 
 - name: Disks to mount
   debug:
