@@ -10,6 +10,7 @@ from botocore.exceptions import EndpointConnectionError
 from pg_spot_operator.cloud_impl.aws_cache import (
     get_aws_static_ondemand_pricing_info,
     get_spot_eviction_rates_from_public_json,
+    get_spot_pricing_from_public_json,
 )
 from pg_spot_operator.cloud_impl.aws_client import get_client
 from pg_spot_operator.cloud_impl.cloud_structs import (
@@ -77,7 +78,7 @@ def try_get_monthly_ondemand_price_for_sku(region: str, sku: str) -> float:
 
 
 def resolve_instance_type_info(
-    instance_type: str, region: str, i_desc: dict | None = None
+    instance_type: str, region: str, zone: str = "", i_desc: dict | None = None
 ) -> InstanceTypeInfo:
     """i_desc = AWS API response dict. e.g.: aws ec2 describe-instance-types --instance-types i3en.xlarge"""
     if not i_desc:
@@ -96,9 +97,7 @@ def resolve_instance_type_info(
         arch=extract_cpu_arch_from_sku_desc(CLOUD_AWS, i_desc),
         cloud=CLOUD_AWS,
         region=region,
-        availability_zone=i_desc.get("Placement", {}).get(
-            "AvailabilityZone", ""
-        ),
+        availability_zone=zone,
         cpu=i_desc.get("VCpuInfo", {}).get("DefaultVCpus", 0),
         ram_mb=i_desc.get("MemoryInfo", {}).get("SizeInMiB", 0),
         instance_storage=i_desc.get("InstanceStorageInfo", {}).get(
@@ -148,6 +147,48 @@ def get_all_ec2_spot_instance_types(
         with_local_storage_only,
     )
     return instances
+
+
+@timed_cache(seconds=600)
+def get_current_hourly_spot_price_static(
+    region: str,
+    instance_type: str,
+) -> float:
+    try:
+        all_spot_instances_for_region_with_price = (
+            get_spot_instance_types_with_price_from_s3_pricing_json(
+                region, get_spot_pricing_from_public_json()
+            )
+        )
+        if not all_spot_instances_for_region_with_price:
+            logger.warning(
+                "Couldn't fetch Spot price for %s in region %s from static files",
+                instance_type,
+                region,
+            )
+            return 0
+
+        if instance_type not in all_spot_instances_for_region_with_price:
+            logger.warning(
+                "Instance %s pricing data not found from static Spot price files in region %s",
+                instance_type,
+                region,
+            )
+            return 0
+        logger.debug(
+            "Hourly Spot price of %s determined for %s in region %s from static pricing files",
+            all_spot_instances_for_region_with_price[instance_type],
+            instance_type,
+            region,
+        )
+        return all_spot_instances_for_region_with_price[instance_type]
+    except Exception:
+        logger.exception(
+            "Couldn't fetch Spot price for %s in region %s from static files",
+            instance_type,
+            region,
+        )
+    return 0
 
 
 # TODO some caching
@@ -419,15 +460,22 @@ def get_filtered_instances_by_price_no_az(
 
 
 def attach_pricing_info_to_instance_type_info(
-    instance_types: list[InstanceTypeInfo], use_boto3: bool = False
+    instance_types: list[InstanceTypeInfo],
 ) -> list[InstanceTypeInfo]:
     for iti in instance_types:
         if not iti.hourly_spot_price:
-            if use_boto3:
+            if (
+                iti.availability_zone
+            ):  # AWS provided static pricing is not zonal sadly ...
                 iti.hourly_spot_price = get_current_hourly_spot_price_boto3(
                     region=iti.region,
                     instance_type=iti.instance_type,
                     az=iti.availability_zone,
+                )
+            else:
+                iti.hourly_spot_price = get_current_hourly_spot_price_static(
+                    region=iti.region,
+                    instance_type=iti.instance_type,
                 )
         if not iti.monthly_spot_price:
             iti.monthly_spot_price = round(iti.hourly_spot_price * 24 * 30, 1)
@@ -596,7 +644,7 @@ def resolve_hardware_requirements_to_instance_types(
 
     strategy_sorted_instance_types_with_pricing = (
         attach_pricing_info_to_instance_type_info(
-            strategy_sorted_instance_types, use_boto3
+            strategy_sorted_instance_types
         )
     )
 
@@ -742,8 +790,9 @@ def get_all_instance_types_from_aws_regional_pricing_info(
 
 def get_spot_instance_types_with_price_from_s3_pricing_json(
     region: str, spot_pricing_info: dict
-) -> dict:
-    """Info from: https://website.spot.ec2.aws.a2z.com/spot.json
+) -> dict[str, float]:
+    """Returns a dict of {instance_type: hourly_spot_price}
+    Info extracted from: https://website.spot.ec2.aws.a2z.com/spot.json
     {
       "vers": 0.01,
       "config": {

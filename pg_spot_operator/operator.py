@@ -20,6 +20,7 @@ from pg_spot_operator.cloud_impl.aws_s3 import (
     s3_try_create_bucket_if_not_exists,
 )
 from pg_spot_operator.cloud_impl.aws_spot import (
+    attach_pricing_info_to_instance_type_info,
     get_backing_vms_for_instances_if_any,
     resolve_instance_type_info,
     try_get_monthly_ondemand_price_for_sku,
@@ -91,9 +92,14 @@ def preprocess_ensure_vm_action(
             resolve_instance_type_info(
                 existing_instance_info["InstanceType"],
                 m.region,
-                existing_instance_info,
+                existing_instance_info.get("Placement", {}).get(
+                    "AvailabilityZone", ""
+                ),
             )
         ]
+        cheapest_skus = attach_pricing_info_to_instance_type_info(
+            cheapest_skus
+        )
     else:
         cheapest_skus = (
             cloud_api.resolve_hardware_requirements_to_instance_types(m)

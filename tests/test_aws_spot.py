@@ -630,12 +630,13 @@ def test_get_current_hourly_ondemand_price():
 
 def test_resolve_instance_type_info():
     i_info = resolve_instance_type_info(
-        "i3.xlarge", "eu-north-1", i_desc=INSTANCE_LISTING[0]
+        "i3.xlarge", "eu-north-1", "eu-north-1c", i_desc=INSTANCE_LISTING[0]
     )
     assert i_info.cpu == 1
     assert i_info.ram_mb == 8192
     assert i_info.instance_storage == 59
     assert i_info.storage_speed_class == "ssd"
+    assert i_info.availability_zone == "eu-north-1c"
 
 
 def test_get_ondemand_price_for_instance_type_from_aws_regional_pricing_info():
