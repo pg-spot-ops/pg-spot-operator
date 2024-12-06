@@ -144,16 +144,31 @@ Note that by default we're in "daemon mode" - checking continuously for the inst
 
 ## Via Docker
 
-An example Postgres v16 instance with a 1d lifetime and some extensions enabled:
+An example Postgres v17 instance with persistent EBS volumes (the default), 5d lifetime and pgvector AI extension enabled:
 
 ```bash
-docker run --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
-  -e PGSO_EXPIRATION_DATE=$(date --utc --date="+1 day" +%Y-%m-%d) \
-  -e PGSO_STORAGE_MIN=100 -e PGSO_STORAGE_TYPE=local -e PGSO_CPU_MIN=2 \
-  -e PGSO_EXTENSIONS=vector,pg_stat_statements -e PGSO_OS_EXTRA_PACKAGES=postgresql-16-pgvector \
-  -e PGSO_SSH_KEYS="$(cat ~/.ssh/id_rsa.pub)" -e PGSO_POSTGRES_VERSION=16 \
+# Let's check the price first
+docker run --rm -e PGSO_CHECK_PRICE=y \
+  -e PGSO_RAM_MIN=128 -e PGSO_REGION=us-east-1 \
+  pg-spot-operator:latest
+...
++-----------+---------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
+|   Region  |      SKU      | Arch | vCPU |  RAM   | Instance storage | Spot $ (Mo) | On-Demand $ (Mo) | EC2 discount | Approx. RDS win | Evic. rate (Mo) |
++-----------+---------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
+| us-east-1 | x2iedn.xlarge | x86  |  4   | 128 GB |   118 GB nvme    |     85.5    |      600.2       |     -86%     |       11x       |      5-10%      |
++-----------+---------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
+...
+
+# Actually create the instance for private direct SQL access from our IP address
+docker run --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=us-east-1 \
+  -e PGSO_STORAGE_MIN=200 -e PGSO_RAM_MIN=64 \
+  -e PGSO_EXTENSIONS=vector,pg_stat_statements -e PGSO_OS_EXTRA_PACKAGES=postgresql-17-pgvector \
+  -e PGSO_SSH_KEYS="$(cat ~/.ssh/id_rsa.pub)" -e PGSO_POSTGRES_VERSION=17 \
+  -e PGSO_PG_HBA_LINES="host all all $(curl -s whatismyip.akamai.com)/32 scram-sha-256" \
+  -e PGSO_EXPIRATION_DATE=$(date --utc --date="+5 day" +%Y-%m-%d) \
   -e PGSO_AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
   -e PGSO_AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
+  -e PGSO_ADMIN_USER=mypostgres -e PGSO_ADMIN_PASSWORD=supersecret123 \  
   pgspotops/pg-spot-operator:latest
 ```
 
