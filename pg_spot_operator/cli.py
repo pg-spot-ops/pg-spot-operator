@@ -72,7 +72,10 @@ class ArgumentParser(Tap):
     )  # Resolve HW reqs, show Spot price and exit
     list_regions: bool = str_to_bool(
         os.getenv("PGSO_LIST_REGIONS", "false")
-    )  # Display all known AWS region codes + names
+    )  # Display all known AWS region codes + names and exit
+    list_strategies: bool = str_to_bool(
+        os.getenv("PGSO_LIST_STRATEGIES", "false")
+    )  # Display available instance selection strategies and exit
     check_manifest: bool = str_to_bool(
         os.getenv("PGSO_CHECK_MANIFEST", "false")
     )  # Validate instance manifests and exit
@@ -687,15 +690,12 @@ def resolve_manifest_and_display_price(
     selected_skus = instance_selection_strategy_cls.execute(selected_skus)
     if len(selected_skus) > 10:
         selected_skus = selected_skus[:10]
-        logger.info(
-            "Top 10 cheapest instances found for strategy '%s':",
-            m.vm.instance_selection_strategy,
-        )
-    else:
-        logger.info(
-            "Cheapest instances found for strategy '%s':",
-            m.vm.instance_selection_strategy,
-        )
+
+    logger.info(
+        "Top cheapest instances found for strategy '%s' (to list available strategies run --list-strategies / PGSO_LIST_STRATEGIES=y):",
+        m.vm.instance_selection_strategy,
+    )
+
     display_selected_skus_for_region(selected_skus)
 
     return
@@ -859,6 +859,19 @@ def list_regions_and_exit() -> None:
     exit(0)
 
 
+def list_strategies_and_exit() -> None:
+    print(
+        "# Available --selection-strategy / PGSO_SELECTION_STRATEGY values\n"
+    )
+    for (
+        strategy,
+        description,
+    ) in InstanceTypeSelection.get_strategies_with_descriptions().items():
+        print(f"{strategy.ljust(20)}: {description}")
+    print()
+    exit(0)
+
+
 def main():  # pragma: no cover
 
     global args
@@ -883,6 +896,9 @@ def main():  # pragma: no cover
 
     if args.list_regions:
         list_regions_and_exit()
+
+    if args.list_strategies:
+        list_strategies_and_exit()
 
     if args.check_manifest:
         check_manifest_and_exit(args)

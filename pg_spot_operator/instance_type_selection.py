@@ -124,3 +124,12 @@ class InstanceTypeSelection:
             instance_selection_strategy.lower().strip(),
             InstanceTypeSelectionBalanced,
         )
+
+    @classmethod
+    def get_strategies_with_descriptions(cls) -> dict[str, str]:
+        return {
+            "balanced": "A 50-50 weighed mix of ev.rate / price. Cost-optimal for non-critical use cases. DEFAULT",
+            "cheapest": "Look only at price. Highest eviction rate bracket (>20%) instances not considered though",
+            "eviction-rate": "Prefer lowest eviction rate bracket instances only, preferring cheapest within the bracket",
+            "random": "Randomize from 15 cheapest instances satisfying the HW requirements. Useful for testing out various HW or in very contested regions where cheaper instance types get a lot of churn",
+        }

@@ -3,6 +3,7 @@
 ## General
 
 * **--list-regions / PGSO_LIST_REGIONS** List AWS datacenter locations and exit
+* **--list-strategies / PGSO_LIST_STRATEGIES** Display available instance selection strategies and exit
 * **--check-price / PGSO_CHECK_PRICE** Just resolve the HW reqs, show Spot price / discount rate and exit. No AWS creds required.
 * **--check-manifest / PGSO_CHECK_PRICE** Validate CLI input or instance manifest file and exit
 * **--dry-run / PGSO_DRY_RUN** Perform a dry-run VM create + create the Ansible skeleton. For example to check if cloud credentials allow Spot VM creation.
