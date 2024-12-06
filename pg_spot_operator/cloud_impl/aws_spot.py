@@ -27,7 +27,11 @@ from pg_spot_operator.constants import (
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
     SPOT_OPERATOR_ID_TAG,
 )
-from pg_spot_operator.instance_type_selection import InstanceTypeSelection
+from pg_spot_operator.instance_type_selection import (
+    SELECTION_STRATEGY_BALANCED,
+    SELECTION_STRATEGY_EVICTION_RATE,
+    InstanceTypeSelection,
+)
 from pg_spot_operator.util import timed_cache
 
 MAX_SKUS_FOR_SPOT_PRICE_COMPARE = 15
@@ -616,8 +620,8 @@ def resolve_hardware_requirements_to_instance_types(
         )
     except Exception:
         if instance_selection_strategy in (
-            "eviction-rate",
-            "balanced",
+            SELECTION_STRATEGY_EVICTION_RATE,
+            SELECTION_STRATEGY_BALANCED,
         ):  # Can't proceed, for other strategies not critical
             raise
         logger.warning(
