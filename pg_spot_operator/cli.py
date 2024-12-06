@@ -484,6 +484,15 @@ def check_cli_args_valid(args: ArgumentParser):
             "Fuzzy or regex --region input only allowed in --check-price mode",
         )
         exit(1)
+    if (
+        args.selection_strategy
+        not in InstanceTypeSelection.get_strategies_with_descriptions()
+    ):
+        logger.error(
+            "Invalid --selection-strategy input",
+        )
+        list_strategies_and_exit()
+        exit(1)
 
 
 def try_load_manifest(manifest_str: str) -> InstanceManifest | None:
@@ -860,9 +869,7 @@ def list_regions_and_exit() -> None:
 
 
 def list_strategies_and_exit() -> None:
-    print(
-        "# Available --selection-strategy / PGSO_SELECTION_STRATEGY values\n"
-    )
+    print("Available --selection-strategy / PGSO_SELECTION_STRATEGY values:\n")
     for (
         strategy,
         description,
