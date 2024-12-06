@@ -1,6 +1,7 @@
 # Security
 
-The defaults are geared towards user experience i.e. public access, but everything is tunable.
+The defaults are geared towards user experience i.e. public access if admin user / password set, but with precautions like
+brute-force protection (`auth_delay`, `fail2ban`) taken, and everything being configurable as well.
 
 WARNING - it is very much recommended to use a new, isolated VPC for running the Spot Operator! Official AWS documentation
 on creating one: https://docs.aws.amazon.com/vpc/latest/userguide/create-vpc.html#create-vpc-cli
@@ -11,7 +12,7 @@ on creating one: https://docs.aws.amazon.com/vpc/latest/userguide/create-vpc.htm
 public_ip_address: true
 postgres:
   admin_is_superuser: true
-  admin_user: ''  # Meaning only local access possible
+  admin_user: ''  # If not set only local on-the-vm access possible
   admin_password: ''
   pg_hba_lines:  # Defaults allow non-postgres world access
     - "host all postgres 0.0.0.0/0 reject"

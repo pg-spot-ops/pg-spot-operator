@@ -144,7 +144,8 @@ Note that by default we're in "daemon mode" - checking continuously for the inst
 
 ## Via Docker
 
-An example Postgres v17 instance with persistent EBS volumes (the default), 5d lifetime and pgvector AI extension enabled:
+An example Postgres v17 instance for a near in-memory feel with persistent EBS volumes (the default), a 5d lifetime and
+pgvector AI extension enabled.
 
 ```bash
 # Let's check the price first
@@ -161,7 +162,7 @@ docker run --rm -e PGSO_CHECK_PRICE=y \
 
 # Actually create the instance for private direct SQL access from our IP address
 docker run --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=us-east-1 \
-  -e PGSO_STORAGE_MIN=200 -e PGSO_RAM_MIN=64 \
+  -e PGSO_STORAGE_MIN=200 -e PGSO_RAM_MIN=128 \
   -e PGSO_EXTENSIONS=vector,pg_stat_statements -e PGSO_OS_EXTRA_PACKAGES=postgresql-17-pgvector \
   -e PGSO_SSH_KEYS="$(cat ~/.ssh/id_rsa.pub)" -e PGSO_POSTGRES_VERSION=17 \
   -e PGSO_PG_HBA_LINES="host all all $(curl -s whatismyip.akamai.com)/32 scram-sha-256" \
@@ -177,20 +178,36 @@ PS The SSH key is optional, to be able to access the cloud VM directly from your
 ## Via Python
 
 ```bash
-# PS Assuming local AWS CLI is configured!
 pipx install pg-spot-operator
-# Let's run a world-global price check for some in-memory analytics to get some insane $$ value
-# PS in default --storage-type=network mode we though still pay normal price for the EBS volumes
-pg_spot_operator --check-price --ram-min=256
-...
-Main specs - vCPU: 32, RAM: 256 GB, instance storage: EBS only
-Current monthly Spot price for r6a.8xlarge in region ap-south-2: $95.0
-Current Spot vs Ondemand discount rate: -88.5% ($95.0 vs $823.7), approx. 14x to non-HA RDS
-Current expected monthly eviction rate range: <5%
 
-pg_spot_operator --ram-min=256 --region=ap-south-2 --instance-name=play
+# Let's check prices for some in-memory analytics on our 200GB dataset in all North American regions to get some great $$ value
+# PS in default persistent storage mode (--storage-type=network) we though still pay list price for the EBS volumes (~$0.09/GB)
+pg_spot_operator --check-price --ram-min=256 --region='^(us|ca)'
+
+Resolving HW requirements to actual instance types / prices using --selection-strategy=balanced ...
+Regions in consideration based on --region='^(us|ca)' input: ['ca-central-1', 'ca-west-1', 'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
+Resolving HW requirements in region '^(us|ca)' using --selection-strategy=balanced ...
+Top cheapest instances found for strategy 'balanced' (to list available strategies run --list-strategies / PGSO_LIST_STRATEGIES=y):
++--------------+----------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
+|    Region    |      SKU       | Arch | vCPU |  RAM   | Instance storage | Spot $ (Mo) | On-Demand $ (Mo) | EC2 discount | Approx. RDS win | Evic. rate (Mo) |
++--------------+----------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
+| us-west-2    | x8g.4xlarge    | arm  |  16  | 256 GB |   EBS only       |    170.7    |      1125.5      |     -85%     |       10x       |       <5%       |
+| us-east-1    | x2gd.4xlarge   | arm  |  16  | 256 GB |   950 GB ssd     |    214.2    |      961.9       |     -78%     |        7x       |      10-15%     |
+| us-west-2    | x2iezn.2xlarge | x86  |  8   | 256 GB |   EBS only       |    226.7    |      1201.0      |     -81%     |        8x       |       <5%       |
+| us-west-2    | x2iedn.2xlarge | x86  |  8   | 256 GB |   237 GB nvme    |    230.5    |      1200.4      |     -81%     |        8x       |       <5%       |
+| us-east-1    | x8g.4xlarge    | arm  |  16  | 256 GB |   EBS only       |    237.0    |      1125.5      |     -79%     |        8x       |       <5%       |
+| us-east-1    | i4g.8xlarge    | arm  |  32  | 256 GB |   7500 GB ssd    |    261.8    |      1779.1      |     -85%     |       11x       |       <5%       |
++--------------+----------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
+
+# Now to actually create the instance two mandatory flags `--region` and `--instance-name` are required. Plus all other
+# optional ones like passwords, pg_hba.conf rules, etc. Run `--help` for all flags or look at README_env_options.md.
 # Note that when installing from PyPI, on first real setup run the Ansible setup files are downloaded
 # from Github into ~/.pg-spot-operator/ansible. If this seems too fishy, one can also pre-download.
+pg_spot_operator --ram-min=256 --region=us-west-2 --storage-min 300 \
+  --instance-name pg1 --postgres-version=17 --tuning-profile=analytics \
+  --extensions=vector,pg_stat_statements --os-extra-packages=postgresql-17-pgvector \
+  --pg-hba-lines="host all all $(curl -s whatismyip.akamai.com)/32 scram-sha-256" \
+  --admin-user=mypostgres --admin-password=supersecret123
 ```
 
 # Integrating with user applications
