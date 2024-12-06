@@ -1,5 +1,10 @@
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
-from pg_spot_operator.instance_type_selection import InstanceTypeSelection
+from pg_spot_operator.instance_type_selection import (
+    InstanceTypeSelection,
+    SELECTION_STRATEGY_EVICTION_RATE,
+    SELECTION_STRATEGY_CHEAPEST,
+    SELECTION_STRATEGY_BALANCED,
+)
 
 INSTANCE_TYPES: list[InstanceTypeInfo] = [
     InstanceTypeInfo(
@@ -35,7 +40,9 @@ INSTANCE_TYPES: list[InstanceTypeInfo] = [
 
 def test_strategy_cheapest():
     instance_selection_strategy_cls = (
-        InstanceTypeSelection.get_selection_strategy("cheapest")
+        InstanceTypeSelection.get_selection_strategy(
+            SELECTION_STRATEGY_CHEAPEST
+        )
     )
 
     siti: InstanceTypeInfo = instance_selection_strategy_cls.execute(
@@ -46,7 +53,9 @@ def test_strategy_cheapest():
 
 def test_strategy_eviction_rate():
     instance_selection_strategy_cls = (
-        InstanceTypeSelection.get_selection_strategy("eviction-rate")
+        InstanceTypeSelection.get_selection_strategy(
+            SELECTION_STRATEGY_EVICTION_RATE
+        )
     )
 
     siti: InstanceTypeInfo = instance_selection_strategy_cls.execute(
@@ -57,7 +66,9 @@ def test_strategy_eviction_rate():
 
 def test_strategy_balanced():
     instance_selection_strategy_cls = (
-        InstanceTypeSelection.get_selection_strategy("balanced")
+        InstanceTypeSelection.get_selection_strategy(
+            SELECTION_STRATEGY_BALANCED
+        )
     )
 
     siti: InstanceTypeInfo = instance_selection_strategy_cls.execute(

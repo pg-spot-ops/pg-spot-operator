@@ -4,6 +4,11 @@ from typing import Type
 
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
 
+SELECTION_STRATEGY_BALANCED = "balanced"
+SELECTION_STRATEGY_CHEAPEST = "cheapest"
+SELECTION_STRATEGY_RANDOM = "random"
+SELECTION_STRATEGY_EVICTION_RATE = "eviction-rate"
+
 logger = logging.getLogger(__name__)
 
 
@@ -115,10 +120,10 @@ class InstanceTypeSelection:
         cls, instance_selection_strategy: str
     ) -> Type[InstanceTypeSelectionStrategy]:
         strategy = {
-            "cheapest": InstanceTypeSelectionCheapest,
-            "random": InstanceTypeSelectionRandom,
-            "eviction-rate": InstanceTypeSelectionEvictionRate,
-            "balanced": InstanceTypeSelectionBalanced,
+            SELECTION_STRATEGY_CHEAPEST: InstanceTypeSelectionCheapest,
+            SELECTION_STRATEGY_RANDOM: InstanceTypeSelectionRandom,
+            SELECTION_STRATEGY_EVICTION_RATE: InstanceTypeSelectionEvictionRate,
+            SELECTION_STRATEGY_BALANCED: InstanceTypeSelectionBalanced,
         }
         return strategy.get(
             instance_selection_strategy.lower().strip(),
@@ -128,8 +133,8 @@ class InstanceTypeSelection:
     @classmethod
     def get_strategies_with_descriptions(cls) -> dict[str, str]:
         return {
-            "balanced": "A 50-50 weighed mix of ev.rate / price. Cost-optimal for non-critical use cases. DEFAULT",
-            "cheapest": "Look only at price. Highest eviction rate bracket (>20%) instances not considered though",
-            "eviction-rate": "Prefer lowest eviction rate bracket instances only, preferring cheapest within the bracket",
-            "random": "Randomize from 15 cheapest instances satisfying the HW requirements. Useful for testing out various HW or in very contested regions where cheaper instance types get a lot of churn",
+            SELECTION_STRATEGY_BALANCED: "A 50-50 weighed mix of ev.rate / price. Cost-optimal for non-critical use cases. DEFAULT",
+            SELECTION_STRATEGY_CHEAPEST: "Look only at price. Highest eviction rate bracket (>20%) instances not considered though",
+            SELECTION_STRATEGY_EVICTION_RATE: "Prefer lowest eviction rate bracket instances only, preferring cheapest within the bracket",
+            SELECTION_STRATEGY_RANDOM: "Randomize from 15 cheapest instances satisfying the HW requirements. Useful for testing out various HW or in very contested regions where cheaper instance types get a lot of churn",
         }

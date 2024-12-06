@@ -19,6 +19,9 @@ from pg_spot_operator.constants import (
     SPOT_OPERATOR_EXPIRES_TAG,
     SPOT_OPERATOR_ID_TAG,
 )
+from pg_spot_operator.instance_type_selection import (
+    SELECTION_STRATEGY_BALANCED,
+)
 from pg_spot_operator.util import (
     decrypt_vault_secret,
     extract_region_from_az,
@@ -81,7 +84,7 @@ class SectionVm(BaseModel):
     instance_types: list[str] = field(
         default_factory=list
     )  # Min CPU etc. will be ignored then
-    instance_selection_strategy: str = "balanced"
+    instance_selection_strategy: str = SELECTION_STRATEGY_BALANCED
     volume_type: str = "gp3"
     volume_iops: int = 0
     volume_throughput: int = 0
