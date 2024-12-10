@@ -17,7 +17,11 @@ from pg_spot_operator.cloud_impl.aws_spot import (
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import is_explicit_aws_region_code
 from pg_spot_operator.cmdb_impl import schema_manager
-from pg_spot_operator.constants import MF_SEC_VM_STORAGE_TYPE_LOCAL
+from pg_spot_operator.constants import (
+    MF_SEC_VM_STORAGE_TYPE_LOCAL,
+    SPOT_OPERATOR_EXPIRES_TAG,
+    SPOT_OPERATOR_ID_TAG,
+)
 from pg_spot_operator.instance_type_selection import InstanceTypeSelection
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.operator import clean_up_old_logs_if_any
@@ -925,20 +929,40 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
             errors += 1
 
     cols = [
-        "InstanceID",
+        "Instance name",
+        "AZ",
+        "InstanceId",
         "InstanceType",
+        "vCPU",
+        "VolumeId",
         "LaunchTime",
         "PrivateIpAddress",
         "PublicIpAddress",
         "VpcId",
-        "Tags",
+        "Expiration Date",
     ]
     tab = PrettyTable(cols)
     for i in instances:
-        tbl_row = []
-        for c in cols:
-            tbl_row.append(i.get(c))
-        tab.add_row(tbl_row)
+        tags_as_dict = {tag["Key"]: tag["Value"] for tag in i.get("Tags", [])}
+        tab.add_row(
+            [
+                tags_as_dict.get(SPOT_OPERATOR_ID_TAG),
+                i.get("Placement", {}).get("AvailabilityZone"),
+                i.get("InstanceId"),
+                i.get("InstanceType"),
+                i.get("CpuOptions", {}).get("CoreCount"),
+                (
+                    i["BlockDeviceMappings"][1].get("Ebs", {}).get("VolumeId")
+                    if len(i.get("BlockDeviceMappings", [])) > 1
+                    else None
+                ),
+                i.get("LaunchTime"),
+                i.get("PrivateIpAddress"),
+                i.get("PublicIpAddress"),
+                i.get("VpcId"),
+                tags_as_dict.get(SPOT_OPERATOR_EXPIRES_TAG),
+            ]
+        )
 
     print(tab)
 
