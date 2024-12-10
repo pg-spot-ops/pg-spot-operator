@@ -2,6 +2,7 @@
 
 ## General
 
+* **--list-instances / PGSO_LIST_INSTANCES** List all running operator managed VMs in specified region(s) and exit
 * **--list-regions / PGSO_LIST_REGIONS** List AWS datacenter locations and exit
 * **--list-strategies / PGSO_LIST_STRATEGIES** Display available instance selection strategies and exit
 * **--check-price / PGSO_CHECK_PRICE** Just resolve the HW reqs, show Spot price / discount rate and exit. No AWS creds required.
