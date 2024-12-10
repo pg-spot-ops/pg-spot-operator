@@ -30,6 +30,7 @@
 ## Integration
 
 * **--connstr-output-only / PGSO_CONNSTR_OUTPUT_ONLY** Ensure VM + Postgres, output the connstr to stdout and exit. Pipe-friendly
+* **--connstr-format / PGSO_CONNSTR_FORMAT** ssh | ansible. Relevant when --connstr-output-only + --vm-only set
 * **--setup-finished-callback / PGSO_SETUP_FINISHED_CALLBACK** An optional executable to propagate the connect string somewhere
 
 ## Hardware selection

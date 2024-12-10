@@ -88,6 +88,9 @@ class ArgumentParser(Tap):
     connstr_output_only: bool = str_to_bool(
         os.getenv("PGSO_CONNSTR_OUTPUT_ONLY", "false")
     )  # Set up Postgres, print connstr and exit
+    connstr_format: str = os.getenv(
+        "PGSO_CONNSTR_FORMAT", "ssh"
+    )  # ssh | ansible. Effective currently only when --connstr-output-only and --vm-only set.
     manifest: str = os.getenv("PGSO_MANIFEST", "")  # Manifest to process
     teardown: bool = str_to_bool(
         os.getenv("PGSO_TEARDOWN", "false")
@@ -716,6 +719,7 @@ def download_ansible_from_github_if_not_set_locally(
     if (
         args.ansible_path
         or args.check_price
+        or args.vm_only
         or args.check_manifest
         or args.teardown
         or args.teardown_region
@@ -973,5 +977,6 @@ def main():  # pragma: no cover
         cli_destroy_file_base_path=args.destroy_file_base_path,
         cli_teardown=args.teardown,
         cli_connstr_output_only=args.connstr_output_only,
+        cli_connstr_format=args.connstr_format,
         cli_ansible_path=args.ansible_path,
     )
