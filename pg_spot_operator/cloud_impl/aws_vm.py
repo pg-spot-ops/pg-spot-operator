@@ -377,6 +377,8 @@ def ec2_launch_instance(
 
     if SPOT_OPERATOR_ID_TAG not in user_tags:
         user_tags[SPOT_OPERATOR_ID_TAG] = instance_name
+    if "Name" not in user_tags:  # For better clarity in the Web console
+        user_tags["Name"] = f"{instance_name} [pg-spot-operator]"
     os_image_id, _ = get_latest_ami_for_region_arch(region, architecture)
 
     placement = {}
