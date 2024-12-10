@@ -492,10 +492,8 @@ def get_instance_connect_strings(m: InstanceManifest) -> tuple[str, str]:
     return connstr_private, connstr_public
 
 
-def get_ssh_connstr(
-    m: InstanceManifest, connstr_output_format: str = "ssh"
-) -> str:
-    if connstr_output_format == "ssh":
+def get_ssh_connstr(m: InstanceManifest, connstr_format: str = "ssh") -> str:
+    if connstr_format == "ssh":
         if m.vm.host and m.vm.login_user:
             return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -l {m.vm.login_user} {m.vm.host}"
         vm = get_latest_vm_by_uuid(m.uuid)
@@ -504,7 +502,7 @@ def get_ssh_connstr(
         if m.ansible.private_key:
             return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -l {vm.login_user} -i {m.ansible.private_key} {vm.ip_public or vm.ip_private}"
         return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -l {vm.login_user} {vm.ip_public or vm.ip_private}"
-    elif connstr_output_format == "ansible":
+    elif connstr_format == "ansible":
         if m.vm.host and m.vm.login_user:
             inventory_string = f"{m.vm.host} ansible_user={m.vm.login_user}"
             if m.ansible.private_key:
@@ -526,9 +524,7 @@ def get_ssh_connstr(
 
         return inventory_string
     else:
-        raise Exception(
-            f"Unexpected connstr_output_format: {connstr_output_format}"
-        )
+        raise Exception(f"Unexpected connstr_format: {connstr_format}")
 
 
 def finalize_ensure_vm(m: InstanceManifest, vm: CloudVM):

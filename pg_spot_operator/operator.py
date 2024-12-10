@@ -952,7 +952,7 @@ def do_main_loop(
     cli_destroy_file_base_path: str = "",
     cli_teardown: bool = False,
     cli_connstr_output_only: bool = False,
-    cli_connstr_output_format: str = "auto",
+    cli_connstr_format: str = "ssh",
     cli_ansible_path: str = "",
 ):
     global dry_run
@@ -1227,8 +1227,12 @@ def do_main_loop(
             loop_errors = True
 
         if cli_connstr_output_only and not loop_errors:
+            logger.info(
+                "Outputting the %s connect string to stdout and exiting.",
+                cli_connstr_format if m.vm_only else "libpq",
+            )
             if m.vm_only:
-                print(get_ssh_connstr(m, cli_connstr_output_format))
+                print(get_ssh_connstr(m, cli_connstr_format))
             else:
                 print(get_instance_connect_string(m))
             exit(0)
