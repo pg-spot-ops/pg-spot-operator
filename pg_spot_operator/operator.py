@@ -952,6 +952,7 @@ def do_main_loop(
     cli_destroy_file_base_path: str = "",
     cli_teardown: bool = False,
     cli_connstr_output_only: bool = False,
+    cli_connstr_output_format: str = "auto",
     cli_ansible_path: str = "",
 ):
     global dry_run
@@ -1227,7 +1228,7 @@ def do_main_loop(
 
         if cli_connstr_output_only and not loop_errors:
             if m.vm_only:
-                print(get_ssh_connstr(m))
+                print(get_ssh_connstr(m, cli_connstr_output_format))
             else:
                 print(get_instance_connect_string(m))
             exit(0)

@@ -492,15 +492,43 @@ def get_instance_connect_strings(m: InstanceManifest) -> tuple[str, str]:
     return connstr_private, connstr_public
 
 
-def get_ssh_connstr(m: InstanceManifest) -> str:
-    if m.vm.host and m.vm.login_user:
-        return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -l {m.vm.login_user} {m.vm.host}"
-    vm = get_latest_vm_by_uuid(m.uuid)
-    if not vm:
-        return ""
-    if m.ansible.private_key:
-        return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -l {vm.login_user} -i {m.ansible.private_key} {vm.ip_public or vm.ip_private}"
-    return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -l {vm.login_user} {vm.ip_public or vm.ip_private}"
+def get_ssh_connstr(
+    m: InstanceManifest, connstr_output_format: str = "ssh"
+) -> str:
+    if connstr_output_format == "ssh":
+        if m.vm.host and m.vm.login_user:
+            return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -l {m.vm.login_user} {m.vm.host}"
+        vm = get_latest_vm_by_uuid(m.uuid)
+        if not vm:
+            return ""
+        if m.ansible.private_key:
+            return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -l {vm.login_user} -i {m.ansible.private_key} {vm.ip_public or vm.ip_private}"
+        return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -l {vm.login_user} {vm.ip_public or vm.ip_private}"
+    elif connstr_output_format == "ansible":
+        if m.vm.host and m.vm.login_user:
+            inventory_string = f"{m.vm.host} ansible_user={m.vm.login_user}"
+            if m.ansible.private_key:
+                inventory_string += (
+                    f" ansible_ssh_private_key_file={m.ansible.private_key}"
+                )
+            return inventory_string
+
+        vm = get_latest_vm_by_uuid(m.uuid)
+        if not vm:
+            return ""
+
+        inventory_string = f"{vm.ip_public or vm.ip_private} ansible_user={vm.login_user} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'"
+
+        if m.ansible.private_key:
+            inventory_string += (
+                f" ansible_ssh_private_key_file={m.ansible.private_key}"
+            )
+
+        return inventory_string
+    else:
+        raise Exception(
+            f"Unexpected connstr_output_format: {connstr_output_format}"
+        )
 
 
 def finalize_ensure_vm(m: InstanceManifest, vm: CloudVM):
