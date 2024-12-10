@@ -67,6 +67,9 @@ access key and secret available or some transparent "assume role" based scheme s
 port 22 access from the operator node to the used Security Group (defaults to the "default" SG). More info on Security
 Groups and ports can be found in the [Security](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_security.md) section.
 
+If you don't yet have a safe AWS playground / credentials - start with a bit of Terraform [here](https://github.com/pg-spot-ops/pg-spot-operator/tree/main/scripts/terraform)
+and feed the output into `--aws-vpc-id`, `--aws-access-key-id` and `--aws-secret-access-key` params.
+
 ```
 # In --connstr-output-only mode we can land right into `psql`!
 psql $(pg_spot_operator --region=us-east-1 --ram-min=128 \
@@ -114,8 +117,28 @@ pg_spot_operator --region=us-east-1 --instance-name=analytics --teardown
 2024-11-19 11:48:04,251 INFO OK - cloud resources for instance analytics cleaned-up
 ```
 
-PS If you don't yet have a safe AWS playground / credentials - start with a bit of Terraform [here](https://github.com/pg-spot-ops/pg-spot-operator/tree/main/scripts/terraform)
-and feed the output into `--aws-vpc-id`, `--aws-access-key-id` and `--aws-secret-access-key` CLI params.
+## Not only for Postgres
+
+Spot Operator can also be used to provision and sustain VMs for any custom workloads, in need of cheap VMs. Relevant
+flags: `--vm-only`, `--connstr-output-only` and `--connstr-format`.
+
+For example to run your custom Ansible scripted verification of some large multi-DB backups on fast local storage for
+peanuts, one could go:
+
+```
+pg_spot_operator --vm-only --connstr-output-only --connstr-format ansible --region=us-east-1 \
+  --cpu-min=8 --ram-min=32 --storage-min=5000 --storage-type=local --instance-name=custom > inventory
+...
+INFO SKU i7ie.2xlarge main specs - vCPU: 8, RAM: 64 GB, instance storage: 5000 GB ssd
+INFO Current Spot vs Ondemand discount rate: -88.4% ($86.7 vs $748.5), approx. 13x to non-HA RDS
+INFO Current expected monthly eviction rate range: <5%
+...
+
+ansible-playbook -i inventory mycustom_verification.yml && report_success.sh
+
+pg_spot_operator --teardown --region=us-east-1 --instance-name custom
+```
+
 
 # General idea
 
