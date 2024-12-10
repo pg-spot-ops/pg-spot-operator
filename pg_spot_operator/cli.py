@@ -719,6 +719,7 @@ def download_ansible_from_github_if_not_set_locally(
     if (
         args.ansible_path
         or args.check_price
+        or args.vm_only
         or args.check_manifest
         or args.teardown
         or args.teardown_region
