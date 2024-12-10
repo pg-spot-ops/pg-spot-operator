@@ -116,6 +116,9 @@ class ArgumentParser(Tap):
     ram_min: int = int(os.getenv("PGSO_RAM_MIN", "0"))
     storage_min: int = int(os.getenv("PGSO_STORAGE_MIN", "0"))
     storage_type: str = os.getenv("PGSO_STORAGE_TYPE", "network")
+    storage_speed_class: str = os.getenv(
+        "PGSO_STORAGE_SPEED_CLASS", "ssd"
+    )  # hdd | ssd | nvme. ssd also includes nvme
     volume_type: str = os.getenv(
         "PGSO_VOLUME_TYPE", "gp3"
     )  # gp2, gp3, io1, io2
@@ -251,6 +254,7 @@ def compile_manifest_from_cmdline_params(
     m.vm.ram_min = args.ram_min
     m.vm.storage_min = args.storage_min
     m.vm.storage_type = args.storage_type
+    m.vm.storage_speed_class = args.storage_speed_class.lower()
     m.vm.volume_type = args.volume_type
     m.vm.volume_iops = args.volume_iops
     m.vm.volume_throughput = args.volume_throughput
