@@ -65,7 +65,11 @@ def try_get_monthly_ondemand_price_for_sku(region: str, sku: str) -> float:
     hourly: float = 0
     try:
         hourly = get_current_hourly_ondemand_price(region, sku)
-        return round(hourly * 24 * 30, 1)
+        return (
+            round(hourly * 24 * 30, 1)
+            if hourly * 24 * 30 < 100
+            else round(hourly * 24 * 30)
+        )
     except Exception as e:
         logger.error(
             "Failed to get ondemand instance pricing from AWS, trying ec2.shop fallback. Error: %s",
@@ -73,7 +77,11 @@ def try_get_monthly_ondemand_price_for_sku(region: str, sku: str) -> float:
         )
     try:
         hourly = get_current_hourly_ondemand_price_fallback(region, sku)
-        return round(hourly * 24 * 30, 1)
+        return (
+            round(hourly * 24 * 30, 1)
+            if hourly * 24 * 30 < 100
+            else round(hourly * 24 * 30)
+        )
     except Exception as e:
         logger.error(
             "Failed to get fallback pricing from ec2.shop. Error: %s", e
@@ -482,7 +490,11 @@ def attach_pricing_info_to_instance_type_info(
                     instance_type=iti.instance_type,
                 )
         if not iti.monthly_spot_price:
-            iti.monthly_spot_price = round(iti.hourly_spot_price * 24 * 30, 1)
+            iti.monthly_spot_price = (
+                round(iti.hourly_spot_price * 24 * 30, 1)
+                if iti.hourly_spot_price * 24 * 30 < 100
+                else round(iti.hourly_spot_price * 24 * 30)
+            )
         if not iti.hourly_ondemand_price:
             iti.monthly_ondemand_price = (
                 try_get_monthly_ondemand_price_for_sku(
@@ -762,8 +774,10 @@ def get_all_instance_types_from_aws_regional_pricing_info(
                         cloud=CLOUD_AWS,
                         region=region,
                         hourly_ondemand_price=float(sku_data["price"]),
-                        monthly_ondemand_price=round(
-                            float(sku_data["price"]) * 24 * 30, 1
+                        monthly_ondemand_price=(
+                            round(float(sku_data["price"]) * 24 * 30, 1)
+                            if float(sku_data["price"]) * 24 * 30 < 100
+                            else round(float(sku_data["price"]) * 24 * 30)
                         ),
                         cpu=int(sku_data["vCPU"]),
                         ram_mb=extract_memory_mb_from_aws_pricing_memory_string(
