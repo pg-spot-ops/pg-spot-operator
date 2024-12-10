@@ -4,6 +4,65 @@ Changelog
 
 (unreleased)
 ------------
+- Show Spot and On-demand prices without decimals if > $100. [Kaarel
+  Moppel]
+- Set a "Name" tag on VM create automatically if not set by the user.
+  [Kaarel Moppel]
+
+  In the form of '$instance-name [pg-spot-operator]'.
+
+  To provide better recognition in the AWS Web Console.
+- Merge pull request #109 from pg-spot-ops/list-instances. [Kaarel
+  Moppel]
+
+  New CLI flag: --list-instances
+- Docement the new --list-instances option. [Kaarel Moppel]
+- Add some more fields to the --list-instances output table. [Kaarel
+  Moppel]
+- New CLI flag: --list-instances. [Kaarel Moppel]
+
+  Show key attributes from boto3.describe_instances
+- Expose --storage-speed-class manifest attribute via the CLI. [Kaarel
+  Moppel]
+
+  As sometimes actually want HDD instances for testing
+- Merge pull request #108 from pg-spot-ops/ansible-connstr-output.
+  [Kaarel Moppel]
+
+  Add an option to get Ansible inventory suitable output in --connstr-output-only mode
+- Don't try to download Ansible files when --vm-only set. [Kaarel
+  Moppel]
+
+  As not needed
+- README - mention that one can also use the operator for non-Postgres
+  tasks. [Kaarel Moppel]
+
+  And generate an Ansible inventory file plus just run custom playbooks
+- Rename --connstr-output-format to --connstr-format. [Kaarel Moppel]
+- Add new --connstr-output-format CLI flag. [Kaarel Moppel]
+
+  To get an Ansible compatible inventory string for easy custom setups,
+  where --connstr-output-format=ansible given
+- README update - mention idling server estimates. [Kaarel Moppel]
+- README - a more complete PyPI example + mention brute-force
+  protectoion. [Kaarel Moppel]
+- Merge pull request #105 from pg-spot-ops/cli-list-strategies-flag.
+  [Kaarel Moppel]
+
+  A new CLI flag:  --list-strategies
+- Turn instance selection strategies into string constants. [Kaarel
+  Moppel]
+- Bail on invalid --selection-strategy input and list available
+  strategies. [Kaarel Moppel]
+- Add new --list-strategies CLI flag. [Kaarel Moppel]
+
+  To explain available strategies. Also add a hint to this new flag in the
+  check price output
+
+
+0.9.11 (2024-12-06)
+-------------------
+- Release: version 0.9.11 🚀 [Kaarel Moppel]
 - README - update the Docker usage example. [Kaarel Moppel]
 
   Use region us-east-1 to be in sync with PyPI quickstart
