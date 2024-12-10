@@ -4,11 +4,13 @@
 
 # PG Spot Operator [Community Edition]
 
+According to various estimates 30-40% of cloud servers are idling - why not to make good use of them, and save some money in the process?
+
 Think of it as one-liner RDS, but at a fraction of the cost! Typical [savings](https://aws.amazon.com/ec2/spot/pricing/)
 of running self-managed EC2 Spot instances are around 5x compared to [RDS](https://aws.amazon.com/rds/postgresql/pricing/).
 
-Obviously not meant for all projects as a general RDS replacement, as utilizing Spot instances means one can be interrupted
-by AWS at any time, and it takes a few minutes to restore the state.
+Obviously not meant for all projects as a general RDS replacement, as Spot could mean more service interruptions for longer
+term setups. Data remains persistent though!
 
 On the other hand - Spot eviction rates are insanely good for the price! The average frequency of interruption is only
 around 5% per month according to AWS [data](https://aws.amazon.com/ec2/spot/instance-advisor/), meaning - one **can expect to run a few months uninterrupted**, i.e.
