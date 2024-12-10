@@ -61,6 +61,7 @@ def test_region_regex_to_actual_region_codes():
         ("", sorted(list(get_aws_region_code_to_name_mapping().keys()))),
         ("eu-west", ["eu-west-1", "eu-west-2", "eu-west-3"]),
         ("london", ["eu-west-2"]),
+        ("eu-west-1", ["eu-west-1"]),
         ("(us-east|ca-we)", ["ca-west-1", "us-east-1", "us-east-2"]),
         ("eu-(ce|no)", ["eu-central-1", "eu-central-2", "eu-north-1"]),
     ]

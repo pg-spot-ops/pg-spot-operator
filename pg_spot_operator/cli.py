@@ -11,6 +11,7 @@ from tap import Tap
 from pg_spot_operator import cloud_api, cmdb, manifests, operator
 from pg_spot_operator.cloud_impl.aws_client import set_access_keys
 from pg_spot_operator.cloud_impl.aws_spot import (
+    get_all_active_operator_instances_from_region,
     try_get_monthly_ondemand_price_for_sku,
 )
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
@@ -73,6 +74,9 @@ class ArgumentParser(Tap):
     list_regions: bool = str_to_bool(
         os.getenv("PGSO_LIST_REGIONS", "false")
     )  # Display all known AWS region codes + names and exit
+    list_instances: bool = str_to_bool(
+        os.getenv("PGSO_LIST_INSTANCES", "false")
+    )  # List running VMs for given region / region wildcards
     list_strategies: bool = str_to_bool(
         os.getenv("PGSO_LIST_STRATEGIES", "false")
     )  # Display available instance selection strategies and exit
@@ -350,6 +354,14 @@ def get_manifest_from_args(args: ArgumentParser) -> InstanceManifest | None:
 
 def check_cli_args_valid(args: ArgumentParser):
     fixed_vm = bool(args.vm_login_user and args.vm_host)
+    if args.list_instances:
+        if not args.region:
+            logger.error(
+                "--region input expected. Can be fuzzy / regex",
+            )
+            exit(1)
+        return
+
     if not fixed_vm:
         if not args.region and not args.zone and not args.check_price:
             logger.error("--region input expected")
@@ -887,6 +899,52 @@ def list_strategies_and_exit() -> None:
     exit(0)
 
 
+def list_instances_and_exit(args: ArgumentParser) -> None:
+    regions = region_regex_to_actual_region_codes(args.region)
+    if not regions:
+        logger.error("No regions provided")
+        exit(1)
+
+    errors = 0
+    instances: list[dict] = []
+
+    for reg in regions:
+        logger.info(
+            "Fetching non-terminated pg-spot-operator instances for region '%s' ...",
+            reg,
+        )
+        try:
+            instance_descriptions = (
+                get_all_active_operator_instances_from_region(reg)
+            )
+            logger.info("Instances found: %s", len(instance_descriptions))
+            if instance_descriptions:
+                instances.extend(instance_descriptions)
+        except Exception:
+            logger.error("Failed to complete scan for region %s", reg)
+            errors += 1
+
+    cols = [
+        "InstanceID",
+        "InstanceType",
+        "LaunchTime",
+        "PrivateIpAddress",
+        "PublicIpAddress",
+        "VpcId",
+        "Tags",
+    ]
+    tab = PrettyTable(cols)
+    for i in instances:
+        tbl_row = []
+        for c in cols:
+            tbl_row.append(i.get(c))
+        tab.add_row(tbl_row)
+
+    print(tab)
+
+    exit(errors)
+
+
 def main():  # pragma: no cover
 
     global args
@@ -895,7 +953,7 @@ def main():  # pragma: no cover
     logging.basicConfig(
         format=(
             "%(message)s"
-            if args.check_price
+            if (args.check_price or args.list_instances)
             else (
                 "%(asctime)s %(levelname)s %(threadName)s %(filename)s:%(lineno)d %(message)s"
                 if args.verbose
@@ -920,6 +978,9 @@ def main():  # pragma: no cover
 
     if not (args.manifest_path or args.manifest):
         check_cli_args_valid(args)
+
+    if args.list_instances:
+        list_instances_and_exit(args)
 
     logger.debug("Args: %s", args.as_dict()) if args.verbose else None
 
