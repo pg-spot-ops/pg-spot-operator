@@ -18,6 +18,7 @@ from pg_spot_operator.cloud_impl.aws_client import set_access_keys
 from pg_spot_operator.cloud_impl.aws_s3 import (
     s3_clean_bucket_path_if_exists,
     s3_try_create_bucket_if_not_exists,
+    write_to_bucket,
 )
 from pg_spot_operator.cloud_impl.aws_spot import (
     attach_pricing_info_to_instance_type_info,
@@ -943,6 +944,41 @@ def check_for_explicit_tag_signalled_expiration_date(m) -> str:
     return ""
 
 
+def write_connstr_to_s3_if_bucket_set(m: InstanceManifest) -> None:
+    """Failures considered non-critical, as the service running itself.
+    If some bucket address params missing, we try to put together a valid bucket url.
+    Bucket writing format:
+    {
+    }
+    """
+    if not m.integrations.connstr_bucket:
+        return
+    if (
+        m.integrations.connstr_bucket
+        and not m.integrations.connstr_bucket_filename
+    ):
+        logger.warning(
+            "--connstr-bucket-filename not set, can't store connstr to s3"
+        )
+        return
+    try:
+        connstr = get_instance_connect_string(m)
+        if not connstr:
+            logger.error("No valid connect string found for bucket writing")
+            return
+        data = json.dumps({"connstr": connstr})
+        write_to_bucket(
+            data,
+            m.integrations.connstr_bucket_region or m.region,
+            m.integrations.connstr_bucket,
+            m.integrations.connstr_bucket_filename,
+        )
+    except Exception:
+        logger.exception(
+            "Failed to write the connect string to specified bucket"
+        )
+
+
 def do_main_loop(
     cli_dry_run: bool = False,
     cli_env_manifest: InstanceManifest | None = None,
@@ -1201,6 +1237,8 @@ def do_main_loop(
                     cmdb.mark_manifest_snapshot_as_succeeded(m)
                 else:
                     run_action(constants.ACTION_INSTANCE_SETUP, m)
+
+                    write_connstr_to_s3_if_bucket_set(m)
 
             else:
                 logger.info(

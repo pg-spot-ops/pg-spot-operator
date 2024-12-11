@@ -48,3 +48,15 @@ def s3_clean_bucket_path_if_exists(
         logger.info(
             "Backup bucket %s not found, nothing to clean up", bucket_name
         )
+
+
+def write_to_bucket(
+    data: str,
+    region: str,
+    bucket_name: str,
+    file_name_to_write: str,
+    endpoint: str = "",
+    key: str = "",
+    secret: str = "",
+):
+    pass
