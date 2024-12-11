@@ -197,13 +197,15 @@ class ArgumentParser(Tap):
     connstr_bucket: str = os.getenv(
         "CONNSTR_BUCKET", ""
     )  # An S3 bucket to write the connect string into
-    connstr_bucket_filename: str = os.getenv(
-        "CONNSTR_BUCKET_FILENAME", ""
+    connstr_bucket_key: str = os.getenv(
+        "CONNSTR_BUCKET_KEY", ""
     )  # Required if --connstr-bucket set
     connstr_bucket_region: str = os.getenv("CONNSTR_BUCKET_REGION", "")
     connstr_bucket_endpoint: str = os.getenv("CONNSTR_BUCKET_ENDPOINT", "")
-    connstr_bucket_key: str = os.getenv("CONNSTR_BUCKET_KEY", "")
-    connstr_bucket_secret: str = os.getenv("CONNSTR_BUCKET_SECRET", "")
+    connstr_bucket_access_key: str = os.getenv("CONNSTR_BUCKET_ACCESS_KEY", "")
+    connstr_bucket_access_secret: str = os.getenv(
+        "CONNSTR_BUCKET_ACCESS_SECRET", ""
+    )
     backup_s3_bucket: str = os.getenv(
         "PGSO_BACKUP_S3_BUCKET", ""
     )  # If set, pgbackrest will be configured
@@ -266,11 +268,11 @@ def compile_manifest_from_cmdline_params(
     m.assign_public_ip = args.assign_public_ip
     m.integrations.setup_finished_callback = args.setup_finished_callback
     m.integrations.connstr_bucket = args.connstr_bucket
-    m.integrations.connstr_bucket_filename = args.connstr_bucket_filename
+    m.integrations.connstr_bucket_filename = args.connstr_bucket_key
     m.integrations.connstr_bucket_region = args.connstr_bucket_region
     m.integrations.connstr_bucket_endpoint = args.connstr_bucket_endpoint
-    m.integrations.connstr_bucket_key = args.connstr_bucket_key
-    m.integrations.connstr_bucket_secret = args.connstr_bucket_secret
+    m.integrations.connstr_bucket_key = args.connstr_bucket_access_key
+    m.integrations.connstr_bucket_secret = args.connstr_bucket_access_secret
     m.vm_only = args.vm_only
     m.vm.cpu_arch = args.cpu_arch
     m.vm.cpu_min = args.cpu_min

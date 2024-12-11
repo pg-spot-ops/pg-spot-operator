@@ -991,13 +991,16 @@ def write_connstr_to_s3_if_bucket_set(m: InstanceManifest) -> None:
         }
         write_to_s3_bucket(
             data=json.dumps(connect_data),
-            region=m.integrations.connstr_bucket_region or m.region,
+            region=(m.integrations.connstr_bucket_region or m.region),
             bucket_name=m.integrations.connstr_bucket,
-            bucket_filename=m.integrations.connstr_bucket_filename,
+            bucket_key=m.integrations.connstr_bucket_filename,
             endpoint=m.integrations.connstr_bucket_endpoint,
-            key=m.integrations.connstr_bucket_key or m.aws.access_key_id,
-            secret=m.integrations.connstr_bucket_secret
-            or m.aws.secret_access_key,
+            access_key=(
+                m.integrations.connstr_bucket_key or m.aws.access_key_id
+            ),
+            access_secret=(
+                m.integrations.connstr_bucket_secret or m.aws.secret_access_key
+            ),
         )
     except Exception:
         logger.exception(

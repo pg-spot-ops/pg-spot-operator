@@ -56,22 +56,21 @@ def write_to_s3_bucket(
     data: str,
     region: str,
     bucket_name: str,
-    bucket_filename: str,
+    bucket_key: str,
     endpoint: str = "",
-    key: str = "",
-    secret: str = "",
+    access_key: str = "",
+    access_secret: str = "",
 ):
     s3_params = {
         "service_name": "s3",
         "endpoint_url": endpoint,
-        "aws_access_key_id": key,
-        "aws_secret_access_key": secret,
+        "aws_access_key_id": access_key,
+        "aws_secret_access_key": access_secret,
         "region_name": region,
     }
-
     client = boto3.client(**{k: v for k, v in s3_params.items() if v})  # type: ignore
     # https://boto3.amazonaws.com/v1/documentation/api/1.35.9/reference/services/s3.html
-    client.put_object(Bucket=bucket_name, Key=bucket_filename, Body=data)
+    client.put_object(Bucket=bucket_name, Key=bucket_key, Body=data)
 
 
 def read_s3_bucket(
