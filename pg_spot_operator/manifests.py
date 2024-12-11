@@ -263,16 +263,18 @@ class InstanceManifest(BaseModel):
                 self.availability_zone
             )
         if (
-            not self.setup_finished_callback
+            not self.integrations.setup_finished_callback
             and default_setup_finished_callback
         ):
-            self.setup_finished_callback = default_setup_finished_callback
+            self.integrations.setup_finished_callback = (
+                default_setup_finished_callback
+            )
         if (
-            self.setup_finished_callback
-            and "~" in self.setup_finished_callback
+            self.integrations.setup_finished_callback
+            and "~" in self.integrations.setup_finished_callback
         ):
-            self.setup_finished_callback = os.path.expanduser(
-                self.setup_finished_callback
+            self.integrations.setup_finished_callback = os.path.expanduser(
+                self.integrations.setup_finished_callback
             )
         if (
             self.backup.type == BACKUP_TYPE_PGBACKREST

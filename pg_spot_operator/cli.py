@@ -199,7 +199,7 @@ class ArgumentParser(Tap):
     )  # An S3 bucket to write the connect string into
     connstr_bucket_filename: str = os.getenv(
         "CONNSTR_BUCKET_FILENAME", ""
-    )  # Defaults to $instance_name.json if not set
+    )  # Required if --connstr-bucket set
     connstr_bucket_region: str = os.getenv("CONNSTR_BUCKET_REGION", "")
     connstr_bucket_endpoint: str = os.getenv("CONNSTR_BUCKET_ENDPOINT", "")
     connstr_bucket_key: str = os.getenv("CONNSTR_BUCKET_KEY", "")

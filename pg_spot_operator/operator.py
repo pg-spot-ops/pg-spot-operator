@@ -18,7 +18,7 @@ from pg_spot_operator.cloud_impl.aws_client import set_access_keys
 from pg_spot_operator.cloud_impl.aws_s3 import (
     s3_clean_bucket_path_if_exists,
     s3_try_create_bucket_if_not_exists,
-    write_to_bucket,
+    write_to_s3_bucket,
 )
 from pg_spot_operator.cloud_impl.aws_spot import (
     attach_pricing_info_to_instance_type_info,
@@ -38,7 +38,11 @@ from pg_spot_operator.cloud_impl.aws_vm import (
     terminate_instances_in_region,
 )
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
-from pg_spot_operator.cmdb import get_instance_connect_string, get_ssh_connstr
+from pg_spot_operator.cmdb import (
+    get_instance_connect_string,
+    get_latest_vm_by_uuid,
+    get_ssh_connstr,
+)
 from pg_spot_operator.constants import (
     BACKUP_TYPE_PGBACKREST,
     DEFAULT_CONFIG_DIR,
@@ -949,6 +953,13 @@ def write_connstr_to_s3_if_bucket_set(m: InstanceManifest) -> None:
     If some bucket address params missing, we try to put together a valid bucket url.
     Bucket writing format:
     {
+        "connstr": "postgresql://app1:secret@1.2.3.4:5432/postgres?sslmode=require",
+        "instance_name": "",
+        "ip_public": "",
+        "ip_private": "1.2.3.4",
+        "admin_user": "app1",
+        "admin_password": "secret",
+        "app_db_name": "postgres"
     }
     """
     if not m.integrations.connstr_bucket:
@@ -966,17 +977,38 @@ def write_connstr_to_s3_if_bucket_set(m: InstanceManifest) -> None:
         if not connstr:
             logger.error("No valid connect string found for bucket writing")
             return
-        data = json.dumps({"connstr": connstr})
-        write_to_bucket(
-            data,
-            m.integrations.connstr_bucket_region or m.region,
-            m.integrations.connstr_bucket,
-            m.integrations.connstr_bucket_filename,
+
+        vm = get_latest_vm_by_uuid(m.uuid)
+
+        connect_data = {
+            "connstr": connstr,
+            "instance_name": m.instance_name,
+            "ip_public": vm.ip_public if vm and vm.ip_public else "",
+            "ip_private": vm.ip_private if vm and vm.ip_private else "",
+            "admin_user": m.postgres.admin_user,
+            "admin_password": m.postgres.admin_password,
+            "app_db_name": m.postgres.app_db_name or "postgres",
+        }
+        write_to_s3_bucket(
+            data=json.dumps(connect_data),
+            region=m.integrations.connstr_bucket_region or m.region,
+            bucket_name=m.integrations.connstr_bucket,
+            bucket_filename=m.integrations.connstr_bucket_filename,
+            endpoint=m.integrations.connstr_bucket_endpoint,
+            key=m.integrations.connstr_bucket_key or m.aws.access_key_id,
+            secret=m.integrations.connstr_bucket_secret
+            or m.aws.secret_access_key,
         )
     except Exception:
         logger.exception(
             "Failed to write the connect string to specified bucket"
         )
+        return
+    logger.info(
+        "Connect information successfully written to bucket %s/%s",
+        m.integrations.connstr_bucket,
+        m.integrations.connstr_bucket_filename,
+    )
 
 
 def do_main_loop(

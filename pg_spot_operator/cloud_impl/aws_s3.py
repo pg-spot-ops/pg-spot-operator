@@ -1,5 +1,7 @@
 import logging
 
+import boto3
+
 from pg_spot_operator.cloud_impl.aws_client import get_client, get_session
 
 logger = logging.getLogger(__name__)
@@ -50,13 +52,49 @@ def s3_clean_bucket_path_if_exists(
         )
 
 
-def write_to_bucket(
+def write_to_s3_bucket(
     data: str,
     region: str,
     bucket_name: str,
-    file_name_to_write: str,
+    bucket_filename: str,
     endpoint: str = "",
     key: str = "",
     secret: str = "",
 ):
-    pass
+    s3_params = {
+        "service_name": "s3",
+        "endpoint_url": endpoint,
+        "aws_access_key_id": key,
+        "aws_secret_access_key": secret,
+        "region_name": region,
+    }
+
+    client = boto3.client(**{k: v for k, v in s3_params.items() if v})  # type: ignore
+    # https://boto3.amazonaws.com/v1/documentation/api/1.35.9/reference/services/s3.html
+    client.put_object(Bucket=bucket_name, Key=bucket_filename, Body=data)
+
+
+def read_s3_bucket(
+    region: str,
+    bucket_name: str,
+    bucket_filename: str,
+    endpoint: str = "",
+    key: str = "",
+    secret: str = "",
+):
+    s3_params = {
+        "service_name": "s3",
+        "endpoint_url": endpoint,
+        "aws_access_key_id": key,
+        "aws_secret_access_key": secret,
+        "region_name": region,
+    }
+
+    client = boto3.client(**{k: v for k, v in s3_params.items() if v})  # type: ignore
+    # https://youtype.github.io/boto3_stubs_docs/mypy_boto3_s3/client/#get_object
+    resp = client.get_object(
+        Bucket=bucket_name,
+        Key=bucket_filename,
+    )
+    body = resp["Body"].read()
+    return body.decode("utf8")
