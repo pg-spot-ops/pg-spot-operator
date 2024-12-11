@@ -237,9 +237,9 @@ pg_spot_operator --ram-min=256 --region=us-west-2 --storage-min 300 \
 
 # Integrating with user applications
 
-Although the Community Edition is designed for more light use, one can use it also to power real applications (given
-they cope with the possible service interruptions of course) by either providing a "setup finished" callback hook or just
-running in special pipe-friendly `--connstr-output-only` mode. More details [here](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_integration.md).
+One can use the Spot Operator also to power real applications, given they cope with the slighyly reduced uptimes of course,
+by either providing a "setup finished" callback script, running in special pipe-friendly `--connstr-output-only` mode or
+pushing the resulting connect information to a S3 bucket. More details in [README_integration.md](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_integration.md).
 
 PS Real usage assumes that the engine is kept running on a single node only by the user, as there's by design no global
 synchronization / consensus store to keep things simple.
