@@ -1002,16 +1002,16 @@ def write_connstr_to_s3_if_bucket_set(m: InstanceManifest) -> None:
                 m.integrations.connstr_bucket_secret or m.aws.secret_access_key
             ),
         )
+        logger.info(
+            "Connect information successfully written to bucket %s, key %s",
+            m.integrations.connstr_bucket,
+            m.integrations.connstr_bucket_filename,
+        )
     except Exception:
         logger.exception(
             "Failed to write the connect string to specified bucket"
         )
         return
-    logger.info(
-        "Connect information successfully written to bucket %s/%s",
-        m.integrations.connstr_bucket,
-        m.integrations.connstr_bucket_filename,
-    )
 
 
 def do_main_loop(

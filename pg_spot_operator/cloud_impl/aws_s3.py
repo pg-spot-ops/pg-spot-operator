@@ -68,6 +68,14 @@ def write_to_s3_bucket(
         "aws_secret_access_key": access_secret,
         "region_name": region,
     }
+    logger.debug(
+        "Updating connstr info in S3. S3 details: %s",
+        {
+            k: v
+            for k, v in s3_params.items()
+            if v and k not in ("aws_access_key_id", "aws_secret_access_key")
+        },
+    )
     client = boto3.client(**{k: v for k, v in s3_params.items() if v})  # type: ignore
     # https://boto3.amazonaws.com/v1/documentation/api/1.35.9/reference/services/s3.html
     client.put_object(Bucket=bucket_name, Key=bucket_key, Body=data)

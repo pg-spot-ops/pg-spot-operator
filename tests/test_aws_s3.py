@@ -20,10 +20,10 @@ def test_write_to_s3_bucket():
         data=random_as_str,
         region="",
         bucket_name=BUCKET,
-        bucket_filename="dummy.txt",
+        bucket_key="dummy.txt",
         endpoint="",
-        key="",
-        secret="",
+        access_key="",
+        access_secret="",
     )
 
     data_out = read_s3_bucket(

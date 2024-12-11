@@ -201,7 +201,9 @@ class ArgumentParser(Tap):
         "CONNSTR_BUCKET_KEY", ""
     )  # Required if --connstr-bucket set
     connstr_bucket_region: str = os.getenv("CONNSTR_BUCKET_REGION", "")
-    connstr_bucket_endpoint: str = os.getenv("CONNSTR_BUCKET_ENDPOINT", "")
+    connstr_bucket_endpoint: str = os.getenv(
+        "CONNSTR_BUCKET_ENDPOINT", ""
+    )  # e.g. https://myminio:9000
     connstr_bucket_access_key: str = os.getenv("CONNSTR_BUCKET_ACCESS_KEY", "")
     connstr_bucket_access_secret: str = os.getenv(
         "CONNSTR_BUCKET_ACCESS_SECRET", ""
