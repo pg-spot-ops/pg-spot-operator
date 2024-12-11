@@ -14,6 +14,44 @@ docker run --rm -e PGSO_CONNSTR_OUTPUT_ONLY=y -e PGSO_REGION=eu-north-1 -e PGSO_
   && docker run --rm -e PGSO_TEARDOWN=y -e PGSO_REGION=eu-north-1 -e PGSO_INSTANCE_NAME=pg1
 ```
 
+## Pushing connect info to S3
+
+For convenient app integration the operator can push the connect details to S3 or S3 compatible buckets. The bucket must
+be pre-existing!
+
+Relevant input parameters / Env vars:
+
+```
+  --connstr-bucket / CONNSTR_BUCKET (Required for S3 push to work)
+  --connstr-bucket-key / CONNSTR_BUCKET_KEY (Required for S3 push to work)
+  --connstr-bucket-region / CONNSTR_BUCKET_REGION
+  --connstr-bucket-endpoint / CONNSTR_BUCKET_ENDPOINT
+  --connstr-bucket-access-key / CONNSTR_BUCKET_ACCESS_KEY
+  --connstr-bucket-access-secret / CONNSTR_BUCKET_ACCESS_SECRET
+```
+
+E.g. a sample config looks something like:
+
+```
+pg_spot_operator ... --connstr-bucket app1cs --connstr-bucket-endpoint https://9e61e4.r2.cloudflarestorage.com \
+  --connstr-bucket-key connstr.json --connstr-bucket-access-key aaa --connstr-bucket-access-secret bbbb
+```
+
+Format of data written into the bucket:
+
+```
+{
+  "connstr": "postgresql://app1:secret@1.1.1.1:5432/postgres?sslmode=require",
+  "instance_name": "app1",
+  "ip_public": "1.1.1.1",
+  "ip_private": "2.2.2.2",
+  "admin_user": "app1",
+  "admin_password": "secret",
+  "app_db_name": "postgres"
+}
+
+```
+
 ## Setup finished callback file usage
 
 Currently the callback be a self-contained executable which gets following 4 input parameters for propagations into "somewhere":
