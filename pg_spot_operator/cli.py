@@ -193,7 +193,17 @@ class ArgumentParser(Tap):
     )  # If a file named base+instance detected, the instance is expired and the program exits
     setup_finished_callback: str = os.getenv(
         "PGSO_SETUP_FINISHED_CALLBACK", ""
-    )  # An optional executable to propagate the connect string somewhere
+    )  # An optional executable to propagate the connect string somewhere. Gets connect details as input parameters
+    connstr_bucket: str = os.getenv(
+        "CONNSTR_BUCKET", ""
+    )  # An S3 bucket to write the connect string into
+    connstr_bucket_filename: str = os.getenv(
+        "CONNSTR_BUCKET_FILENAME", ""
+    )  # Defaults to $instance_name.json if not set
+    connstr_bucket_region: str = os.getenv("CONNSTR_BUCKET_REGION", "")
+    connstr_bucket_endpoint: str = os.getenv("CONNSTR_BUCKET_ENDPOINT", "")
+    connstr_bucket_key: str = os.getenv("CONNSTR_BUCKET_KEY", "")
+    connstr_bucket_secret: str = os.getenv("CONNSTR_BUCKET_SECRET", "")
     backup_s3_bucket: str = os.getenv(
         "PGSO_BACKUP_S3_BUCKET", ""
     )  # If set, pgbackrest will be configured
@@ -254,7 +264,13 @@ def compile_manifest_from_cmdline_params(
         m.region = extract_region_from_az(m.availability_zone)
     m.expiration_date = args.expiration_date
     m.assign_public_ip = args.assign_public_ip
-    m.setup_finished_callback = args.setup_finished_callback
+    m.integrations.setup_finished_callback = args.setup_finished_callback
+    m.integrations.connstr_bucket = args.connstr_bucket
+    m.integrations.connstr_bucket_filename = args.connstr_bucket_filename
+    m.integrations.connstr_bucket_region = args.connstr_bucket_region
+    m.integrations.connstr_bucket_endpoint = args.connstr_bucket_endpoint
+    m.integrations.connstr_bucket_key = args.connstr_bucket_key
+    m.integrations.connstr_bucket_secret = args.connstr_bucket_secret
     m.vm_only = args.vm_only
     m.vm.cpu_arch = args.cpu_arch
     m.vm.cpu_min = args.cpu_min

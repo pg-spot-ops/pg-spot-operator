@@ -169,6 +169,21 @@ class SectionMonitoring(BaseModel):
     )
 
 
+class SectionIntegration(BaseModel):
+    setup_finished_callback: str = (
+        ""  # Any executable, run at end of successful setup on the operator host
+    )
+    # gets connect details as input parameters
+    connstr_bucket: str = ""  # An S3 bucket to write the connect string into
+    connstr_bucket_filename: str = (
+        ""  # Defaults to $instance_name.json if not set
+    )
+    connstr_bucket_region: str = ""
+    connstr_bucket_endpoint: str = ""
+    connstr_bucket_key: str = ""
+    connstr_bucket_secret: str = ""
+
+
 class InstanceManifest(BaseModel):
     # *Internal engine usage fields*
     original_manifest: str = ""
@@ -191,7 +206,6 @@ class InstanceManifest(BaseModel):
     availability_zone: str = ""
     user_tags: dict = field(default_factory=dict)
     vault_password_file: str = ""
-    setup_finished_callback: str = ""  # An executable passed to Ansible
     expiration_date: str = ""  # now | '2024-06-11 10:40'
     self_termination: bool = False
     vm_only: bool = False  # No Postgres setup
@@ -204,6 +218,9 @@ class InstanceManifest(BaseModel):
     aws: SectionAws = field(default_factory=SectionAws)
     monitoring: SectionMonitoring = field(default_factory=SectionMonitoring)
     ansible: SectionAnsible = field(default_factory=SectionAnsible)
+    integrations: SectionIntegration = field(
+        default_factory=SectionIntegration
+    )
 
     @staticmethod
     def get_internal_usage_attributes() -> set:
