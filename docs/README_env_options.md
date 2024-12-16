@@ -8,6 +8,7 @@
 * **--check-price / PGSO_CHECK_PRICE** Just resolve the HW reqs, show Spot price / discount rate and exit. No AWS creds required.
 * **--check-manifest / PGSO_CHECK_PRICE** Validate CLI input or instance manifest file and exit
 * **--dry-run / PGSO_DRY_RUN** Perform a dry-run VM create + create the Ansible skeleton. For example to check if cloud credentials allow Spot VM creation.
+* **--debug / PGSO_DEBUG** Don't clean up Ansible run files plus extra developer outputs.
 * **--vm-only / PGSO_VM_ONLY** Skip Ansible / Postgres setup
 * **--config-dir / PGSO_CONFIG_DIR** (Default: ~/.pg-spot-operator) Where the engine keeps its internal state / configuration
 * **--main-loop-interval-s / PGSO_MAIN_LOOP_INTERVAL_S** (Default: 60)  Main loop sleep time. Reduce a bit to detect failures earlier / improve uptime

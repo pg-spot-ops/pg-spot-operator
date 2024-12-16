@@ -92,6 +92,9 @@ class ArgumentParser(Tap):
     dry_run: bool = str_to_bool(
         os.getenv("PGSO_DRY_RUN", "false")
     )  # Just resolve the VM instance type
+    debug: bool = str_to_bool(
+        os.getenv("PGSO_DEBUG", "false")
+    )  # Don't clean up Ansible run files plus extra developer outputs
     vm_only: bool = str_to_bool(
         os.getenv("PGSO_VM_ONLY", "false")
     )  # No Ansible / Postgres setup
@@ -1081,7 +1084,14 @@ def main():  # pragma: no cover
 
     init_cmdb_and_apply_schema_migrations_if_needed(args)
 
-    if not (args.dry_run or args.check_price or args.check_manifest):
+    if not (
+        args.dry_run
+        or args.check_price
+        or args.check_manifest
+        or args.debug
+        or args.list_regions
+        or args.list_instances
+    ):
         operator.operator_config_dir = args.config_dir
         clean_up_old_logs_if_any()
 
@@ -1093,6 +1103,7 @@ def main():  # pragma: no cover
     operator.do_main_loop(
         cli_env_manifest=env_manifest,
         cli_dry_run=args.dry_run,
+        cli_debug=args.debug,
         cli_vault_password_file=args.vault_password_file,
         cli_user_manifest_path=args.manifest_path,
         cli_main_loop_interval_s=args.main_loop_interval_s,

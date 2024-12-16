@@ -71,6 +71,7 @@ logger = logging.getLogger(__name__)
 
 default_vault_password_file: str = ""
 dry_run: bool = False
+debug: bool = False
 operator_startup_time = time.time()
 ansible_root_path: str = ANSIBLE_DEFAULT_ROOT_PATH
 operator_config_dir: str = DEFAULT_CONFIG_DIR
@@ -620,9 +621,10 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
 
         display_connect_strings(m)
 
-        clean_up_old_logs_if_any(
-            old_threshold_days=0
-        )  # To avoid possibility of unencrypted secrets hanging around for too long
+        if not debug:
+            clean_up_old_logs_if_any(
+                old_threshold_days=0
+            )  # To avoid possibility of unencrypted secrets hanging around for too long
 
     return rc == 0, outputs
 
@@ -1016,6 +1018,7 @@ def write_connstr_to_s3_if_bucket_set(m: InstanceManifest) -> None:
 
 def do_main_loop(
     cli_dry_run: bool = False,
+    cli_debug: bool = False,
     cli_env_manifest: InstanceManifest | None = None,
     cli_user_manifest_path: str = "",
     cli_vault_password_file: str = "",
@@ -1028,6 +1031,8 @@ def do_main_loop(
 ):
     global dry_run
     dry_run = cli_dry_run
+    global debug
+    debug = cli_debug
     global default_vault_password_file
     default_vault_password_file = cli_vault_password_file
     if cli_ansible_path:
