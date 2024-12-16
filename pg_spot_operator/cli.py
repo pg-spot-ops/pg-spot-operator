@@ -12,6 +12,7 @@ from pg_spot_operator import cloud_api, cmdb, manifests, operator
 from pg_spot_operator.cloud_impl.aws_client import set_access_keys
 from pg_spot_operator.cloud_impl.aws_spot import (
     get_all_active_operator_instances_from_region,
+    get_current_hourly_spot_price_static,
     try_get_monthly_ondemand_price_for_sku,
 )
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
@@ -954,6 +955,7 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
         "InstanceId",
         "InstanceType",
         "vCPU",
+        "$ (Mon.)",
         "VolumeId",
         "LaunchTime",
         "PrivateIpAddress",
@@ -964,6 +966,9 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
     tab = PrettyTable(cols)
     for i in instances:
         tags_as_dict = {tag["Key"]: tag["Value"] for tag in i.get("Tags", [])}
+        region = extract_region_from_az(
+            i.get("Placement", {}).get("AvailabilityZone", "")
+        )
         tab.add_row(
             [
                 tags_as_dict.get(SPOT_OPERATOR_ID_TAG),
@@ -971,6 +976,14 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
                 i.get("InstanceId"),
                 i.get("InstanceType"),
                 i.get("CpuOptions", {}).get("CoreCount"),
+                round(
+                    get_current_hourly_spot_price_static(
+                        region, i.get("InstanceType")
+                    )
+                    * 24
+                    * 30,
+                    1,
+                ),
                 (
                     i["BlockDeviceMappings"][1].get("Ebs", {}).get("VolumeId")
                     if len(i.get("BlockDeviceMappings", [])) > 1
