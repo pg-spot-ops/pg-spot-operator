@@ -98,6 +98,9 @@ class ArgumentParser(Tap):
     vm_only: bool = str_to_bool(
         os.getenv("PGSO_VM_ONLY", "false")
     )  # No Ansible / Postgres setup
+    ondemand: bool = str_to_bool(
+        os.getenv("PGSO_ONDEMAND", "false")
+    )  # Use persistent VMs instead of Spot
     connstr_output_only: bool = str_to_bool(
         os.getenv("PGSO_CONNSTR_OUTPUT_ONLY", "false")
     )  # Set up Postgres, print connstr and exit
@@ -271,6 +274,7 @@ def compile_manifest_from_cmdline_params(
     m.instance_name = args.instance_name
     if not m.region and m.availability_zone:
         m.region = extract_region_from_az(m.availability_zone)
+    m.vm.ondemand = args.ondemand
     m.expiration_date = args.expiration_date
     m.assign_public_ip = args.assign_public_ip
     m.integrations.setup_finished_callback = args.setup_finished_callback
