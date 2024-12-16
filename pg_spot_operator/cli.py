@@ -30,6 +30,7 @@ from pg_spot_operator.util import (
     extract_region_from_az,
     get_aws_region_code_to_name_mapping,
     region_regex_to_actual_region_codes,
+    timestamp_to_human_readable_delta,
     try_download_ansible_from_github,
 )
 
@@ -956,7 +957,7 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
         "vCPU",
         "$ (Mon.)",
         "VolumeId",
-        "LaunchTime",
+        "Uptime",
         "PrivateIpAddress",
         "PublicIpAddress",
         "VpcId",
@@ -988,7 +989,7 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
                     if len(i.get("BlockDeviceMappings", [])) > 1
                     else None
                 ),
-                i.get("LaunchTime"),
+                timestamp_to_human_readable_delta(i.get("LaunchTime")),
                 i.get("PrivateIpAddress"),
                 i.get("PublicIpAddress"),
                 i.get("VpcId"),
