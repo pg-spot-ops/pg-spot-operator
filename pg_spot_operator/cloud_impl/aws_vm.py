@@ -447,11 +447,11 @@ def ec2_launch_instance(
         )
 
     instance_market_options = {}
-    if not m.vm.ondemand:
+    if not m.vm.persistent_vms:
         instance_market_options = {"MarketType": "spot"}
     logger.info(
         "Launching a new %s instance of type %s in region %s ...",
-        "ondemand" if m.vm.ondemand else "spot",
+        "ondemand" if m.vm.persistent_vms else "spot",
         instance_name,
         region,
     )
@@ -498,7 +498,7 @@ def ec2_launch_instance(
     i_az = i["Instances"][0]["Placement"]["AvailabilityZone"]
     logger.debug(
         "New %s %s instance %s launched in AZ %s",
-        "ondemand" if m.vm.ondemand else "spot",
+        "ondemand" if m.vm.persistent_vms else "spot",
         instance_type,
         i_id,
         i_az,

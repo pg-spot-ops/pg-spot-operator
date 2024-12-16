@@ -74,7 +74,7 @@ class SectionVm(BaseModel):
     allow_burstable: bool = (
         False  # T-class instances tend to get killed more often, thus exclude by default
     )
-    ondemand: bool = False
+    persistent_vms: bool = False
     detailed_monitoring: bool = False  # Has extra cost
     cpu_min: int = 0
     cpu_max: int = 0
