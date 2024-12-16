@@ -512,6 +512,7 @@ def resolve_hardware_requirements_to_instance_types(
     region: str,
     max_skus_to_get: int,
     use_boto3: bool = False,
+    persistent_vms: bool = False,
     availability_zone: str | None = None,
     cpu_min: int = 0,
     cpu_max: int = 0,
@@ -566,6 +567,24 @@ def resolve_hardware_requirements_to_instance_types(
         qualified_instances_cpu_sorted = qualified_instances_cpu_sorted[
             :MAX_SKUS_FOR_SPOT_PRICE_COMPARE
         ]
+
+    if persistent_vms:
+        # Only price sort makes sense for non-Spot VMs
+        logger.debug(
+            "Sorting VM shortlist by ondemand price as persistent VMs wanted ...",
+        )
+        ondemand_sorted = sorted(
+            qualified_instances_cpu_sorted,
+            key=lambda x: x.hourly_ondemand_price,
+        )
+        logger.debug(
+            "Instances / Prices in selection: %s",
+            [
+                (x.instance_type, x.hourly_ondemand_price)
+                for x in ondemand_sorted
+            ],
+        )
+        return ondemand_sorted[:max_skus_to_get]
 
     instance_types_to_consider = [
         x.instance_type for x in qualified_instances_cpu_sorted

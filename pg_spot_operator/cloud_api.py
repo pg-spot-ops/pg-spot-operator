@@ -126,6 +126,7 @@ def resolve_hardware_requirements_to_instance_types(
                     region,
                     max_skus_to_get,
                     use_boto3=use_boto3,
+                    persistent_vms=m.vm.persistent_vms,
                     availability_zone=m.availability_zone,
                     cpu_min=m.vm.cpu_min,
                     cpu_max=m.vm.cpu_max,
