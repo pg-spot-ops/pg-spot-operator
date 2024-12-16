@@ -942,7 +942,6 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
             instance_descriptions = (
                 get_all_active_operator_instances_from_region(reg)
             )
-            logger.debug("Instances found: %s", len(instance_descriptions))
             if instance_descriptions:
                 instances.extend(instance_descriptions)
         except Exception:
