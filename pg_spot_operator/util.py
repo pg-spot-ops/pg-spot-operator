@@ -1,3 +1,4 @@
+import datetime
 import functools
 import json
 import logging
@@ -7,8 +8,8 @@ import shutil
 import subprocess
 import urllib.request
 import zipfile
-from datetime import datetime, timedelta
 
+import humanize
 import requests
 
 logger = logging.getLogger(__name__)
@@ -100,15 +101,17 @@ def timed_cache(**timedelta_kwargs):
     """From https://gist.github.com/Morreski/c1d08a3afa4040815eafd3891e16b945"""
 
     def _wrapper(f):
-        update_delta = timedelta(**timedelta_kwargs)
-        next_update = datetime.utcnow() + update_delta
+        update_delta = datetime.timedelta(**timedelta_kwargs)
+        next_update = (
+            datetime.datetime.now(datetime.timezone.utc) + update_delta
+        )
         # Apply @lru_cache to f with no cache size limit
         f = functools.lru_cache(None)(f)
 
         @functools.wraps(f)
         def _wrapped(*args, **kwargs):
             nonlocal next_update
-            now = datetime.utcnow()
+            now = datetime.datetime.now(datetime.timezone.utc)
             if now >= next_update:
                 f.cache_clear()
                 next_update = now + update_delta
@@ -348,3 +351,14 @@ def space_pad_manifest(mfs: str, spaces_to_add: int = 2) -> str:
         " " * spaces_to_add + s for s in splits if s.strip() != "---"
     ]
     return "\n".join(new_splits)
+
+
+def timestamp_to_human_readable_delta(
+    dt1: datetime.datetime | None, dt2: datetime.datetime | None = None
+) -> str:
+    if not dt1:
+        return "N/A"
+
+    if not dt2:
+        dt2 = datetime.datetime.now(datetime.timezone.utc)
+    return humanize.naturaldelta(dt2 - dt1)

@@ -1,3 +1,4 @@
+import datetime
 import tempfile
 
 import pytest
@@ -10,6 +11,7 @@ from pg_spot_operator.util import (
     region_regex_to_actual_region_codes,
     space_pad_manifest,
     merge_user_and_tuned_non_conflicting_config_params,
+    timestamp_to_human_readable_delta,
 )
 from tests.test_manifests import TEST_MANIFEST_VAULT_SECRETS
 
@@ -88,3 +90,10 @@ def test_merge_user_and_tuned_non_conflicting_config_params():
     )
     assert len(merged) == 4
     assert merged["param3"] == "yyy"
+
+
+def test_timestamp_str_to_human_readable_delta():
+    hr = timestamp_to_human_readable_delta(
+        datetime.datetime(2024, 10, 1), datetime.datetime(2024, 12, 1)
+    )
+    assert "month" in hr

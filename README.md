@@ -117,6 +117,17 @@ pg_spot_operator --region=us-east-1 --instance-name=analytics --teardown
 2024-11-19 11:48:04,251 INFO OK - cloud resources for instance analytics cleaned-up
 ```
 
+Let's double-check that nothing is left hanging from previous experiments:
+
+```
+pg_spot_operator --region='^(us|ca)' --list-instances
+
++---------------+----+------------+--------------+------+----------+----------+--------+------------------+-----------------+-------+-----------------+
+| Instance name | AZ | InstanceId | InstanceType | vCPU | $ (Mon.) | VolumeId | Uptime | PrivateIpAddress | PublicIpAddress | VpcId | Expiration Date |
++---------------+----+------------+--------------+------+----------+----------+--------+------------------+-----------------+-------+-----------------+
++---------------+----+------------+--------------+------+----------+----------+--------+------------------+-----------------+-------+-----------------+
+```
+
 ## Not only for Postgres
 
 Spot Operator can also be used to provision and sustain VMs for any custom workloads, in need of cheap VMs. Relevant

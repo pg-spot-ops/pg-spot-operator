@@ -12,6 +12,7 @@ from pg_spot_operator import cloud_api, cmdb, manifests, operator
 from pg_spot_operator.cloud_impl.aws_client import set_access_keys
 from pg_spot_operator.cloud_impl.aws_spot import (
     get_all_active_operator_instances_from_region,
+    get_current_hourly_spot_price_static,
     try_get_monthly_ondemand_price_for_sku,
 )
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
@@ -29,6 +30,7 @@ from pg_spot_operator.util import (
     extract_region_from_az,
     get_aws_region_code_to_name_mapping,
     region_regex_to_actual_region_codes,
+    timestamp_to_human_readable_delta,
     try_download_ansible_from_github,
 )
 
@@ -933,7 +935,7 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
     instances: list[dict] = []
 
     for reg in regions:
-        logger.info(
+        logger.debug(
             "Fetching non-terminated pg-spot-operator instances for region '%s' ...",
             reg,
         )
@@ -941,7 +943,6 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
             instance_descriptions = (
                 get_all_active_operator_instances_from_region(reg)
             )
-            logger.info("Instances found: %s", len(instance_descriptions))
             if instance_descriptions:
                 instances.extend(instance_descriptions)
         except Exception:
@@ -954,8 +955,9 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
         "InstanceId",
         "InstanceType",
         "vCPU",
+        "$ (Mon.)",
         "VolumeId",
-        "LaunchTime",
+        "Uptime",
         "PrivateIpAddress",
         "PublicIpAddress",
         "VpcId",
@@ -964,6 +966,9 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
     tab = PrettyTable(cols)
     for i in instances:
         tags_as_dict = {tag["Key"]: tag["Value"] for tag in i.get("Tags", [])}
+        region = extract_region_from_az(
+            i.get("Placement", {}).get("AvailabilityZone", "")
+        )
         tab.add_row(
             [
                 tags_as_dict.get(SPOT_OPERATOR_ID_TAG),
@@ -971,12 +976,20 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
                 i.get("InstanceId"),
                 i.get("InstanceType"),
                 i.get("CpuOptions", {}).get("CoreCount"),
+                round(
+                    get_current_hourly_spot_price_static(
+                        region, i.get("InstanceType")
+                    )
+                    * 24
+                    * 30,
+                    1,
+                ),
                 (
                     i["BlockDeviceMappings"][1].get("Ebs", {}).get("VolumeId")
                     if len(i.get("BlockDeviceMappings", [])) > 1
                     else None
                 ),
-                i.get("LaunchTime"),
+                timestamp_to_human_readable_delta(i.get("LaunchTime")),
                 i.get("PrivateIpAddress"),
                 i.get("PublicIpAddress"),
                 i.get("VpcId"),

@@ -166,6 +166,8 @@ def get_current_hourly_spot_price_static(
     region: str,
     instance_type: str,
 ) -> float:
+    if not instance_type:
+        return 0
     try:
         all_spot_instances_for_region_with_price = (
             get_spot_instance_types_with_price_from_s3_pricing_json(
