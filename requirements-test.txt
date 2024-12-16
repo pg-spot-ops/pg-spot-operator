@@ -22,3 +22,4 @@ types-PyYAML
 sqlalchemy
 unidecode
 prettytable
+humanize
