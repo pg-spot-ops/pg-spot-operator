@@ -1279,7 +1279,10 @@ def do_main_loop(
             ):
                 # Just reconfigure the VM if any changes discovered, relying on Ansible idempotence
                 if diff:
-                    logging.info("Detected manifest changes: %s", diff)
+                    logging.info(
+                        "Detected manifest changes in keys: %s",
+                        diff if debug else list(diff.keys()),
+                    )
 
                 if m.vm_only:
                     logger.info("Skipping Postgres setup as vm_only set")
