@@ -150,6 +150,10 @@ ansible-playbook -i inventory mycustom_verification.yml && report_success.sh
 pg_spot_operator --teardown --region=us-east-1 --instance-name custom
 ```
 
+## Persistent VM mode
+
+There's also a `--persistent-vms` flag to use normal long-lived non-spot VMs to just quickly get a self-managed instance
+for some hardware specs.
 
 # General idea
 

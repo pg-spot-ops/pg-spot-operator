@@ -30,26 +30,38 @@ class InstanceTypeSelectionCheapest(InstanceTypeSelectionStrategy):
         cls, instance_types: list[InstanceTypeInfo]
     ) -> list[InstanceTypeInfo]:
         """Don't consider the worst eviction rate bracket instance types still"""
-        non_zero_price = [
-            x
-            for x in instance_types
-            if x.hourly_spot_price and x.max_eviction_rate != 100
-        ]
+        if instance_types[0].spot:
+            non_zero_price = [
+                x
+                for x in instance_types
+                if x.hourly_spot_price and x.max_eviction_rate != 100
+            ]
+        else:
+            non_zero_price = [
+                x for x in instance_types if x.hourly_ondemand_price
+            ]
         if not non_zero_price:
             raise Exception(
                 "No qualified instances with hourly_spot_price set"
             )
-        return sorted(non_zero_price, key=lambda x: x.hourly_spot_price)
+        return sorted(
+            non_zero_price,
+            key=lambda x: (
+                x.hourly_spot_price if x.spot else x.hourly_ondemand_price
+            ),
+        )
 
 
 class InstanceTypeSelectionRandom(InstanceTypeSelectionStrategy):
 
     @classmethod
     def execute(
-        cls, qualified_instance_types: list[InstanceTypeInfo]
+        cls, instance_types: list[InstanceTypeInfo]
     ) -> list[InstanceTypeInfo]:
-        random.shuffle(qualified_instance_types)
-        return qualified_instance_types
+        if not instance_types[0].spot:
+            return InstanceTypeSelectionCheapest.execute(instance_types)
+        random.shuffle(instance_types)
+        return instance_types
 
 
 class InstanceTypeSelectionEvictionRate(InstanceTypeSelectionStrategy):
@@ -58,6 +70,8 @@ class InstanceTypeSelectionEvictionRate(InstanceTypeSelectionStrategy):
     def execute(
         cls, instance_types: list[InstanceTypeInfo]
     ) -> list[InstanceTypeInfo]:
+        if not instance_types[0].spot:
+            return InstanceTypeSelectionCheapest.execute(instance_types)
         valid_instances = [
             x
             for x in instance_types
@@ -80,6 +94,8 @@ class InstanceTypeSelectionBalanced(InstanceTypeSelectionStrategy):
     def execute(
         cls, instance_types: list[InstanceTypeInfo]
     ) -> list[InstanceTypeInfo]:
+        if not instance_types[0].spot:
+            return InstanceTypeSelectionCheapest.execute(instance_types)
         valid_instances = [
             x
             for x in instance_types

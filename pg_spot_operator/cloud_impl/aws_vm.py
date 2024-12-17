@@ -370,7 +370,6 @@ def ec2_launch_instance(
     key_pair_name: str = m.aws.key_pair_name
     security_group_ids: list[str] = m.aws.security_group_ids
     subnet_id: str = m.aws.subnet_id
-    market_type = "spot"
 
     if not region:
         raise Exception("Instance manifest 'region' input required!")
@@ -447,8 +446,14 @@ def ec2_launch_instance(
             }
         )
 
+    instance_market_options = {}
+    if not m.vm.persistent_vms:
+        instance_market_options = {"MarketType": "spot"}
     logger.info(
-        f"Launching a new {market_type} instance of type {instance_type} in region {region} ..."
+        "Launching a new %s instance of type %s in region %s ...",
+        "ondemand" if m.vm.persistent_vms else "spot",
+        instance_name,
+        region,
     )
 
     client = get_client("ec2", region)
@@ -472,7 +477,7 @@ def ec2_launch_instance(
             MinCount=1,
             MaxCount=1,
             ImageId=os_image_id,
-            InstanceMarketOptions={"MarketType": market_type},
+            InstanceMarketOptions=instance_market_options,
             Placement=placement,
             NetworkInterfaces=[network_interface],
             TagSpecifications=tag_spec,
@@ -492,7 +497,11 @@ def ec2_launch_instance(
     i_id = i["Instances"][0]["InstanceId"]
     i_az = i["Instances"][0]["Placement"]["AvailabilityZone"]
     logger.debug(
-        f"New {market_type} {instance_type} instance {i_id} launched in AZ {i_az}"
+        "New %s %s instance %s launched in AZ %s",
+        "ondemand" if m.vm.persistent_vms else "spot",
+        instance_type,
+        i_id,
+        i_az,
     )
     logger.debug("Waiting for instance 'running' state (timeout 300s) ...")
 

@@ -98,6 +98,9 @@ class ArgumentParser(Tap):
     vm_only: bool = str_to_bool(
         os.getenv("PGSO_VM_ONLY", "false")
     )  # No Ansible / Postgres setup
+    persistent_vms: bool = str_to_bool(
+        os.getenv("PGSO_PERSISTENT_VMS", "false")
+    )  # Use persistent VMs instead of Spot
     connstr_output_only: bool = str_to_bool(
         os.getenv("PGSO_CONNSTR_OUTPUT_ONLY", "false")
     )  # Set up Postgres, print connstr and exit
@@ -271,6 +274,7 @@ def compile_manifest_from_cmdline_params(
     m.instance_name = args.instance_name
     if not m.region and m.availability_zone:
         m.region = extract_region_from_az(m.availability_zone)
+    m.vm.persistent_vms = args.persistent_vms
     m.expiration_date = args.expiration_date
     m.assign_public_ip = args.assign_public_ip
     m.integrations.setup_finished_callback = args.setup_finished_callback
@@ -667,7 +671,8 @@ def display_selected_skus_for_region(
                 ).ljust(max_inst_stor_len),
                 f"{i.monthly_spot_price}",
                 f"{i.monthly_ondemand_price}",
-                f"{ec2_discount_rate}%",
+                f"{ec2_discount_rate}"
+                + ("%" if ec2_discount_rate != "N/A" else ""),
                 approx_rds_x,
                 (
                     i.eviction_rate_group_label
@@ -693,9 +698,14 @@ def resolve_manifest_and_display_price(
     if not m:
         raise Exception("Valid InstanceManifest expected")
 
+    # Selection strategies are relevant only when using Spot VMs
     logger.info(
-        "Resolving HW requirements to actual instance types / prices using --selection-strategy=%s ...",
-        m.vm.instance_selection_strategy,
+        "Resolving HW requirements to actual instance types / prices %s ...",
+        (
+            ""
+            if m.vm.persistent_vms
+            else f"using --selection-strategy={m.vm.instance_selection_strategy}"
+        ),
     )
 
     use_boto3: bool = False
@@ -734,24 +744,29 @@ def resolve_manifest_and_display_price(
         )
         exit(1)
 
-    # Do an extra sort in case have multi-regions or "random" strategy
-    instance_selection_strategy_cls = (
-        InstanceTypeSelection.get_selection_strategy("cheapest")
-    )
-    logger.debug(
-        "Applying extra sorting using strategy %s over %s instances from all regions ...",
-        "cheapest",
-        len(selected_skus),
-    )
+    if len(regions) > 1:
+        # Do an extra sort in case have multi-regions or "random" strategy
+        instance_selection_strategy_cls = (
+            InstanceTypeSelection.get_selection_strategy("cheapest")
+        )
+        logger.debug(
+            "Applying extra sorting using strategy %s over %s instances from all regions ...",
+            "cheapest",
+            len(selected_skus),
+        )
 
-    selected_skus = instance_selection_strategy_cls.execute(selected_skus)
+        selected_skus = instance_selection_strategy_cls.execute(selected_skus)
+
     if len(selected_skus) > 10:
         selected_skus = selected_skus[:10]
 
-    logger.info(
-        "Top cheapest instances found for strategy '%s' (to list available strategies run --list-strategies / PGSO_LIST_STRATEGIES=y):",
-        m.vm.instance_selection_strategy,
-    )
+    if m.vm.persistent_vms:
+        logger.info("Top cheapest instances by ondemand price:")
+    else:
+        logger.info(
+            "Top cheapest instances found for strategy '%s' (to list available strategies run --list-strategies / PGSO_LIST_STRATEGIES=y):",
+            m.vm.instance_selection_strategy,
+        )
 
     display_selected_skus_for_region(selected_skus)
 
