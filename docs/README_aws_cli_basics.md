@@ -56,3 +56,13 @@ PS For the actual Spot Operator managed instances teardown / cleanup it's recomm
 `--teardown` or `--teardown-region` modes, or the Bash script from the "scripts" folder.
 
 PS2 The `--teardown-region` mode is only safe to use when the account is not a shared / organization one!
+
+
+## Listing Spot eviction events
+
+AWS also provides some insight into eviction events given on has the `cloudtrail:LookupEvents` privilege granted.
+
+```
+aws cloudtrail lookup-events --region eu-north-1 --start-time 2024-12-06  --max-items 10 \
+  --lookup-attributes AttributeKey=EventName,AttributeValue=BidEvictedEvent 
+```
