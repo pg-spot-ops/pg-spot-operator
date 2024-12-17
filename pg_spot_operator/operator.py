@@ -1140,7 +1140,7 @@ def do_main_loop(
                 m.instance_name,
                 m.cloud,
             )
-            if first_loop:
+            if first_loop and debug:
                 logger.debug("Manifest: %s", "\n" + m.original_manifest)
 
             prev_success_manifest = cmdb.get_last_successful_manifest_if_any(

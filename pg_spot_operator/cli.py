@@ -364,7 +364,9 @@ def compile_manifest_from_cmdline_params(
 
     m.ansible.private_key = args.ssh_private_key
 
-    m.original_manifest = yaml.dump(m.model_dump(exclude_none=True))
+    m.original_manifest = yaml.dump(
+        m.model_dump(exclude_none=True, exclude_defaults=True)
+    )
 
     return m
 
@@ -1057,7 +1059,7 @@ def main():  # pragma: no cover
     if args.list_instances:
         list_instances_and_exit(args)
 
-    logger.debug("Args: %s", args.as_dict()) if args.verbose else None
+    logger.debug("Args: %s", args.as_dict()) if args.debug else None
 
     if not (args.dry_run or args.check_price):
         ensure_single_instance_running(args.instance_name)
