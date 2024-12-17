@@ -451,7 +451,7 @@ echo "Done at `date`"
     return exec_full_path
 
 
-def apply_tuning_profile(
+def run_tuning_profile_script(
     mf: InstanceManifest, tuning_profiles_path: str = "./tuning_profiles"
 ) -> list[str]:
     """Executes the tuning profile if exists and returns lines that would be added to postgres.config_lines"""
@@ -473,21 +473,33 @@ def apply_tuning_profile(
     tuning_input: dict = (
         mf.vm.model_dump()
     )  # Default fall back of tuning by HW min reqs from user
-    if mf.vm.instance_types:  # Use actual HW specs for tuning if available
+    ins_type_info: InstanceTypeInfo | None = None
+
+    if not dry_run:
+        backing_instances = get_backing_vms_for_instances_if_any(
+            mf.region, mf.instance_name
+        )
+        # Use actual HW specs for tuning if available
+        ins_type_info = resolve_instance_type_info(
+            backing_instances[0]["InstanceType"], mf.region
+        )
+
+    if not ins_type_info and mf.vm.instance_types:
         try:
             ins_type_info = resolve_instance_type_info(
                 mf.vm.instance_types[0], mf.region
             )
-            tuning_input = {
-                "cpu_min": ins_type_info.cpu,
-                "ram_min": int(ins_type_info.ram_mb / 1000),
-                "storage_type": mf.vm.storage_type,
-                "storage_speed_class": ins_type_info.storage_speed_class,
-            }
         except Exception:
             logger.error(
                 "Failed to fetch actual HW details, tuning Postgres based on user HW reqs"
             )
+    if ins_type_info:
+        tuning_input = {
+            "cpu_min": ins_type_info.cpu,
+            "ram_min": int(ins_type_info.ram_mb / 1000),
+            "storage_type": mf.vm.storage_type,
+            "storage_speed_class": ins_type_info.storage_speed_class,
+        }
 
     tuning_input["cloud"] = mf.cloud
     tuning_input["postgres_version"] = mf.postgres.version
@@ -522,7 +534,7 @@ def apply_postgres_config_tuning_to_manifest(
             "Applying Postgres tuning profile '%s' to given hardware ...",
             m.postgres.tuning_profile,
         )
-        tuned_config_lines = apply_tuning_profile(m)
+        tuned_config_lines = run_tuning_profile_script(m)
         logger.info(
             "%s config lines will be added to postgresql.conf",
             len(tuned_config_lines),
