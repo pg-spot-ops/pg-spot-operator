@@ -4,6 +4,71 @@ Changelog
 
 (unreleased)
 ------------
+- Merge pull request #115 from pg-spot-ops/persistent-vm-option. [Kaarel
+  Moppel]
+
+  Allow running on persistent VMs via the new --persistent-vms flag
+- Better logging when --persistent-vms set. [Kaarel Moppel]
+
+  Selection strategies only relevant for Spot VMs
+- README document the new --persistent-vms flag. [Kaarel Moppel]
+- Minor check price output table format for non-spots. [Kaarel Moppel]
+- Improved ondemand sorting. [Kaarel Moppel]
+
+  Make selection strategies spot/non-spot aware and use the according
+  price when sorting. If using ondemand VMs redirect all advanced sort
+  strategies to "cheapest"
+- Sort by ondemand price when --persistent-vms set. [Kaarel Moppel]
+- Rename --ondemand to --persistent-vms. [Kaarel Moppel]
+
+  Should be more universally understood as ondemand is an AWS concept
+- Add new --ondemand flag to run on non-Spot VMs. [Kaarel Moppel]
+
+  Add flag and propagate to run_instances
+- Add a new --debug flag. [Kaarel Moppel]
+
+  To not clean up Ansible run config and logs, for troubleshooting and
+  forensics
+- Merge pull request #113 from pg-spot-ops/list-instances-improvements.
+  [Kaarel Moppel]
+
+  List instances improvements - pricing info + human readable uptime
+- Hint at --list-instances in the main README. [Kaarel Moppel]
+- Declare the humanize Py dependency. [Kaarel Moppel]
+- Replace LaunchTime with Uptime in --list-instances. [Kaarel Moppel]
+
+  For a nicer experience
+- Remove double-printing of a region's instance count in --verbose mode.
+  [Kaarel Moppel]
+- Add current Spot price to --list-instances output. [Kaarel Moppel]
+- List instances: make per region scanning messages debug level. [Kaarel
+  Moppel]
+
+  Show wnly the output table in normal / non-verbose mode
+- Merge pull request #110 from pg-spot-ops/s3-connstr-storage. [Kaarel
+  Moppel]
+
+  New app integration feature -  connect string info pushing to S3
+- Update README_env_options.md on S3 push flags. [Kaarel Moppel]
+- Document the new connstr S3 pushing feature. [Kaarel Moppel]
+- Better debug info around s3 connstr storage. [Kaarel Moppel]
+- Rename --connstr-bucket-filename to --connstr-bucket-key. [Kaarel
+  Moppel]
+
+  As more correct
+- Connect info written to s3 after a success loop. [Kaarel Moppel]
+
+  If --connstr-bucket and --connstr-bucket-filename set
+- Dummy connstr s3 writing. [Kaarel Moppel]
+- Lay groundwork for new s3 connect string integration possibility.
+  [Kaarel Moppel]
+
+  New manifest section: integrations
+
+
+0.9.12 (2024-12-10)
+-------------------
+- Release: version 0.9.12 🚀 [Kaarel Moppel]
 - Show Spot and On-demand prices without decimals if > $100. [Kaarel
   Moppel]
 - Set a "Name" tag on VM create automatically if not set by the user.
