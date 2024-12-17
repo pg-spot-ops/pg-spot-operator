@@ -43,8 +43,8 @@ if __name__ == "__main__":
         o["max_wal_size"] = "4GB" if storage_speed_class == "ssd" else "8GB"
     if cpus > 8:
         o["max_worker_processes"] = cpus
-        o["max_parallel_workers"] = min(cpus / 4, 4)
-        o["max_parallel_maintenance_workers"] = min(cpus / 4, 4)
+        o["max_parallel_workers"] = int(min(cpus / 4, 4))
+        o["max_parallel_maintenance_workers"] = int(min(cpus / 4, 4))
     o["backend_flush_after"] = "2MB"
     o["jit"] = "on"
     o["jit_above_cost"] = "1000000"  # 10x from default
