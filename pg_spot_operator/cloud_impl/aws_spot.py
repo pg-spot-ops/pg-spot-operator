@@ -584,6 +584,8 @@ def resolve_hardware_requirements_to_instance_types(
                 for x in ondemand_sorted
             ],
         )
+        for x in ondemand_sorted:
+            x.spot = False
         return ondemand_sorted[:max_skus_to_get]
 
     instance_types_to_consider = [
