@@ -671,7 +671,8 @@ def display_selected_skus_for_region(
                 ).ljust(max_inst_stor_len),
                 f"{i.monthly_spot_price}",
                 f"{i.monthly_ondemand_price}",
-                f"{ec2_discount_rate}%",
+                f"{ec2_discount_rate}"
+                + ("%" if ec2_discount_rate != "N/A" else ""),
                 approx_rds_x,
                 (
                     i.eviction_rate_group_label
