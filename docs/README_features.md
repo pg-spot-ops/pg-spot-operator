@@ -1,12 +1,13 @@
 # Main features
 
 * Uses cheap (3-10x compared to on-demand pricing) AWS Spot VMs to run Postgres
+* Can also use normal on-demand VMs via the `--persistent-vms` flag
+* Can just provision the VMs without Postgres setup via `--vm-only`
+* Supports 3 connect string propagation integrations - a generic callback script, writing to S3, pipe mode
 * Installs Postgres from official PGDG repos, meaning you get instant minor version updates
 * Supports Postgres versions v14-v17 (defaults to v16 currently if not specified)
 * Supports all extensions available from the official repos
-* Two instance selection strategies - "cheapest" and "random"
-  - Note that `--selection-strategy=random` can produce better eviction rates as cheaper instance types are in more danger
-  of being overbooked. For the same reason burstable instances are not recommended at all for real work.
+* Four instance selection strategies - "balanced" (def.), "cheapest", "eviction-rate", "random"
 * Allows also to explicitly specify a list of preferred instance types and cheapest used
 * Uses Debian 12 base images / AMI-s
 * Allows override of ALL `postgresql.conf` settings if user wishes so
@@ -31,3 +32,9 @@
 * No automatic EBS volume growth (can do manually still)
 * DNS integration - all communication happening over IP for now
 * No full railguards regarding user input - undefined behaviour for example if user changes region or zone after 1st init
+
+## General recommendations
+
+* Cheaper instance types are usually in more danger of being overbooked / used and have a higher eviction rate - for that
+  reason burstable instances are not recommended at all for real work.
+* If possible do not specify an Availability Zone, as there are huge differences in pricing and eviction rates within a region.

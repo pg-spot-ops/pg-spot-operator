@@ -1,8 +1,11 @@
 # Integrating with user applications
 
 Although the Community Edition is optimized for more light use, one can use it also to power real applications (given
-they cope with the possible service interruptions of course) by either providing a "setup finished" callback hook or just
-running in special `--connstr-output-only` mode.
+they cope with the possible service interruptions of course) by either:
+
+* Providing a "setup finished" callback script to do "something" with the resulting VM / Postgres info
+* Running in special `--connstr-output-only` mode
+* Specifying an S3 (or compatible) bucket where to push the connect string
 
 ## Pipe-friendly `--connstr-output-only` mode
 
