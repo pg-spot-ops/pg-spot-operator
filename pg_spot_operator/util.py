@@ -1,3 +1,4 @@
+import configparser
 import datetime
 import functools
 import json
@@ -362,3 +363,38 @@ def timestamp_to_human_readable_delta(
     if not dt2:
         dt2 = datetime.datetime.now(datetime.timezone.utc)
     return humanize.naturaldelta(dt2 - dt1)
+
+
+def gcp_get_default_project_id_and_zone_from_local_config_if_set() -> (
+    tuple[str | None, str | None]
+):
+    """Using CLI config for now for testing etc, assumes Application Default Credentials are set up
+    https://cloud.google.com/docs/authentication/provide-credentials-adc#how-to
+
+    cat ~/.config/gcloud/configurations/config_default
+    [core]
+    account = x@gmail.com
+    project = y
+
+    [compute]
+    zone = europe-north1-b
+    region = europe-west1
+    """
+    GCLOUD_DEFAULT_CONFIG_LOCATION = (
+        "~/.config/gcloud/configurations/config_default"
+    )
+    if not os.path.exists(os.path.expanduser(GCLOUD_DEFAULT_CONFIG_LOCATION)):
+        return None, None
+
+    try:
+        config = configparser.ConfigParser()
+        config.read(os.path.expanduser(GCLOUD_DEFAULT_CONFIG_LOCATION))
+        return (
+            config["core"].get("project"),
+            config.get("compute", "zone", fallback="europe-north1-b"),
+        )
+    except Exception:
+        logger.exception(
+            f"Could not parse default GCLOUD config at {GCLOUD_DEFAULT_CONFIG_LOCATION}"
+        )
+    return None, None
