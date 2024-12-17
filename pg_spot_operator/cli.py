@@ -698,9 +698,14 @@ def resolve_manifest_and_display_price(
     if not m:
         raise Exception("Valid InstanceManifest expected")
 
+    # Selection strategies are relevant only when using Spot VMs
     logger.info(
-        "Resolving HW requirements to actual instance types / prices using --selection-strategy=%s ...",
-        m.vm.instance_selection_strategy,
+        "Resolving HW requirements to actual instance types / prices %s ...",
+        (
+            ""
+            if m.vm.persistent_vms
+            else f"using --selection-strategy={m.vm.instance_selection_strategy}"
+        ),
     )
 
     use_boto3: bool = False
@@ -739,24 +744,29 @@ def resolve_manifest_and_display_price(
         )
         exit(1)
 
-    # Do an extra sort in case have multi-regions or "random" strategy
-    instance_selection_strategy_cls = (
-        InstanceTypeSelection.get_selection_strategy("cheapest")
-    )
-    logger.debug(
-        "Applying extra sorting using strategy %s over %s instances from all regions ...",
-        "cheapest",
-        len(selected_skus),
-    )
+    if len(regions) > 1:
+        # Do an extra sort in case have multi-regions or "random" strategy
+        instance_selection_strategy_cls = (
+            InstanceTypeSelection.get_selection_strategy("cheapest")
+        )
+        logger.debug(
+            "Applying extra sorting using strategy %s over %s instances from all regions ...",
+            "cheapest",
+            len(selected_skus),
+        )
 
-    selected_skus = instance_selection_strategy_cls.execute(selected_skus)
+        selected_skus = instance_selection_strategy_cls.execute(selected_skus)
+
     if len(selected_skus) > 10:
         selected_skus = selected_skus[:10]
 
-    logger.info(
-        "Top cheapest instances found for strategy '%s' (to list available strategies run --list-strategies / PGSO_LIST_STRATEGIES=y):",
-        m.vm.instance_selection_strategy,
-    )
+    if m.vm.persistent_vms:
+        logger.info("Top cheapest instances by ondemand price:")
+    else:
+        logger.info(
+            "Top cheapest instances found for strategy '%s' (to list available strategies run --list-strategies / PGSO_LIST_STRATEGIES=y):",
+            m.vm.instance_selection_strategy,
+        )
 
     display_selected_skus_for_region(selected_skus)
 

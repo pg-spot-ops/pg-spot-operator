@@ -61,7 +61,7 @@ def resolve_hardware_requirements_to_instance_types(
 ) -> list[InstanceTypeInfo]:
     """By default prefer to use the direct boto3 APIs to get the most fresh instance and pricing info.
     Use AWS static JSONs for unauthenticated price checks"""
-    logger.info(
+    logger.debug(
         "Resolving HW requirements in region '%s' using --selection-strategy=%s ...",
         m.region,
         m.vm.instance_selection_strategy,
