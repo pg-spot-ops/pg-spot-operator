@@ -1281,7 +1281,11 @@ def do_main_loop(
                 if diff:
                     logging.info(
                         "Detected manifest changes in keys: %s",
-                        diff if debug else list(diff.keys()),
+                        (
+                            diff
+                            if debug
+                            else list(diff.get("values_changed", {}).keys())
+                        ),
                     )
 
                 if m.vm_only:

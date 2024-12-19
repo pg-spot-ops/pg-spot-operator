@@ -452,7 +452,7 @@ def ec2_launch_instance(
     logger.info(
         "Launching a new %s instance of type %s in region %s ...",
         "ondemand" if m.vm.persistent_vms else "spot",
-        instance_name,
+        instance_type,
         region,
     )
 
