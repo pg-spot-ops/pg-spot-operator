@@ -21,7 +21,7 @@ extensions, admin user password etc) and there's a reconciliation loop of sorts.
 
 # Quickstart
 
-Let's say we're a Data Scientists (sexiest job of 21st century, remember?) and need to perform some advanced ad-hoc
+Let's say we're Data Scientists (sexiest job of 21st century, remember?) and need to perform some advanced ad-hoc
 exploration/analytics on a medium-size dataset of a few hundred GB. Sadly all the available development DBs are not much
 better than our shiny new MacBook Pro - seems our data exploration quest might not exactly be a lot of fun...
 
@@ -60,6 +60,7 @@ Top 10 cheapest instances found for strategy 'balanced':
 
 Ok seems `us-east-1` is best for us currently with some incredible pricing, as hinted in the log output - **a full work
 day on a very powerful instance will cost us a mere $2.2** - less than a cup of coffee!
+
 
 For actually launching any AWS instances we of course need a working CLI (`~/.aws/credentials`) or have some
 [privileged enough](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/scripts/terraform/create-iam-user-and-credentials/create_region_limited_user.tf#L22)
@@ -293,7 +294,7 @@ and find the niche interesting.
 **Working Beta**
 
 * Manifest API not yet fully fixed (not relevant though when using Docker or the CLI).
-* No guarantees on internal configuration being kept backwards compatible - thus might need to clean up `~/.pg-spot-operator`
+* No guarantees on internal configuration being kept backwards compatible - thus might need to remove `~/.pg-spot-operator`
   if getting weird errors after a version update.
 
 # Other topics
