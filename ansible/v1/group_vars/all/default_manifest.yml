@@ -55,7 +55,7 @@ default_manifest:
       - --locale-provider=icu
       - --icu-locale=en
       - --locale=en_US.utf8
-    tuning_profile: default  # none | default | oltp | analytics | web. Set to 'none' for Postgres defaults.
+    tuning_profile: default  # none | default | oltp | analytics | web | throwaway. Set to 'none' for Postgres defaults.
     config_lines:  # Literal postgresql.conf lines for custom overrides / tuning. Takes precedence over tuning_profile outputs.
       cluster_name: "{{ postgres_cluster_name }}"
       shared_preload_libraries: 'pg_stat_statements,auth_delay'

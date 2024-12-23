@@ -1,28 +1,14 @@
 import pytest
 
-from pg_spot_operator import manifests
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
 from pg_spot_operator.operator import (
-    run_tuning_profile_script,
     apply_short_life_time_instances_reordering,
 )
-from .test_manifests import TEST_MANIFEST
 
 
 @pytest.fixture(autouse=True)
 def change_test_dir(request, monkeypatch):
     monkeypatch.chdir(request.fspath.dirname)
-
-
-def test_apply_tuning_profile():
-    m: manifests.InstanceManifest = manifests.load_manifest_from_string(
-        TEST_MANIFEST
-    )
-    assert m
-    tuning_lines = run_tuning_profile_script(
-        m, tuning_profiles_path="../tuning_profiles"
-    )
-    assert len(tuning_lines) > 5
 
 
 def test_exclude_prev_short_life_time_instances_leaving_at_least_one():

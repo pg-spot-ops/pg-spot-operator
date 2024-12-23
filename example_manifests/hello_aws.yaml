@@ -62,7 +62,7 @@ postgres:
     - --locale-provider=icu
     - --icu-locale=en
     - --locale=en_US.utf8
-  tuning_profile: default  # none | default | oltp | analytics | web. Set to 'none' for Postgres defaults.
+  tuning_profile: default  # none | default | oltp | analytics | web | throwaway. Set to 'none' for Postgres defaults.
   config_lines:  # postgresql.conf settings for custom overrides / tuning. Takes precedence over tuning_profile outputs.
     log_connections: 'off'
     shared_preload_libraries: 'pg_stat_statements,auth_delay,pg_prewarm'

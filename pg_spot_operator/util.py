@@ -31,22 +31,16 @@ def run_process_with_output(
 
 
 def merge_user_and_tuned_non_conflicting_config_params(
-    config_lines_tuned: list[str], config_lines_user: dict
+    config_params_tuned: dict, config_params_user: dict
 ) -> dict:
-    """User input wins over tuned config lines
-    Input lines are ready-to-use PG conf lines a la: work_mem='64MB'
-    """
+    """User input wins over tuned config lines in case of a collision"""
 
-    merged = config_lines_user.copy()
+    merged = config_params_user.copy()
 
-    for tuned_line in config_lines_tuned:
-        tuned_line = tuned_line.strip()
-        if not tuned_line.startswith("#"):
-            splits = tuned_line.partition("=")
-            key = splits[0].strip()
-            if key in config_lines_user or len(splits) != 3:
-                continue
-            merged[key] = splits[2].strip()
+    for tuned_key, tuned_val in config_params_tuned.items():
+        if tuned_key not in config_params_user:
+            merged[tuned_key] = tuned_val
+
     return merged
 
 

@@ -52,11 +52,11 @@ from pg_spot_operator.constants import (
 )
 from pg_spot_operator.instance_type_selection import InstanceTypeSelection
 from pg_spot_operator.manifests import InstanceManifest
+from pg_spot_operator.pgtuner import TuningInput, apply_postgres_tuning
 from pg_spot_operator.util import (
     check_ssh_ping_ok,
     merge_action_output_params,
     merge_user_and_tuned_non_conflicting_config_params,
-    run_process_with_output,
     space_pad_manifest,
     try_rm_file_if_exists,
 )
@@ -451,75 +451,74 @@ echo "Done at `date`"
     return exec_full_path
 
 
-def run_tuning_profile_script(
-    mf: InstanceManifest, tuning_profiles_path: str = "./tuning_profiles"
-) -> list[str]:
-    """Executes the tuning profile if exists and returns lines that would be added to postgres.config_lines"""
-    if not mf.postgres.tuning_profile or mf.postgres.tuning_profile == "none":
-        return []
-    profile_path_to_run = os.path.join(
-        tuning_profiles_path,
-        mf.postgres.tuning_profile.strip().lower() + ".py",
+def get_tuning_inputs_from_manifest_hw_reqs(
+    m: InstanceManifest,
+) -> TuningInput:
+    """Convert manifest HW reqs for tuning
+    We assume a 1-to-4 CPU-to-RAM ration if either specified and no exact instance info
+    """
+    # Start with HW min reqs from user, refine later if have actual resolved instance type infos
+    cpus = m.vm.cpu_min
+    if not cpus and m.vm.ram_min:
+        cpus = math.ceil(m.vm.ram_min / 4)
+    ram_gb = m.vm.ram_min
+    if not ram_gb and m.vm.cpu_min:
+        ram_gb = m.vm.cpu_min * 4
+    return TuningInput(
+        postgres_version=m.postgres.version,
+        ram_mb=(ram_gb or 1) * 1024,
+        cpus=(cpus or 2),
+        storage_type=m.vm.storage_type,
+        storage_speed_class=m.vm.storage_speed_class,
     )
-    if not os.path.exists(profile_path_to_run):
-        logger.warning(
-            "Tuning profile %s not found from %s, skipping tuning for instance %s",
-            mf.postgres.tuning_profile,
-            profile_path_to_run,
-            mf.instance_name,
-        )
-        return []
 
-    tuning_input: dict = (
-        mf.vm.model_dump()
-    )  # Default fall back of tuning by HW min reqs from user
+
+def get_tuning_inputs_from_real_instance_info_if_present(
+    m: InstanceManifest,
+) -> TuningInput | None:
+    """Provide actual HW specs for tuning if available"""
     ins_type_info: InstanceTypeInfo | None = None
 
-    if not dry_run:
+    try:
         backing_instances = get_backing_vms_for_instances_if_any(
-            mf.region, mf.instance_name
+            m.region, m.instance_name
         )
-        # Use actual HW specs for tuning if available
-        ins_type_info = resolve_instance_type_info(
-            backing_instances[0]["InstanceType"], mf.region
-        )
-
-    if not ins_type_info and mf.vm.instance_types:
-        try:
+        if backing_instances:
             ins_type_info = resolve_instance_type_info(
-                mf.vm.instance_types[0], mf.region
+                backing_instances[0]["InstanceType"], m.region
             )
-        except Exception:
-            logger.error(
-                "Failed to fetch actual HW details, tuning Postgres based on user HW reqs"
-            )
-    if ins_type_info:
-        tuning_input = {
-            "cpu_min": ins_type_info.cpu,
-            "ram_min": int(ins_type_info.ram_mb / 1000),
-            "storage_type": mf.vm.storage_type,
-            "storage_speed_class": ins_type_info.storage_speed_class,
-        }
-
-    tuning_input["cloud"] = mf.cloud
-    tuning_input["postgres_version"] = mf.postgres.version
-    tuning_input["user_tags"] = mf.user_tags
-    logger.debug("Config tuning input: %s", tuning_input)
-
-    tuning_input_json_str = json.dumps(tuning_input)
-    rc, output = run_process_with_output(
-        profile_path_to_run, [tuning_input_json_str]
-    )
-    logger.debug("Config tuning output: %s", "\n" + output.strip())
-    if rc != 0:
-        logger.warning(
-            "Failed to apply tuning profile %s to instance %s. Output: %s",
-            mf.postgres.tuning_profile,
-            mf.instance_name,
-            output,
+            if ins_type_info:
+                return TuningInput(
+                    postgres_version=m.postgres.version,
+                    ram_mb=ins_type_info.ram_mb,
+                    cpus=ins_type_info.cpu,
+                    storage_type=m.vm.storage_type,
+                    storage_speed_class=ins_type_info.storage_speed_class,
+                )
+        if (
+            m.vm.instance_types
+        ):  # If user has specified an explicit list of instance types, pick the first
+            try:
+                ins_type_info = resolve_instance_type_info(
+                    m.vm.instance_types[0], m.region
+                )
+            except Exception:
+                logger.error(
+                    "Failed to fetch actual HW details, tuning Postgres based on user HW reqs"
+                )
+            if ins_type_info:
+                return TuningInput(
+                    postgres_version=m.postgres.version,
+                    ram_mb=ins_type_info.ram_mb,
+                    cpus=ins_type_info.cpu,
+                    storage_type=m.vm.storage_type,
+                    storage_speed_class=ins_type_info.storage_speed_class,
+                )
+    except Exception:
+        logger.error(
+            "Failed to fetch actual HW details, tuning Postgres based on user HW reqs"
         )
-        return []  # No showstopping for now
-    return [line for line in output.split("\n") if line]
+    return None
 
 
 def apply_postgres_config_tuning_to_manifest(
@@ -534,21 +533,45 @@ def apply_postgres_config_tuning_to_manifest(
             "Applying Postgres tuning profile '%s' to given hardware ...",
             m.postgres.tuning_profile,
         )
-        tuned_config_lines = run_tuning_profile_script(m)
-        logger.info(
-            "%s config lines will be added to postgresql.conf",
-            len(tuned_config_lines),
-        )
-        merged_config_lines = (
-            merge_user_and_tuned_non_conflicting_config_params(
-                tuned_config_lines,
-                m.postgres.config_lines.copy(),
+
+        try:
+            tuning_input = get_tuning_inputs_from_manifest_hw_reqs(m)
+            tuning_input_exact = (
+                get_tuning_inputs_from_real_instance_info_if_present(m)
             )
-        )
-        if merged_config_lines:
-            if "postgres" not in m.session_vars:
-                m.session_vars["postgres"] = {}
-            m.session_vars["postgres"]["config_lines"] = merged_config_lines
+            if tuning_input_exact:
+                tuning_input = tuning_input_exact
+
+            if not tuning_input:
+                raise Exception("Can't apply tuning - no HW information")
+
+            tuned_config_params = apply_postgres_tuning(
+                tuning_input, m.postgres.tuning_profile.strip().lower()
+            )
+
+            logger.info(
+                "%s tuned config parameters will be added to postgresql.conf",
+                len(tuned_config_params),
+            )
+            logger.debug("Tuned config params: %s", tuned_config_params)
+            merged_config_lines = (
+                merge_user_and_tuned_non_conflicting_config_params(
+                    tuned_config_params,
+                    m.postgres.config_lines.copy(),
+                )
+            )
+            if merged_config_lines:
+                if "postgres" not in m.session_vars:
+                    m.session_vars["postgres"] = {}
+                m.session_vars["postgres"][
+                    "config_lines"
+                ] = merged_config_lines
+        except Exception:  # Tuning not a showstopper
+            logger.warning(
+                "Failed to apply tuning profile %s to instance %s",
+                m.postgres.tuning_profile,
+                m.instance_name,
+            )
 
 
 def clean_up_old_logs_if_any(

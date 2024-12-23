@@ -83,13 +83,17 @@ def test_space_pad_manifest():
 
 def test_merge_user_and_tuned_non_conflicting_config_params():
     """User config params override tuning output"""
-    config_lines_tuned = ["param1 = 100", "param2 = 'on'", "param3=xxx"]
-    config_lines_user = {"param3": "yyy", "p4": "a"}
+    config_lines_tuned = {
+        "param1": "100",
+        "param2": "on",
+        "collision": "tuningval",
+    }
+    config_lines_user = {"collision": "userval", "p4": "a"}
     merged = merge_user_and_tuned_non_conflicting_config_params(
         config_lines_tuned, config_lines_user
     )
     assert len(merged) == 4
-    assert merged["param3"] == "yyy"
+    assert merged["collision"] == "userval"
 
 
 def test_timestamp_str_to_human_readable_delta():
