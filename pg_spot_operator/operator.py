@@ -52,7 +52,7 @@ from pg_spot_operator.constants import (
 )
 from pg_spot_operator.instance_type_selection import InstanceTypeSelection
 from pg_spot_operator.manifests import InstanceManifest
-from pg_spot_operator.pgtuner import TuningInput, apply_postgres_base_tuning
+from pg_spot_operator.pgtuner import TuningInput, apply_postgres_tuning
 from pg_spot_operator.util import (
     check_ssh_ping_ok,
     merge_action_output_params,
@@ -542,7 +542,7 @@ def apply_postgres_config_tuning_to_manifest(
             if tuning_input_exact:
                 tuning_input = tuning_input_exact
 
-            tuned_config_lines = apply_postgres_base_tuning(tuning_input)
+            tuned_config_lines = apply_postgres_tuning(tuning_input)
 
             logger.info(
                 "%s tuned config parameters will be added to postgresql.conf",
