@@ -542,15 +542,21 @@ def apply_postgres_config_tuning_to_manifest(
             if tuning_input_exact:
                 tuning_input = tuning_input_exact
 
-            tuned_config_lines = apply_postgres_tuning(tuning_input)
+            if not tuning_input:
+                raise Exception("Can't apply tuning - no HW information")
+
+            tuned_config_params = apply_postgres_tuning(
+                tuning_input, m.postgres.tuning_profile.strip().lower()
+            )
 
             logger.info(
                 "%s tuned config parameters will be added to postgresql.conf",
-                len(tuned_config_lines),
+                len(tuned_config_params),
             )
+            logger.debug("Tuned config params: %s", tuned_config_params)
             merged_config_lines = (
                 merge_user_and_tuned_non_conflicting_config_params(
-                    tuned_config_lines,
+                    tuned_config_params,
                     m.postgres.config_lines.copy(),
                 )
             )

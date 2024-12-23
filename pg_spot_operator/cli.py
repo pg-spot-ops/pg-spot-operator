@@ -26,6 +26,7 @@ from pg_spot_operator.constants import (
 from pg_spot_operator.instance_type_selection import InstanceTypeSelection
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.operator import clean_up_old_logs_if_any
+from pg_spot_operator.pgtuner import TUNING_PROFILES
 from pg_spot_operator.util import (
     extract_region_from_az,
     get_aws_region_code_to_name_mapping,
@@ -396,6 +397,13 @@ def check_cli_args_valid(args: ArgumentParser):
             )
             exit(1)
         return
+    if args.tuning_profile and args.tuning_profile not in TUNING_PROFILES:
+        logger.error(
+            "Invalid --tuning-profile %s. Available profiles: %s",
+            args.tuning_profile,
+            TUNING_PROFILES,
+        )
+        exit(1)
 
     if not fixed_vm:
         if not args.region and not args.zone and not args.check_price:

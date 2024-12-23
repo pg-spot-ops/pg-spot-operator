@@ -12,7 +12,7 @@ def test_apply_tuning_profile():
 
     tuning_input = get_tuning_inputs_from_manifest_hw_reqs(m)
 
-    tuned_config_params = apply_postgres_tuning(tuning_input)
+    tuned_config_params = apply_postgres_tuning(tuning_input, "default")
 
     assert len(tuned_config_params) > 5
     assert "shared_buffers" in tuned_config_params

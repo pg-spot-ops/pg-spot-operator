@@ -15,7 +15,7 @@ instance_name: hello
 expiration_date: now
 postgres:
   version: 16
-  tuning_profile: oltp  # builtins: oltp | warehouse | web | mixed  
+  tuning_profile: oltp  # builtins: default | oltp | analytics | web | throwaway
   admin_user: dev
   admin_password: dev
   admin_is_superuser: true  # Assign all safe built-in roles + make DB owner

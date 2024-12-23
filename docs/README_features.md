@@ -11,7 +11,7 @@
 * Allows also to explicitly specify a list of preferred instance types and cheapest used
 * Uses Debian 12 base images / AMI-s
 * Allows override of ALL `postgresql.conf` settings if user wishes so
-* Built-in basic Postgres tuning profiles for most common workloads (default, oltp, analytics, web)
+* Built-in basic Postgres tuning profiles for most common workloads (default, oltp, analytics, web, throwaway)
 * Maintains a single instance per daemon to keep things simple
 * Supports a single EBS volume or all local/volatile instance disks in a volume group
 * Tunable EBS volume performance via paid IOPS/throughput
