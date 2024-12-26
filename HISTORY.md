@@ -4,6 +4,53 @@ Changelog
 
 (unreleased)
 ------------
+- Add a README on Common Issues. [Kaarel Moppel]
+
+  Like fixing the Spot Quotas and enabling non-activated regions
+- Merge pull request #116 from pg-spot-ops/tuning-profiles-overhaul.
+  [Kaarel Moppel]
+
+  Tuning profiles overhaul, add "throwaway" profile. Remove standalone tuning profile files
+- Add new tuning profile - throwaway. [Kaarel Moppel]
+
+  Plus some README and refactor
+- Implement non-default tuning profiles also in the new way. [Kaarel
+  Moppel]
+- Refactor Postgres config tuning. [Kaarel Moppel]
+
+  Replace standalone tuning scripts with normal Python code.
+  To avoid path issues and provide better testability
+- Update README.md. [Evans Akai Bekoe]
+- Minor logging output improvements. [Kaarel Moppel]
+- Don't show the full values for detected manifest by default. [Kaarel
+  Moppel]
+
+  Show keys only in normal mode, not to leak any credentials and such
+  to the console. Still show in --debug mode
+- Docs - various clarifications. [Kaarel Moppel]
+- Print out the input params / manifest only in --debug mode. [Kaarel
+  Moppel]
+
+  Instead of --verbose. Better for security
+- Tuning profiles - int rounding for max_parallel_workers. [Kaarel
+  Moppel]
+
+  and max_parallel_maintenance_workers
+- Tune postgresql.conf according to the exact HW created. [Kaarel
+  Moppel]
+
+  Previously we did it only when explicit instance types were provided
+  and fell back to min HW reqs, which are normally smaller than what
+  was actually resolved.
+
+  https://github.com/pg-spot-ops/pg-spot-operator/issues/107
+- README_aws_cli_basics.md - document how to list eviction events.
+  [Kaarel Moppel]
+
+
+0.9.15 (2024-12-17)
+-------------------
+- Release: version 0.9.15 🚀 [Kaarel Moppel]
 - Merge pull request #115 from pg-spot-ops/persistent-vm-option. [Kaarel
   Moppel]
 
