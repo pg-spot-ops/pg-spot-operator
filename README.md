@@ -71,6 +71,9 @@ Groups and ports can be found in the [Security](https://github.com/pg-spot-ops/p
 If you don't yet have a safe AWS playground / credentials - start with a bit of Terraform [here](https://github.com/pg-spot-ops/pg-spot-operator/tree/main/scripts/terraform)
 and feed the output into `--aws-vpc-id`, `--aws-access-key-id` and `--aws-secret-access-key` params.
 
+Also note that in case of launching high vCPU (>16) Spot for the first time, you might need to first increase the Spot Quotas -
+see the [Common issues](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_common_issues.md) section for details.
+
 ```
 # In --connstr-output-only mode we can land right into `psql`!
 psql $(pg_spot_operator --region=us-east-1 --ram-min=128 \
@@ -310,3 +313,4 @@ and find the niche interesting.
 * [Advanced features](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_advanced_features.md)
 * [AWS CLI basics](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_aws_cli_basics.md)
 * [Running on K8s](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/k8s/README_k8s.md)
+* [Common issues](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_common_issues.md)
