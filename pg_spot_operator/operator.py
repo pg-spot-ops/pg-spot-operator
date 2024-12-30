@@ -1065,6 +1065,14 @@ def write_connstr_to_output_path(
                 "Could not get a connstr to output to %s", connstr_output_path
             )
             return
+        if os.path.exists(os.path.expanduser(connstr_output_path)):
+            with open(os.path.expanduser(connstr_output_path)) as f:
+                current_file_contents = f.read()
+        if current_file_contents and current_file_contents == connstr:
+            logger.debug(
+                "Not updating the --connstr-output-path as no changes"
+            )
+            return
         with open(connstr_output_path, "w") as f:
             f.write(connstr)
     except Exception as e:
