@@ -102,12 +102,12 @@ class ArgumentParser(Tap):
     persistent_vms: bool = str_to_bool(
         os.getenv("PGSO_PERSISTENT_VMS", "false")
     )  # Use persistent VMs instead of Spot
-    connstr_output_only: bool = str_to_bool(
-        os.getenv("PGSO_CONNSTR_OUTPUT_ONLY", "false")
+    connstr_only: bool = str_to_bool(
+        os.getenv("PGSO_CONNSTR_ONLY", "false")
     )  # Set up Postgres, print connstr and exit
     connstr_format: str = os.getenv(
         "PGSO_CONNSTR_FORMAT", "ssh"
-    )  # ssh | ansible. Effective currently only when --connstr-output-only and --vm-only set.
+    )  # ssh | ansible. Effective currently only when --connstr-only and --vm-only set.
     manifest: str = os.getenv("PGSO_MANIFEST", "")  # Manifest to process
     teardown: bool = str_to_bool(
         os.getenv("PGSO_TEARDOWN", "false")
@@ -1137,7 +1137,7 @@ def main():  # pragma: no cover
         cli_main_loop_interval_s=args.main_loop_interval_s,
         cli_destroy_file_base_path=args.destroy_file_base_path,
         cli_teardown=args.teardown,
-        cli_connstr_output_only=args.connstr_output_only,
+        cli_connstr_only=args.connstr_only,
         cli_connstr_format=args.connstr_format,
         cli_ansible_path=args.ansible_path,
         cli_connstr_output_path=args.connstr_output_path,

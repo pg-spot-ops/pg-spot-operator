@@ -4,16 +4,16 @@ Although the Community Edition is optimized for more light use, one can use it a
 they cope with the possible service interruptions of course) by either:
 
 * Providing a "setup finished" callback script to do "something" with the resulting VM / Postgres info
-* Running in special `--connstr-output-only` mode
+* Running in special `--connstr-only` mode
 * Specifying an S3 (or compatible) bucket where to push the connect string
 * Writing the connect string to a file on the engine node
 
-## Pipe-friendly `--connstr-output-only` mode
+## Pipe-friendly `--connstr-only` mode
 
 Engine ensures VM, sets up Postgres if needed in quiet mode, prints connstr and exits. Example usage:
 
 ```
-docker run --rm -e PGSO_CONNSTR_OUTPUT_ONLY=y -e PGSO_REGION=eu-north-1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_STORAGE_MIN=100 pg-spt \
+docker run --rm -e PGSO_CONNSTR_ONLY=y -e PGSO_REGION=eu-north-1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_STORAGE_MIN=100 pg-spt \
   | run_some_testing \ 
   && docker run --rm -e PGSO_TEARDOWN=y -e PGSO_REGION=eu-north-1 -e PGSO_INSTANCE_NAME=pg1
 ```

@@ -75,10 +75,10 @@ Also note that in case of launching high vCPU (>16) Spot for the first time, you
 see the [Common issues](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_common_issues.md) section for details.
 
 ```
-# In --connstr-output-only mode we can land right into `psql`!
+# In --connstr-only mode we can land right into `psql`!
 psql $(pg_spot_operator --region=us-east-1 --ram-min=128 \
   --storage-min=500 --storage-type=local \
-  --instance-name=analytics --connstr-output-only \
+  --instance-name=analytics --connstr-only \
   --admin-user=pgspotops --admin-password=topsecret123
 )
 
@@ -135,13 +135,13 @@ pg_spot_operator --region='^(us|ca)' --list-instances
 ## Not only for Postgres
 
 Spot Operator can also be used to provision and sustain VMs for any custom workloads, in need of cheap VMs. Relevant
-flags: `--vm-only`, `--connstr-output-only` and `--connstr-format`.
+flags: `--vm-only`, `--connstr-only` and `--connstr-format`.
 
 For example to run your custom Ansible scripted verification of some large multi-DB backups on fast local storage for
 peanuts, one could go:
 
 ```
-pg_spot_operator --vm-only --connstr-output-only --connstr-format ansible --region=us-east-1 \
+pg_spot_operator --vm-only --connstr-only --connstr-format ansible --region=us-east-1 \
   --cpu-min=8 --ram-min=32 --storage-min=5000 --storage-type=local --instance-name=custom > inventory
 ...
 INFO SKU i7ie.2xlarge main specs - vCPU: 8, RAM: 64 GB, instance storage: 5000 GB ssd
@@ -172,7 +172,7 @@ for some hardware specs.
       one could take a look at an example manifest [here](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/example_manifests/hello_aws.yaml)
   - Specifies AWS credentials if no default AWS CLI (`~/.aws/credentials`) set up or if using Docker
   - Optionally specifies a callback (executable file) to do something with the resulting Postgres connect
-    string (just displayed by default), or just runs in `--connstr-output-only` mode to be pipe-friendly
+    string (just displayed by default), or just runs in `--connstr-only` mode to be pipe-friendly
 * The operator:
   - Finds the cheapest Spot instance with OK eviction rate (the default "balanced" `--selection-strategy`) for given HW
     requirements and launches a VM
@@ -260,7 +260,7 @@ One can use the Spot Operator also to power real applications, given they cope w
 by either:
 
 * Providing a "setup finished" callback script to propagate Postgres / VM connect data somewhere
-* Running in a special pipe-friendly `--connstr-output-only` mode
+* Running in a special pipe-friendly `--connstr-only` mode
 * Specifying an S3 (or compatible) bucket where to push the connect string
 * Writing the connect string to a file on the engine node
 
