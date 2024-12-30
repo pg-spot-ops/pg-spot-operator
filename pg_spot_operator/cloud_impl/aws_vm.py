@@ -467,7 +467,7 @@ def ec2_launch_instance(
                     "DeviceName": "/dev/xvda",
                     "Ebs": {
                         "DeleteOnTermination": True,
-                        "VolumeSize": 20,
+                        "VolumeSize": m.vm.os_disk_size,
                         "VolumeType": "gp3",
                         "Encrypted": True,
                     },

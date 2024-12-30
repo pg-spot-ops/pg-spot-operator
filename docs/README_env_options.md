@@ -54,6 +54,7 @@
 * **--volume-type / VOLUME_TYPE** Allowed values: \[ gp2, gp3\*, io1, io2 \]
 * **--volume-iops / VOLUME_IOPS** Set IOPS explicitly. Max. gp2/gp3=16K, io1=64K, io2=256K, gp3 def=3K
 * **--volume-throughput / VOLUME_THROUGHPUT** Set gp3 volume throughput explicitly in MiB/s. Max 1000. Default 125.
+* **--os-disk-size / OS_DISK_SIZE** OS disk size in GB. Default 20.
 * **--cpu-min / CPU_MIN** Minimal CPUs to consider an instance type suitable
 * **--cpu-max / CPU_MAX** Maximum CPUs to consider an instance type suitable. Required for the random selection strategy to cap the costs. 
 * **--ram-min / RAM_MIN** Minimal RAM (in GB) to consider an instance type suitable
