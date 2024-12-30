@@ -132,6 +132,7 @@ class ArgumentParser(Tap):
     storage_speed_class: str = os.getenv(
         "STORAGE_SPEED_CLASS", "ssd"
     )  # hdd | ssd | nvme. ssd also includes nvme
+    os_disk_size: int = int(os.getenv("OS_DISK_SIZE", "20"))
     volume_type: str = os.getenv("VOLUME_TYPE", "gp3")  # gp2, gp3, io1, io2
     volume_iops: int = int(
         os.getenv("VOLUME_IOPS", "0")
@@ -283,6 +284,7 @@ def compile_manifest_from_cmdline_params(
     m.vm.cpu_min = args.cpu_min
     m.vm.cpu_max = args.cpu_max
     m.vm.ram_min = args.ram_min
+    m.vm.os_disk_size = args.os_disk_size
     m.vm.storage_min = args.storage_min
     m.vm.storage_type = args.storage_type
     m.vm.storage_speed_class = args.storage_speed_class.lower()
