@@ -6,6 +6,7 @@ they cope with the possible service interruptions of course) by either:
 * Providing a "setup finished" callback script to do "something" with the resulting VM / Postgres info
 * Running in special `--connstr-output-only` mode
 * Specifying an S3 (or compatible) bucket where to push the connect string
+* Writing the connect string to a file on the engine node
 
 ## Pipe-friendly `--connstr-output-only` mode
 
@@ -16,6 +17,11 @@ docker run --rm -e PGSO_CONNSTR_OUTPUT_ONLY=y -e PGSO_REGION=eu-north-1 -e PGSO_
   | run_some_testing \ 
   && docker run --rm -e PGSO_TEARDOWN=y -e PGSO_REGION=eu-north-1 -e PGSO_INSTANCE_NAME=pg1
 ```
+
+## Writing the connect string to a file on the engine node
+
+Just specify a full file path via `--connstr-output-path` or `CONNSTR_OUTPUT_PATH`, that the engine node has
+write privileges to.
 
 ## Pushing connect info to S3
 

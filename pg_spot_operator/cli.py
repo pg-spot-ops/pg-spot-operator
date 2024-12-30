@@ -203,6 +203,9 @@ class ArgumentParser(Tap):
     setup_finished_callback: str = os.getenv(
         "PGSO_SETUP_FINISHED_CALLBACK", ""
     )  # An optional executable to propagate the connect string somewhere. Gets connect details as input parameters
+    connstr_output_path: str = os.getenv(
+        "CONNSTR_OUTPUT_PATH", ""
+    )  # When set write Postgres (or SSH if --vm-only) connect string into a file
     connstr_bucket: str = os.getenv(
         "CONNSTR_BUCKET", ""
     )  # An S3 bucket to write the connect string into
@@ -1137,4 +1140,5 @@ def main():  # pragma: no cover
         cli_connstr_output_only=args.connstr_output_only,
         cli_connstr_format=args.connstr_format,
         cli_ansible_path=args.ansible_path,
+        cli_connstr_output_path=args.connstr_output_path,
     )
