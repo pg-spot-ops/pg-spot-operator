@@ -54,154 +54,146 @@ def str_to_bool(param: str) -> bool:
 
 class ArgumentParser(Tap):
     show_help: bool = str_to_bool(
-        os.getenv("PGSO_SHOW_HELP", "False")
+        os.getenv("SHOW_HELP", "False")
     )  # Don't actually execute actions
-    manifest_path: str = os.getenv(
-        "PGSO_MANIFEST_PATH", ""
-    )  # User manifest path
+    manifest_path: str = os.getenv("MANIFEST_PATH", "")  # User manifest path
     ansible_path: str = os.getenv(
-        "PGSO_ANSIBLE_PATH", ""
+        "ANSIBLE_PATH", ""
     )  # Use a non-default Ansible path
     main_loop_interval_s: int = int(
-        os.getenv("PGSO_MAIN_LOOP_INTERVAL_S")
+        os.getenv("MAIN_LOOP_INTERVAL_S")
         or 60  # Increase if causing too many calls to the cloud API
     )
     config_dir: str = os.getenv(
-        "PGSO_CONFIG_DIR", "~/.pg-spot-operator"
+        "CONFIG_DIR", "~/.pg-spot-operator"
     )  # For internal state keeping
     vault_password_file: str = os.getenv(
-        "PGSO_VAULT_PASSWORD_FILE", ""
+        "VAULT_PASSWORD_FILE", ""
     )  # Can also be set on instance level
-    verbose: bool = str_to_bool(
-        os.getenv("PGSO_VERBOSE", "false")
-    )  # More chat
+    verbose: bool = str_to_bool(os.getenv("VERBOSE", "false"))  # More chat
     check_price: bool = str_to_bool(
-        os.getenv("PGSO_CHECK_PRICE", "false")
+        os.getenv("CHECK_PRICE", "false")
     )  # Resolve HW reqs, show Spot price and exit
     list_regions: bool = str_to_bool(
-        os.getenv("PGSO_LIST_REGIONS", "false")
+        os.getenv("LIST_REGIONS", "false")
     )  # Display all known AWS region codes + names and exit
     list_instances: bool = str_to_bool(
-        os.getenv("PGSO_LIST_INSTANCES", "false")
+        os.getenv("LIST_INSTANCES", "false")
     )  # List running VMs for given region / region wildcards
     list_strategies: bool = str_to_bool(
-        os.getenv("PGSO_LIST_STRATEGIES", "false")
+        os.getenv("LIST_STRATEGIES", "false")
     )  # Display available instance selection strategies and exit
     check_manifest: bool = str_to_bool(
-        os.getenv("PGSO_CHECK_MANIFEST", "false")
+        os.getenv("CHECK_MANIFEST", "false")
     )  # Validate instance manifests and exit
     dry_run: bool = str_to_bool(
-        os.getenv("PGSO_DRY_RUN", "false")
+        os.getenv("DRY_RUN", "false")
     )  # Just resolve the VM instance type
     debug: bool = str_to_bool(
-        os.getenv("PGSO_DEBUG", "false")
+        os.getenv("DEBUG", "false")
     )  # Don't clean up Ansible run files plus extra developer outputs
     vm_only: bool = str_to_bool(
-        os.getenv("PGSO_VM_ONLY", "false")
+        os.getenv("VM_ONLY", "false")
     )  # No Ansible / Postgres setup
     persistent_vms: bool = str_to_bool(
-        os.getenv("PGSO_PERSISTENT_VMS", "false")
+        os.getenv("PERSISTENT_VMS", "false")
     )  # Use persistent VMs instead of Spot
     connstr_only: bool = str_to_bool(
-        os.getenv("PGSO_CONNSTR_ONLY", "false")
+        os.getenv("CONNSTR_ONLY", "false")
     )  # Set up Postgres, print connstr and exit
     connstr_format: str = os.getenv(
-        "PGSO_CONNSTR_FORMAT", "ssh"
+        "CONNSTR_FORMAT", "ssh"
     )  # ssh | ansible. Effective currently only when --connstr-only and --vm-only set.
-    manifest: str = os.getenv("PGSO_MANIFEST", "")  # Manifest to process
+    manifest: str = os.getenv("MANIFEST", "")  # Manifest to process
     teardown: bool = str_to_bool(
-        os.getenv("PGSO_TEARDOWN", "false")
+        os.getenv("TEARDOWN", "false")
     )  # Delete VM and other created resources
     teardown_region: bool = str_to_bool(
-        os.getenv("PGSO_TEARDOWN_REGION", "false")
+        os.getenv("TEARDOWN_REGION", "false")
     )  # Delete all operator tagged resources in region
     instance_name: str = os.getenv(
-        "PGSO_INSTANCE_NAME", ""
+        "INSTANCE_NAME", ""
     )  # If set other below params become relevant
-    postgres_version: int = int(os.getenv("PGSO_POSTGRES_VERSION", "16"))
+    postgres_version: int = int(os.getenv("POSTGRES_VERSION", "16"))
     instance_types: str = os.getenv(
-        "PGSO_INSTANCE_TYPES", ""
+        "INSTANCE_TYPES", ""
     )  # i3.xlarge,i3.2xlarge
-    cloud: str = os.getenv("PGSO_CLOUD", "aws")
+    cloud: str = os.getenv("CLOUD", "aws")
     region: str = os.getenv(
-        "PGSO_REGION", ""
+        "REGION", ""
     )  # Exact region or also a Regex in price check mode
-    zone: str = os.getenv("PGSO_ZONE", "")
-    cpu_min: int = int(os.getenv("PGSO_CPU_MIN", "0"))
-    cpu_max: int = int(os.getenv("PGSO_CPU_MAX", "0"))
-    selection_strategy: str = os.getenv("PGSO_SELECTION_STRATEGY", "balanced")
-    ram_min: int = int(os.getenv("PGSO_RAM_MIN", "0"))
-    storage_min: int = int(os.getenv("PGSO_STORAGE_MIN", "0"))
-    storage_type: str = os.getenv("PGSO_STORAGE_TYPE", "network")
+    zone: str = os.getenv("ZONE", "")
+    cpu_min: int = int(os.getenv("CPU_MIN", "0"))
+    cpu_max: int = int(os.getenv("CPU_MAX", "0"))
+    selection_strategy: str = os.getenv("SELECTION_STRATEGY", "balanced")
+    ram_min: int = int(os.getenv("RAM_MIN", "0"))
+    storage_min: int = int(os.getenv("STORAGE_MIN", "0"))
+    storage_type: str = os.getenv("STORAGE_TYPE", "network")
     storage_speed_class: str = os.getenv(
-        "PGSO_STORAGE_SPEED_CLASS", "ssd"
+        "STORAGE_SPEED_CLASS", "ssd"
     )  # hdd | ssd | nvme. ssd also includes nvme
-    volume_type: str = os.getenv(
-        "PGSO_VOLUME_TYPE", "gp3"
-    )  # gp2, gp3, io1, io2
+    volume_type: str = os.getenv("VOLUME_TYPE", "gp3")  # gp2, gp3, io1, io2
     volume_iops: int = int(
-        os.getenv("PGSO_VOLUME_IOPS", "0")
+        os.getenv("VOLUME_IOPS", "0")
     )  # max. gp2/gp3=16K, io1=64K, io2=256K, gp3 def=3K
     volume_throughput: int = int(
-        os.getenv("PGSO_VOLUME_THROUGHPUT", "0")
+        os.getenv("VOLUME_THROUGHPUT", "0")
     )  # gp3 def=125, max=1000, relevant only for gp3
     expiration_date: str = os.getenv(
-        "PGSO_EXPIRATION_DATE", ""
+        "EXPIRATION_DATE", ""
     )  # ISO 8601 datetime
     self_termination: bool = str_to_bool(
-        os.getenv("PGSO_SELF_TERMINATION", "false")
+        os.getenv("SELF_TERMINATION", "false")
     )
-    assign_public_ip: bool = str_to_bool(
-        os.getenv("PGSO_ASSIGN_PUBLIC_IP", "true")
-    )
-    cpu_arch: str = os.getenv("PGSO_CPU_ARCH", "")  # [ arm | x86 ]
+    assign_public_ip: bool = str_to_bool(os.getenv("ASSIGN_PUBLIC_IP", "true"))
+    cpu_arch: str = os.getenv("CPU_ARCH", "")  # [ arm | x86 ]
     instance_family: str = os.getenv(
-        "PGSO_INSTANCE_FAMILY", ""
+        "INSTANCE_FAMILY", ""
     )  # Regex, e.g. 'r(6|7)'
-    ssh_keys: str = os.getenv("PGSO_SSH_KEYS", "")  # Comma separated
-    tuning_profile: str = os.getenv("PGSO_TUNING_PROFILE", "default")
-    user_tags: str = os.getenv("PGSO_USER_TAGS", "")  # key=val,key2=val2
-    app_db_name: str = os.getenv("PGSO_APP_DB_NAME", "")
-    admin_user: str = os.getenv("PGSO_ADMIN_USER", "")
-    admin_password: str = os.getenv("PGSO_ADMIN_PASSWORD", "")
-    admin_is_superuser: str = os.getenv("PGSO_ADMIN_IS_SUPERUSER", "false")
+    ssh_keys: str = os.getenv("SSH_KEYS", "")  # Comma separated
+    tuning_profile: str = os.getenv("TUNING_PROFILE", "default")
+    user_tags: str = os.getenv("USER_TAGS", "")  # key=val,key2=val2
+    app_db_name: str = os.getenv("APP_DB_NAME", "")
+    admin_user: str = os.getenv("ADMIN_USER", "")
+    admin_password: str = os.getenv("ADMIN_PASSWORD", "")
+    admin_is_superuser: str = os.getenv("ADMIN_IS_SUPERUSER", "false")
     os_extra_packages: str = os.getenv(
-        "PGSO_OS_EXTRA_PACKAGES", ""
+        "OS_EXTRA_PACKAGES", ""
     )  # Comma separated, e.g. postgresql-16-postgis-3,postgresql-16-pgrouting
     shared_preload_libraries: str = os.getenv(
-        "PGSO_SHARED_PRELOAD_LIBRARIES", "pg_stat_statements,auth_delay"
+        "SHARED_PRELOAD_LIBRARIES", "pg_stat_statements,auth_delay"
     )  # Comma separated
-    extensions: str = os.getenv("PGSO_EXTENSIONS", "pg_stat_statements")
+    extensions: str = os.getenv("EXTENSIONS", "pg_stat_statements")
     pg_hba_lines: str = os.getenv(
-        "PGSO_PG_HBA_LINES", ""
+        "PG_HBA_LINES", ""
     )  # To override operator default pg_hba access rules. CSV
-    aws_access_key_id: str = os.getenv("PGSO_AWS_ACCESS_KEY_ID", "")
-    aws_secret_access_key: str = os.getenv("PGSO_AWS_SECRET_ACCESS_KEY", "")
-    aws_key_pair_name: str = os.getenv("PGSO_AWS_KEY_PAIR_NAME", "")
+    aws_access_key_id: str = os.getenv("AWS_ACCESS_KEY_ID", "")
+    aws_secret_access_key: str = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+    aws_key_pair_name: str = os.getenv("AWS_KEY_PAIR_NAME", "")
     aws_security_group_ids: str = os.getenv(
-        "PGSO_AWS_SECURITY_GROUP_IDS", ""
+        "AWS_SECURITY_GROUP_IDS", ""
     )  # SG rules are "merged" if multiple provided
     aws_vpc_id: str = os.getenv(
-        "PGSO_AWS_VPC_ID", ""
+        "AWS_VPC_ID", ""
     )  # If not set default VPC in region used
-    aws_subnet_id: str = os.getenv("PGSO_AWS_SUBNET_ID", "")
+    aws_subnet_id: str = os.getenv("AWS_SUBNET_ID", "")
     self_termination_access_key_id: str = os.getenv(
-        "PGSO_SELF_TERMINATION_ACCESS_KEY_ID", ""
+        "SELF_TERMINATION_ACCESS_KEY_ID", ""
     )
     self_termination_secret_access_key: str = os.getenv(
-        "PGSO_SELF_TERMINATION_SECRET_ACCESS_KEY", ""
+        "SELF_TERMINATION_SECRET_ACCESS_KEY", ""
     )
     vm_host: str = os.getenv(
-        "PGSO_VM_HOST", ""
+        "VM_HOST", ""
     )  # Skip creation and use the provided IP
     vm_login_user: str = os.getenv(
-        "PGSO_LOGIN_USER", ""
+        "LOGIN_USER", ""
     )  # Default SSH key will be used
     destroy_file_base_path: str = os.getenv(
-        "PGSO_DESTROY_FILE_BASE_PATH", "/tmp/destroy-"
+        "DESTROY_FILE_BASE_PATH", "/tmp/destroy-"
     )  # If a file named base+instance detected, the instance is expired and the program exits
     setup_finished_callback: str = os.getenv(
-        "PGSO_SETUP_FINISHED_CALLBACK", ""
+        "SETUP_FINISHED_CALLBACK", ""
     )  # An optional executable to propagate the connect string somewhere. Gets connect details as input parameters
     connstr_output_path: str = os.getenv(
         "CONNSTR_OUTPUT_PATH", ""
@@ -221,25 +213,23 @@ class ArgumentParser(Tap):
         "CONNSTR_BUCKET_ACCESS_SECRET", ""
     )
     backup_s3_bucket: str = os.getenv(
-        "PGSO_BACKUP_S3_BUCKET", ""
+        "BACKUP_S3_BUCKET", ""
     )  # If set, pgbackrest will be configured
     backup_cipher: str = os.getenv(
-        "PGSO_BACKUP_CIPHER", ""
+        "BACKUP_CIPHER", ""
     )  # pgbackrest cipher password
-    backup_retention_days: int = int(
-        os.getenv("PGSO_BACKUP_RETENTION_DAYS", "1")
-    )
-    backup_s3_key: str = os.getenv("PGSO_BACKUP_S3_KEY", "")
-    backup_s3_key_secret: str = os.getenv("PGSO_BACKUP_S3_KEY_SECRET", "")
-    monitoring: bool = str_to_bool(os.getenv("PGSO_MONITORING", "false"))
+    backup_retention_days: int = int(os.getenv("BACKUP_RETENTION_DAYS", "1"))
+    backup_s3_key: str = os.getenv("BACKUP_S3_KEY", "")
+    backup_s3_key_secret: str = os.getenv("BACKUP_S3_KEY_SECRET", "")
+    monitoring: bool = str_to_bool(os.getenv("MONITORING", "false"))
     grafana_externally_accessible: bool = str_to_bool(
-        os.getenv("PGSO_GRAFANA_EXTERNALLY_ACCESSIBLE", "true")
+        os.getenv("GRAFANA_EXTERNALLY_ACCESSIBLE", "true")
     )
     grafana_anonymous: bool = str_to_bool(
-        os.getenv("PGSO_GRAFANA_ANONYMOUS", "true")
+        os.getenv("GRAFANA_ANONYMOUS", "true")
     )
     ssh_private_key: str = os.getenv(
-        "PGSO_SSH_PRIVATE_KEY", ""
+        "SSH_PRIVATE_KEY", ""
     )  # To use a non-default (~/.ssh/id_rsa) SSH key
 
 
@@ -777,7 +767,7 @@ def resolve_manifest_and_display_price(
         logger.info("Top cheapest instances by ondemand price:")
     else:
         logger.info(
-            "Top cheapest instances found for strategy '%s' (to list available strategies run --list-strategies / PGSO_LIST_STRATEGIES=y):",
+            "Top cheapest instances found for strategy '%s' (to list available strategies run --list-strategies / LIST_STRATEGIES=y):",
             m.vm.instance_selection_strategy,
         )
 
@@ -946,7 +936,7 @@ def list_regions_and_exit() -> None:
 
 
 def list_strategies_and_exit() -> None:
-    print("Available --selection-strategy / PGSO_SELECTION_STRATEGY values:\n")
+    print("Available --selection-strategy / SELECTION_STRATEGY values:\n")
     for (
         strategy,
         description,

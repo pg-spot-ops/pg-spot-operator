@@ -167,8 +167,8 @@ for some hardware specs.
   the Postgres version (v15+ supported, defaults to latest stable) and some addon extensions. User input can come in 3 forms:
     - CLI/Env parameters a la `--region`, `--instance-name`, `--ram-min`, `--assign-public-ip`. Note that in CLI mode not all
       features can be configured and some common choices are made for the user
-    - A YAML manifest as literal text via `--manifest`/`PGSO_MANIFEST`
-    - A YAML manifest file via `--manifest-path`/`PGSO_MANIFEST_PATH`. To get an idea of all possible options/features
+    - A YAML manifest as literal text via `--manifest`/`MANIFEST`
+    - A YAML manifest file via `--manifest-path`/`MANIFEST_PATH`. To get an idea of all possible options/features
       one could take a look at an example manifest [here](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/example_manifests/hello_aws.yaml)
   - Specifies AWS credentials if no default AWS CLI (`~/.aws/credentials`) set up or if using Docker
   - Optionally specifies a callback (executable file) to do something with the resulting Postgres connect
@@ -193,8 +193,8 @@ pgvector AI extension enabled.
 
 ```bash
 # Let's check the price first
-docker run --rm -e PGSO_CHECK_PRICE=y \
-  -e PGSO_RAM_MIN=128 -e PGSO_REGION=us-east-1 \
+docker run --rm -e CHECK_PRICE=y \
+  -e RAM_MIN=128 -e REGION=us-east-1 \
   pg-spot-operator:latest
 ...
 +-----------+---------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
@@ -205,15 +205,15 @@ docker run --rm -e PGSO_CHECK_PRICE=y \
 ...
 
 # Actually create the instance for private direct SQL access from our IP address
-docker run --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=us-east-1 \
-  -e PGSO_STORAGE_MIN=200 -e PGSO_RAM_MIN=128 \
-  -e PGSO_EXTENSIONS=vector,pg_stat_statements -e PGSO_OS_EXTRA_PACKAGES=postgresql-17-pgvector \
-  -e PGSO_SSH_KEYS="$(cat ~/.ssh/id_rsa.pub)" -e PGSO_POSTGRES_VERSION=17 \
-  -e PGSO_PG_HBA_LINES="host all all $(curl -s whatismyip.akamai.com)/32 scram-sha-256" \
-  -e PGSO_EXPIRATION_DATE=$(date --utc --date="+5 day" +%Y-%m-%d) \
-  -e PGSO_AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
-  -e PGSO_AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
-  -e PGSO_ADMIN_USER=mypostgres -e PGSO_ADMIN_PASSWORD=supersecret123 \  
+docker run --name pg1 -e INSTANCE_NAME=pg1 -e REGION=us-east-1 \
+  -e STORAGE_MIN=200 -e RAM_MIN=128 \
+  -e EXTENSIONS=vector,pg_stat_statements -e OS_EXTRA_PACKAGES=postgresql-17-pgvector \
+  -e SSH_KEYS="$(cat ~/.ssh/id_rsa.pub)" -e POSTGRES_VERSION=17 \
+  -e PG_HBA_LINES="host all all $(curl -s whatismyip.akamai.com)/32 scram-sha-256" \
+  -e EXPIRATION_DATE=$(date --utc --date="+5 day" +%Y-%m-%d) \
+  -e AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
+  -e AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
+  -e ADMIN_USER=mypostgres -e ADMIN_PASSWORD=supersecret123 \  
   pgspotops/pg-spot-operator:latest
 ```
 
@@ -231,7 +231,7 @@ pg_spot_operator --check-price --ram-min=256 --region='^(us|ca)'
 Resolving HW requirements to actual instance types / prices using --selection-strategy=balanced ...
 Regions in consideration based on --region='^(us|ca)' input: ['ca-central-1', 'ca-west-1', 'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
 Resolving HW requirements in region '^(us|ca)' using --selection-strategy=balanced ...
-Top cheapest instances found for strategy 'balanced' (to list available strategies run --list-strategies / PGSO_LIST_STRATEGIES=y):
+Top cheapest instances found for strategy 'balanced' (to list available strategies run --list-strategies / LIST_STRATEGIES=y):
 +--------------+----------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
 |    Region    |      SKU       | Arch | vCPU |  RAM   | Instance storage | Spot $ (Mo) | On-Demand $ (Mo) | EC2 discount | Approx. RDS win | Evic. rate (Mo) |
 +--------------+----------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+

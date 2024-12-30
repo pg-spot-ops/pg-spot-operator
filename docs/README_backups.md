@@ -15,11 +15,11 @@ The default average data loss window is around 1min (`backup.wal_archiving_max_i
 with some provisioned IOPS to compensate disk latencies might be a better idea.
 
 Relevant CLI / Env flags:
-  * --backup-s3-bucket / PGSO_BACKUP_S3_BUCKET (signals we want backups)
-  * --backup-cipher / PGSO_BACKUP_CIPHER (no encryption by default)
-  * --backup-retention-days / PGSO_BACKUP_RETENTION_DAYS (1d by default)
-  * --backup-s3-key / PGSO_BACKUP_S3_KEY
-  * --backup-s3-key-secret / PGSO_BACKUP_S3_KEY_SECRET
+  * --backup-s3-bucket / BACKUP_S3_BUCKET (signals we want backups)
+  * --backup-cipher / BACKUP_CIPHER (no encryption by default)
+  * --backup-retention-days / BACKUP_RETENTION_DAYS (1d by default)
+  * --backup-s3-key / BACKUP_S3_KEY
+  * --backup-s3-key-secret / BACKUP_S3_KEY_SECRET
 
 **PS** It is strongly recommended to generate a distinct key/secret for backups, with only limited S3 privileges, and not
 to re-use the engine credentials, as the keys will be actually placed on the Postgres VMs for pgBackRest to work.

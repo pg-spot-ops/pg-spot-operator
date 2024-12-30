@@ -27,27 +27,27 @@ spec:
         env:
           # All ENV options described here:
           # https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_env_options.md
-          - name: PGSO_INSTANCE_NAME
+          - name: INSTANCE_NAME
             value: pg1
-          - name: PGSO_REGION
+          - name: REGION
             value: "eu-north-1"
-          - name: PGSO_STORAGE_MIN
+          - name: STORAGE_MIN
             value: "50"
-          - name: PGSO_STORAGE_TYPE
+          - name: STORAGE_TYPE
             value: "local"
-          - name: PGSO_CPU_MIN
+          - name: CPU_MIN
             value: "1"
-          - name: PGSO_POSTGRES_VERSION
+          - name: POSTGRES_VERSION
             value: "16"
-          - name: PGSO_AWS_ACCESS_KEY_ID
+          - name: AWS_ACCESS_KEY_ID
             value: "aaaa"
-          - name: PGSO_AWS_SECRET_ACCESS_KEY
+          - name: AWS_SECRET_ACCESS_KEY
             value: "bbbb"
-          - name: PGSO_ADMIN_USER
+          - name: ADMIN_USER
             value: "mypostgres"
-          - name: PGSO_ADMIN_PASSWORD
+          - name: ADMIN_PASSWORD
             value: "mypostgressecret"
-          - name: PGSO_ASSIGN_PUBLIC_IP
+          - name: ASSIGN_PUBLIC_IP
             value: "true"
-          - name: PGSO_SSH_KEYS
+          - name: SSH_KEYS
             value: "ssh-rsa ..."

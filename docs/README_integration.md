@@ -13,9 +13,9 @@ they cope with the possible service interruptions of course) by either:
 Engine ensures VM, sets up Postgres if needed in quiet mode, prints connstr and exits. Example usage:
 
 ```
-docker run --rm -e PGSO_CONNSTR_ONLY=y -e PGSO_REGION=eu-north-1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_STORAGE_MIN=100 pg-spt \
+docker run --rm -e CONNSTR_ONLY=y -e REGION=eu-north-1 -e INSTANCE_NAME=pg1 -e STORAGE_MIN=100 pg-spt \
   | run_some_testing \ 
-  && docker run --rm -e PGSO_TEARDOWN=y -e PGSO_REGION=eu-north-1 -e PGSO_INSTANCE_NAME=pg1
+  && docker run --rm -e TEARDOWN=y -e REGION=eu-north-1 -e INSTANCE_NAME=pg1
 ```
 
 ## Writing the connect string to a file on the engine node
@@ -75,11 +75,11 @@ PS Note that the callback execution is **limited to 30 seconds!**
 Example usage:
 
 ```commandline
-docker run --rm --name pg1 -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
-  -e PGSO_STORAGE_MIN=100 -e PGSO_STORAGE_TYPE=local -e PGSO_CPU_MIN=2 \
-  -e PGSO_SSH_KEYS="$(cat ~/.ssh/id_rsa.pub)" \
-  -e PGSO_AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
-  -e PGSO_AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
-  -e PGSO_SETUP_FINISHED_CALLBACK="/my_callback.sh" -v "$HOME/my_callback.sh":/my_callback.sh \
+docker run --rm --name pg1 -e INSTANCE_NAME=pg1 -e REGION=eu-north-1 \
+  -e STORAGE_MIN=100 -e STORAGE_TYPE=local -e CPU_MIN=2 \
+  -e SSH_KEYS="$(cat ~/.ssh/id_rsa.pub)" \
+  -e AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
+  -e AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
+  -e SETUP_FINISHED_CALLBACK="/my_callback.sh" -v "$HOME/my_callback.sh":/my_callback.sh \
   pgspotops/pg-spot-operator:latest
 ```

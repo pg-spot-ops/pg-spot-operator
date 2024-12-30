@@ -33,7 +33,7 @@ spec:
             - name: ssh-data
               mountPath: /app/.ssh
           env:
-            - name: PGSO_INSTANCE_NAME
+            - name: INSTANCE_NAME
               value: {{ .Release.Name }}
             {{- range .Values.env }}
             - name: {{ .name }}

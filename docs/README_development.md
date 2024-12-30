@@ -28,24 +28,24 @@ git commit
 ```commandline
 docker build -f Containerfile -t pg-spot-operator:latest .
 
-docker run --rm -e PGSO_INSTANCE_NAME=pg1 -e PGSO_REGION=eu-north-1 \
-  -e PGSO_CPU_MIN=1 -e PGSO_STORAGE_MIN=10 -e PGSO_STORAGE_TYPE=local \
-  -e PGSO_ADMIN_USER=pgspotops -e PGSO_ADMIN_PASSWORD=topsecret123 \
-  -e PGSO_SSH_KEYS="$(cat ~/.ssh/id_rsa.pub)" -e PGSO_POSTGRES_VERSION=17 \
-  -e PGSO_AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
-  -e PGSO_AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
+docker run --rm -e INSTANCE_NAME=pg1 -e REGION=eu-north-1 \
+  -e CPU_MIN=1 -e STORAGE_MIN=10 -e STORAGE_TYPE=local \
+  -e ADMIN_USER=pgspotops -e ADMIN_PASSWORD=topsecret123 \
+  -e SSH_KEYS="$(cat ~/.ssh/id_rsa.pub)" -e POSTGRES_VERSION=17 \
+  -e AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
+  -e AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
   pg-spot-operator:latest
 ```
 
 ## Cleanup of all operator created cloud resources
 
-After some work/testing one can clean up all operator created cloud resources via `PGSO_TEARDOWN_REGION` or only a
-single instance via the `PGSO_TEARDOWN` flag.
+After some work/testing one can clean up all operator created cloud resources via `TEARDOWN_REGION` or only a
+single instance via the `TEARDOWN` flag.
 
 ```
-docker run --rm --name pg1 -e PGSO_TEARDOWN_REGION=y -e PGSO_REGION=eu-north-1 \
-  -e PGSO_AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
-  -e PGSO_AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
+docker run --rm --name pg1 -e TEARDOWN_REGION=y -e REGION=eu-north-1 \
+  -e AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
+  -e AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
   pgspotops/pg-spot-operator:latest
 ```
 

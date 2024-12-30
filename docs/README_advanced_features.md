@@ -9,9 +9,9 @@ terminates itself.
 
 Relevant CLI/Env flags:
 
-  * --self-termination / PGSO_SELF_TERMINATION
-  * --self-termination-access-key-id / PGSO_SELF_TERMINATION_ACCESS_KEY_ID
-  * --self-termination-secret-access-key / PGSO_SELF_TERMINATION_SECRET_ACCESS_KEY
+  * --self-termination / SELF_TERMINATION
+  * --self-termination-access-key-id / SELF_TERMINATION_ACCESS_KEY_ID
+  * --self-termination-secret-access-key / SELF_TERMINATION_SECRET_ACCESS_KEY
 
 **PS** It is strongly recommended to generate separate AWS credentials for self-termination, only with limited EC2 privileges
 as the keys will be actually placed on the VMs to be able to work self-sufficiently. Also for public IP instances one should
