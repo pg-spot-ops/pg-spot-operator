@@ -4,6 +4,29 @@ Changelog
 
 (unreleased)
 ------------
+- Minor correct last. [Kaarel Moppel]
+- Add jumpy CPU perf to common issues README. [Kaarel Moppel]
+- Env input naming - get rid of the PGSO prefix. [Kaarel Moppel]
+
+  Should be fine without it also. A bit unwieldy still
+- Rename --connstr-output-only to just --connstr-only. [Kaarel Moppel]
+- Merge pull request #117 from pg-spot-ops/connstr-local-file-storage.
+  [Kaarel Moppel]
+
+  New integration option: connect string storing into a local engine node file
+- Don't overwrite the --connstr-output-path file if no changes. [Kaarel
+  Moppel]
+
+  to the connect string
+- A new app integration flag: --connstr-output-path. [Kaarel Moppel]
+
+  To stores the PG / VM connect string in plain text on the engine node,
+  for easy readout by apps
+
+
+0.9.20 (2024-12-26)
+-------------------
+- Release: version 0.9.20 🚀 [Kaarel Moppel]
 - Add a README on Common Issues. [Kaarel Moppel]
 
   Like fixing the Spot Quotas and enabling non-activated regions
