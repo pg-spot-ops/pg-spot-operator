@@ -256,9 +256,15 @@ pg_spot_operator --ram-min=256 --region=us-west-2 --storage-min 300 \
 
 # Integrating with user applications
 
-One can use the Spot Operator also to power real applications, given they cope with the slighyly reduced uptimes of course,
-by either providing a "setup finished" callback script, running in special pipe-friendly `--connstr-output-only` mode or
-pushing the resulting connect information to a S3 bucket. More details in [README_integration.md](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_integration.md).
+One can use the Spot Operator also to power real applications, given they cope with the slightly reduced uptimes of course,
+by either:
+
+* Providing a "setup finished" callback script to propagate Postgres / VM connect data somewhere
+* Running in a special pipe-friendly `--connstr-output-only` mode
+* Specifying an S3 (or compatible) bucket where to push the connect string
+* Writing the connect string to a file on the engine node
+
+* More details in [README_integration.md](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_integration.md).
 
 PS Real usage assumes that the engine is kept running on a single node only by the user, as there's by design no global
 synchronization / consensus store to keep things simple.

@@ -35,7 +35,10 @@
 * **--connstr-output-only / PGSO_CONNSTR_OUTPUT_ONLY** Ensure VM + Postgres, output the connstr to stdout and exit. Pipe-friendly
 * **--connstr-format / PGSO_CONNSTR_FORMAT** ssh | ansible. Relevant when --connstr-output-only + --vm-only set
 * **--setup-finished-callback / PGSO_SETUP_FINISHED_CALLBACK** An optional executable to propagate the connect string somewhere
-* **--setup-finished-callback / PGSO_SETUP_FINISHED_CALLBACK** An optional executable to propagate the connect string somewhere
+    connstr_output_path: str = os.getenv(
+        "CONNSTR_OUTPUT_PATH", ""
+    )  # When set write PG / VM connect string into a file
+* **--connstr-output-path / CONNSTR_OUTPUT_PATH** When set write Postgres (or SSH if --vm-only) connect string into a file
 * **--connstr-bucket / CONNSTR_BUCKET** (Required for S3 push to work)
 * **--connstr-bucket-key / CONNSTR_BUCKET_KEY** (Required for S3 push to work)
 * **--connstr-bucket-region / CONNSTR_BUCKET_REGION** Don't have to be set if region matched with the instance

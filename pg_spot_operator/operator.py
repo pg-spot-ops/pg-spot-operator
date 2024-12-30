@@ -1051,6 +1051,28 @@ def write_connstr_to_s3_if_bucket_set(m: InstanceManifest) -> None:
         return
 
 
+def write_connstr_to_output_path(
+    m: InstanceManifest, connstr_output_path: str, connstr_format: str
+) -> None:
+    """Non-critical"""
+    try:
+        if m.vm_only:
+            connstr = get_ssh_connstr(m, connstr_format)
+        else:
+            connstr = get_instance_connect_string(m)
+        if not connstr:
+            logger.warning(
+                "Could not get a connstr to output to %s", connstr_output_path
+            )
+            return
+        with open(connstr_output_path, "w") as f:
+            f.write(connstr)
+    except Exception as e:
+        logger.error(
+            "Failed to output connstr to %s: Error: %s", connstr_output_path, e
+        )
+
+
 def do_main_loop(
     cli_dry_run: bool = False,
     cli_debug: bool = False,
@@ -1063,6 +1085,7 @@ def do_main_loop(
     cli_connstr_output_only: bool = False,
     cli_connstr_format: str = "ssh",
     cli_ansible_path: str = "",
+    cli_connstr_output_path: str = "",
 ):
     global dry_run
     dry_run = cli_dry_run
@@ -1346,6 +1369,19 @@ def do_main_loop(
             logger.exception("Exception on main loop")
             loop_errors = True
 
+        if cli_dry_run:
+            logger.info("Exiting due to --dry-run")
+            exit(0)
+
+        if cli_connstr_output_path and not loop_errors:
+            logger.info(
+                "Outputting the connect string to %s ...",
+                cli_connstr_output_path,
+            )
+            write_connstr_to_output_path(
+                m, cli_connstr_output_path, cli_connstr_format
+            )
+
         if cli_connstr_output_only and not loop_errors:
             logger.info(
                 "Outputting the %s connect string to stdout and exiting.",
@@ -1358,9 +1394,7 @@ def do_main_loop(
             exit(0)
 
         first_loop = False
-        if cli_dry_run:
-            logger.info("Exiting due to --dry-run")
-            exit(0)
+
         logger.info(
             "Main loop finished. Sleeping for %s s ...",
             cli_main_loop_interval_s,
