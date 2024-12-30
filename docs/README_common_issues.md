@@ -1,5 +1,9 @@
 # Common issues
 
+* [Increasing the Spot vCPU quotas](#increasing-the-spot-vcpu-quotas)
+* [Enabling all AWS regions](#enabling-all-aws-regions)
+* [Getting consistent CPU performance](#getting-consistent-cpu-performance)
+
 ## Increasing the Spot vCPU quotas
 
 When starting to run more or bigger Spots, one will sooner or later run into `Max spot instance count exceeded` errors
@@ -75,3 +79,13 @@ aws ec2 describe-regions --all-regions
 To fix go to the the Web Console and "opt in":
 
 ![AWS Web Console Region Listing](img/manage_regions.png)
+
+
+## Getting consistent CPU performance
+
+By default can happen that different VM incarnations use either ARM or x86 CPUs - and although ARM has generally
+better performance for the price, in absolute terms mostly x86 wins for databases. If this becomes and issue one should
+just fix the CPU architecture, by setting `--cpu-arch` (`CPU_ARCH`) or instance familes (`instance_family` / `INSTANCE_FAMILY`)
+or just give a fixed list of preferred instances via `--instance-types`.
+
+Any limiting of suitable instance types though can affect Spot saving possibilities.
