@@ -43,7 +43,11 @@ logger = logging.getLogger(__name__)
 def str_to_bool(param: str) -> bool:
     if not param:
         return False
-    if param.strip().lower() == "on":
+    if (
+        param.strip().lower() == "on"
+        or param.strip().lower() == "enabled"
+        or param.strip().lower() == "1"
+    ):
         return True
     if param.strip().lower()[0] == "t":
         return True
@@ -52,8 +56,20 @@ def str_to_bool(param: str) -> bool:
     return False
 
 
+def str_boolean_false_to_empty_string(param: str) -> str:
+    if not param:
+        return ""
+    if param.strip().lower()[0] == "f" or param.strip().lower()[0] == "n":
+        return ""
+    if param.strip().lower() == "off":
+        return ""
+    if param.strip().lower() == "disabled":
+        return ""
+    return param
+
+
 class ArgumentParser(Tap):
-    show_help: bool = str_to_bool(
+    show_help: str = str_boolean_false_to_empty_string(
         os.getenv("SHOW_HELP", "False")
     )  # Don't actually execute actions
     manifest_path: str = os.getenv("MANIFEST_PATH", "")  # User manifest path
@@ -70,45 +86,47 @@ class ArgumentParser(Tap):
     vault_password_file: str = os.getenv(
         "VAULT_PASSWORD_FILE", ""
     )  # Can also be set on instance level
-    verbose: bool = str_to_bool(os.getenv("VERBOSE", "false"))  # More chat
-    check_price: bool = str_to_bool(
+    verbose: str = str_boolean_false_to_empty_string(
+        os.getenv("VERBOSE", "false")
+    )  # More chat
+    check_price: str = str_boolean_false_to_empty_string(
         os.getenv("CHECK_PRICE", "false")
     )  # Resolve HW reqs, show Spot price and exit
-    list_regions: bool = str_to_bool(
+    list_regions: str = str_boolean_false_to_empty_string(
         os.getenv("LIST_REGIONS", "false")
     )  # Display all known AWS region codes + names and exit
-    list_instances: bool = str_to_bool(
+    list_instances: str = str_boolean_false_to_empty_string(
         os.getenv("LIST_INSTANCES", "false")
     )  # List running VMs for given region / region wildcards
-    list_strategies: bool = str_to_bool(
+    list_strategies: str = str_boolean_false_to_empty_string(
         os.getenv("LIST_STRATEGIES", "false")
     )  # Display available instance selection strategies and exit
-    check_manifest: bool = str_to_bool(
+    check_manifest: str = str_boolean_false_to_empty_string(
         os.getenv("CHECK_MANIFEST", "false")
     )  # Validate instance manifests and exit
-    dry_run: bool = str_to_bool(
+    dry_run: str = str_boolean_false_to_empty_string(
         os.getenv("DRY_RUN", "false")
     )  # Just resolve the VM instance type
-    debug: bool = str_to_bool(
+    debug: str = str_boolean_false_to_empty_string(
         os.getenv("DEBUG", "false")
     )  # Don't clean up Ansible run files plus extra developer outputs
-    vm_only: bool = str_to_bool(
+    vm_only: str = str_boolean_false_to_empty_string(
         os.getenv("VM_ONLY", "false")
     )  # No Ansible / Postgres setup
-    persistent_vms: bool = str_to_bool(
+    persistent_vms: str = str_boolean_false_to_empty_string(
         os.getenv("PERSISTENT_VMS", "false")
     )  # Use persistent VMs instead of Spot
-    connstr_only: bool = str_to_bool(
+    connstr_only: str = str_boolean_false_to_empty_string(
         os.getenv("CONNSTR_ONLY", "false")
     )  # Set up Postgres, print connstr and exit
     connstr_format: str = os.getenv(
         "CONNSTR_FORMAT", "ssh"
     )  # ssh | ansible. Effective currently only when --connstr-only and --vm-only set.
     manifest: str = os.getenv("MANIFEST", "")  # Manifest to process
-    teardown: bool = str_to_bool(
+    teardown: str = str_boolean_false_to_empty_string(
         os.getenv("TEARDOWN", "false")
     )  # Delete VM and other created resources
-    teardown_region: bool = str_to_bool(
+    teardown_region: str = str_boolean_false_to_empty_string(
         os.getenv("TEARDOWN_REGION", "false")
     )  # Delete all operator tagged resources in region
     instance_name: str = os.getenv(
@@ -143,11 +161,13 @@ class ArgumentParser(Tap):
     expiration_date: str = os.getenv(
         "EXPIRATION_DATE", ""
     )  # ISO 8601 datetime
-    self_termination: bool = str_to_bool(
+    self_termination: str = str_boolean_false_to_empty_string(
         os.getenv("SELF_TERMINATION", "false")
     )
-    assign_public_ip: bool = str_to_bool(os.getenv("ASSIGN_PUBLIC_IP", "true"))
-    ip_floating: bool = str_to_bool(
+    assign_public_ip: str = str_boolean_false_to_empty_string(
+        os.getenv("ASSIGN_PUBLIC_IP", "true")
+    )
+    ip_floating: str = str_boolean_false_to_empty_string(
         os.getenv("IP_FLOATING", "true")
     )  # If "false" and in Public IP mode then a fixed Elastic IP is assigned. Has extra cost, plus limited availability on account level usually.
     cpu_arch: str = os.getenv("CPU_ARCH", "")  # [ arm | x86 ]
@@ -225,11 +245,13 @@ class ArgumentParser(Tap):
     backup_retention_days: int = int(os.getenv("BACKUP_RETENTION_DAYS", "1"))
     backup_s3_key: str = os.getenv("BACKUP_S3_KEY", "")
     backup_s3_key_secret: str = os.getenv("BACKUP_S3_KEY_SECRET", "")
-    monitoring: bool = str_to_bool(os.getenv("MONITORING", "false"))
-    grafana_externally_accessible: bool = str_to_bool(
+    monitoring: str = str_boolean_false_to_empty_string(
+        os.getenv("MONITORING", "false")
+    )
+    grafana_externally_accessible: str = str_boolean_false_to_empty_string(
         os.getenv("GRAFANA_EXTERNALLY_ACCESSIBLE", "true")
     )
-    grafana_anonymous: bool = str_to_bool(
+    grafana_anonymous: str = str_boolean_false_to_empty_string(
         os.getenv("GRAFANA_ANONYMOUS", "true")
     )
     ssh_private_key: str = os.getenv(
@@ -272,10 +294,10 @@ def compile_manifest_from_cmdline_params(
     m.instance_name = args.instance_name
     if not m.region and m.availability_zone:
         m.region = extract_region_from_az(m.availability_zone)
-    m.vm.persistent_vms = args.persistent_vms
+    m.vm.persistent_vms = str_to_bool(args.persistent_vms)
     m.expiration_date = args.expiration_date
-    m.assign_public_ip = args.assign_public_ip
-    m.ip_floating = args.ip_floating
+    m.assign_public_ip = str_to_bool(args.assign_public_ip)
+    m.ip_floating = str_to_bool(args.ip_floating)
     m.integrations.setup_finished_callback = args.setup_finished_callback
     m.integrations.connstr_bucket = args.connstr_bucket
     m.integrations.connstr_bucket_filename = args.connstr_bucket_key
@@ -283,7 +305,7 @@ def compile_manifest_from_cmdline_params(
     m.integrations.connstr_bucket_endpoint = args.connstr_bucket_endpoint
     m.integrations.connstr_bucket_key = args.connstr_bucket_access_key
     m.integrations.connstr_bucket_secret = args.connstr_bucket_access_secret
-    m.vm_only = args.vm_only
+    m.vm_only = str_to_bool(args.vm_only)
     m.vm.cpu_arch = args.cpu_arch
     m.vm.cpu_min = args.cpu_min
     m.vm.cpu_max = args.cpu_max
@@ -317,7 +339,7 @@ def compile_manifest_from_cmdline_params(
     m.aws.access_key_id = args.aws_access_key_id
     m.aws.secret_access_key = args.aws_secret_access_key
     m.aws.key_pair_name = args.aws_key_pair_name
-    m.self_termination = args.self_termination
+    m.self_termination = str_to_bool(args.self_termination)
     if args.self_termination:
         m.aws.self_termination_access_key_id = (
             args.self_termination_access_key_id
@@ -357,8 +379,10 @@ def compile_manifest_from_cmdline_params(
     if args.monitoring:
         m.monitoring.prometheus_node_exporter.enabled = True
         m.monitoring.grafana.enabled = True
-        m.monitoring.grafana.anonymous_access = args.grafana_anonymous
-        m.monitoring.grafana.externally_accessible = (
+        m.monitoring.grafana.anonymous_access = str_to_bool(
+            args.grafana_anonymous
+        )
+        m.monitoring.grafana.externally_accessible = str_to_bool(
             args.grafana_externally_accessible
         )
 
@@ -773,7 +797,7 @@ def resolve_manifest_and_display_price(
         logger.info("Top cheapest instances by ondemand price:")
     else:
         logger.info(
-            "Top cheapest instances found for strategy '%s' (to list available strategies run --list-strategies / LIST_STRATEGIES=y):",
+            "Top cheapest instances found for strategy '%s' (to list available strategies run --list-strategies/LIST_STRATEGIES=yes):",
             m.vm.instance_selection_strategy,
         )
 
@@ -1126,14 +1150,14 @@ def main():  # pragma: no cover
 
     operator.do_main_loop(
         cli_env_manifest=env_manifest,
-        cli_dry_run=args.dry_run,
-        cli_debug=args.debug,
+        cli_dry_run=str_to_bool(args.dry_run),
+        cli_debug=str_to_bool(args.debug),
         cli_vault_password_file=args.vault_password_file,
         cli_user_manifest_path=args.manifest_path,
         cli_main_loop_interval_s=args.main_loop_interval_s,
         cli_destroy_file_base_path=args.destroy_file_base_path,
-        cli_teardown=args.teardown,
-        cli_connstr_only=args.connstr_only,
+        cli_teardown=str_to_bool(args.teardown),
+        cli_connstr_only=str_to_bool(args.connstr_only),
         cli_connstr_format=args.connstr_format,
         cli_ansible_path=args.ansible_path,
         cli_connstr_output_path=args.connstr_output_path,

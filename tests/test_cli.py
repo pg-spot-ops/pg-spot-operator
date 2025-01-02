@@ -1,3 +1,5 @@
+from pg_spot_operator.cli import str_to_bool, str_boolean_false_to_empty_string
+
 # from pg_spot_operator.cli import (
 #     ArgumentParser,
 #     compile_manifest_from_cmdline_params,
@@ -24,3 +26,19 @@
 # pg_spot_operator/cli.py:8: in <module>
 #     from prettytable import PrettyTable
 # E   ModuleNotFoundError: No module named 'prettytable'
+
+
+def test_str_to_bool():
+    assert str_to_bool("True")
+    assert str_to_bool("true")
+    assert str_to_bool("on")
+    assert str_to_bool("yes")
+
+    assert not str_to_bool("False")
+    assert not str_to_bool("")
+    assert not str_to_bool("no")
+
+
+def test_str_boolean_false_to_empty_string():
+    assert str_boolean_false_to_empty_string("no") == ""
+    assert str_boolean_false_to_empty_string("True") == "True"

@@ -64,7 +64,7 @@ aws service-quotas list-service-quotas --service-code ec2 --region eu-north-1 \
 
 ## Enabling all AWS regions
 
-By default some AWS regions of interest might not be enabled, thus causing errors on launching (`--check-price` uses
+By default some AWS regions of interest might not be enabled, thus causing errors on launching (`--check-price=yes` uses
 publicly available data).
 
 Listing not activated regions on the CLI:

@@ -35,7 +35,7 @@ pipx install pg-spot-operator
 
 # Resolve user requirements to actual EC2 instance types and show the best (cheap and with good eviction rates) instances.
 # Here we only consider North American regions, assuming were located there and want good latencies as well.
-pg_spot_operator --check-price \
+pg_spot_operator --check-price=yes \
   --region='^(us|ca)' --ram-min=128 \
   --storage-min=500 --storage-type=local
 
@@ -114,7 +114,7 @@ Wow, that task went smooth, other people's computers can be really useful someti
 the instance ...
 
 ```
-pg_spot_operator --region=us-east-1 --instance-name=analytics --teardown
+pg_spot_operator --region=us-east-1 --instance-name=analytics --teardown=yes
 
 2024-11-19 11:48:04,251 INFO Destroying cloud resources if any for instance analytics ...
 ...
@@ -151,7 +151,7 @@ INFO Current expected monthly eviction rate range: <5%
 
 ansible-playbook -i inventory mycustom_verification.yml && report_success.sh
 
-pg_spot_operator --teardown --region=us-east-1 --instance-name custom
+pg_spot_operator --teardown=yes --region=us-east-1 --instance-name custom
 ```
 
 ## Persistent VM mode
@@ -226,12 +226,12 @@ pipx install pg-spot-operator
 
 # Let's check prices for some in-memory analytics on our 200GB dataset in all North American regions to get some great $$ value
 # PS in default persistent storage mode (--storage-type=network) we though still pay list price for the EBS volumes (~$0.09/GB)
-pg_spot_operator --check-price --ram-min=256 --region='^(us|ca)'
+pg_spot_operator --check-price=yes --ram-min=256 --region='^(us|ca)'
 
 Resolving HW requirements to actual instance types / prices using --selection-strategy=balanced ...
 Regions in consideration based on --region='^(us|ca)' input: ['ca-central-1', 'ca-west-1', 'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
 Resolving HW requirements in region '^(us|ca)' using --selection-strategy=balanced ...
-Top cheapest instances found for strategy 'balanced' (to list available strategies run --list-strategies / LIST_STRATEGIES=y):
+Top cheapest instances found for strategy 'balanced' (to list available strategies run --list-strategies/LIST_STRATEGIES=yes):
 +--------------+----------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
 |    Region    |      SKU       | Arch | vCPU |  RAM   | Instance storage | Spot $ (Mo) | On-Demand $ (Mo) | EC2 discount | Approx. RDS win | Evic. rate (Mo) |
 +--------------+----------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
@@ -260,7 +260,7 @@ One can use the Spot Operator also to power real applications, given they cope w
 by either:
 
 * Providing a "setup finished" callback script to propagate Postgres / VM connect data somewhere
-* Running in a special pipe-friendly `--connstr-only` mode
+* Running in a special pipe-friendly `--connstr-only=yes` mode
 * Specifying an S3 (or compatible) bucket where to push the connect string
 * Writing the connect string to a file on the engine node
 
