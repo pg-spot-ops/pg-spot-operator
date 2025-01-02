@@ -959,6 +959,10 @@ def ensure_spot_vm(
                     )
                 break
             except Exception as e:
+                if "MaxSpotInstanceCountExceeded" in str(e):
+                    raise Exception(
+                        f"Max spot instance count exceeded in region {m.region} - quota increase required, see docs/README_common_issues.md for more"
+                    )
                 if "InsufficientInstanceCapacity" in str(e):
                     logger.error(
                         "Failed to launch - no Spot capacity available for %s in AZ %s",
