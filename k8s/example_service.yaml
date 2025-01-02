@@ -1,0 +1,20 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pg1
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  clusterIP: None # Ensures the Service acts as a selector-less service
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: pg1
+subsets:
+  - addresses:
+      - ip: 192.168.1.153 # Replace with the external IP address
+    ports:
+      - port: 5432
