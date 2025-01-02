@@ -850,8 +850,8 @@ def destroy_instance(
     logger.info("Elastic IP Addresses found: %s", eip_alloc_ids)
     if not dry_run and eip_alloc_ids:
         if nic_ids:
-            logger.info("Sleeping 60s before deleting EIPs ...")
-            time.sleep(60)
+            logger.info("Sleeping 10s before deleting EIPs ...")
+            time.sleep(10)
         for alloc_id in eip_alloc_ids:
             logger.info("Releasing Address with AllocationId %s ...", alloc_id)
             release_address_by_allocation_id_in_region(m.region, alloc_id)
