@@ -788,9 +788,10 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
     if dry_run:
         return False, "dummy"
 
-    cmdb.finalize_ensure_vm(m, cloud_vm)
+    if cloud_vm:
+        cmdb.finalize_ensure_vm(m, cloud_vm)
 
-    return True if not backing_instances else False, cloud_vm.provider_id
+    return created, cloud_vm.provider_id if cloud_vm else ""
 
 
 def ensure_s3_backup_bucket(m: InstanceManifest):
