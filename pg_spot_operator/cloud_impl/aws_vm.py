@@ -295,63 +295,6 @@ users:
     return cloud_init
 
 
-def get_nic_id_if_any_by_id_tag(instance_name: str, region: str) -> str:
-    client = get_client("ec2", region)
-
-    filters = [
-        {
-            "Name": "tag:" + SPOT_OPERATOR_ID_TAG,
-            "Values": [
-                instance_name,
-            ],
-        },
-    ]
-
-    response = client.describe_network_interfaces(Filters=filters)
-    if response and response.get("NetworkInterfaces"):
-        return response["NetworkInterfaces"][0]["NetworkInterfaceId"]
-    return ""
-
-
-def wait_until_nic_available(
-    nic_id: str, region: str, max_wait_seconds: int = 300
-) -> None:
-    """Throws an exception when volume not "available" in max_wait_seconds
-    https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-volumes.html
-    https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2/client/describe_volumes.html#describe-volumes
-    """
-    start_time = time.time()
-    while time.time() < (start_time + max_wait_seconds):
-        try:
-            client = get_client("ec2", region)
-
-            logger.debug(f"Checking NetworkInterface {nic_id} state ...")
-            resp = client.describe_network_interfaces(
-                NetworkInterfaceIds=[nic_id]
-            )
-            if resp and resp.get("NetworkInterfaces"):
-                if resp["NetworkInterfaces"][0]["Status"] == "available":
-                    logger.debug(
-                        "OK %s %s",
-                        resp["NetworkInterfaces"][0]["Status"],
-                        datetime.now(),
-                    )
-                    time.sleep(1)
-                    return
-                logger.debug(
-                    "Not OK %s %s",
-                    resp["NetworkInterfaces"][0]["Status"],
-                    datetime.now(),
-                )
-                time.sleep(10)
-        except Exception as e:
-            logger.debug(e)
-            time.sleep(10)
-    raise Exception(
-        f"NetworkInterface {nic_id} not in 'available' state within {max_wait_seconds}"
-    )
-
-
 def ec2_launch_instance(
     m: InstanceManifest,
     rit: InstanceTypeInfo,
@@ -393,29 +336,15 @@ def ec2_launch_instance(
     logger.debug("placement %s", placement)
 
     network_interface: dict[str, Any] = {
-        "AssociatePublicIpAddress": False,
+        "AssociatePublicIpAddress": m.assign_public_ip and m.ip_floating,
         "DeviceIndex": 0,
-        "DeleteOnTermination": m.ip_floating,
+        "DeleteOnTermination": True,
     }
-    if m.ip_floating and m.assign_public_ip:
-        network_interface["AssociatePublicIpAddress"] = True
     if subnet_id:
         network_interface["SubnetId"] = subnet_id
     if security_group_ids:
         network_interface["Groups"] = security_group_ids
     logger.debug("network_interface %s", network_interface)
-
-    existing_nic_found = False
-    if not m.ip_floating:
-        nic_id = get_nic_id_if_any_by_id_tag(instance_name, region)
-        if nic_id:
-            existing_nic_found = True
-            wait_until_nic_available(nic_id, region)
-            network_interface = {
-                "DeviceIndex": 0,
-                "DeleteOnTermination": False,
-                "NetworkInterfaceId": nic_id,
-            }
 
     kwargs_run: dict[str, Any] = {}
     if instance_type.startswith("t"):
@@ -432,19 +361,16 @@ def ec2_launch_instance(
         tags_kv_list.append({"Key": k, "Value": v})
     tag_spec = [
         {"ResourceType": "instance", "Tags": tags_kv_list},
+        {
+            "ResourceType": "network-interface",
+            "Tags": [
+                {
+                    "Key": SPOT_OPERATOR_ID_TAG,
+                    "Value": instance_name,
+                }
+            ],
+        },
     ]
-    if not existing_nic_found:
-        tag_spec.append(
-            {
-                "ResourceType": "network-interface",
-                "Tags": [
-                    {
-                        "Key": SPOT_OPERATOR_ID_TAG,
-                        "Value": instance_name,
-                    }
-                ],
-            }
-        )
 
     instance_market_options = {}
     if not m.vm.persistent_vms:
