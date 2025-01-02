@@ -9,7 +9,6 @@ description: My play instance # Optional
 assign_public_ip: true  # Default: true. False = internal / VPC access only. PS Public IPs cost ~$4 per month.
 ip_floating: true  # Default: true. If true we get a new IP after eviction i.e. don't reserve / manage a NIC.
                     # If false and assign_public_ip set an Elastic IPs will be used (given available, very limited per account)
-                    # Note that non-floating IPs take longer to recover after an eviction due to some AWS NIC state refresh lag
 #expiration_date: "2024-12-22 00:00+03"  # Optional. Instance will be deleted after that (if engine running)
 self_termination: false  # Optional. Instance will auto-destroy itself (needs according separate AWS keys set)
 is_paused: false  # No engine actions on the instance
