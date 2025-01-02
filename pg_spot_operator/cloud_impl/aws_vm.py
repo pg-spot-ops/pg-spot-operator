@@ -79,10 +79,13 @@ def get_latest_ami_for_region_arch(
         )
 
         if response["Images"]:
-            amis = response["Images"]
-            amis.sort(key=lambda x: x["CreationDate"], reverse=True)
-            logger.debug("Latest %s AMI found: %s", OS_IMAGE_FAMILY, amis[0])
-            return amis[0]["ImageId"], amis[0]
+            amis = [x for x in response["Images"] if "daily" not in x["Name"]]
+            if amis:
+                amis.sort(key=lambda x: x["CreationDate"], reverse=True)
+                logger.debug(
+                    "Latest %s AMI found: %s", OS_IMAGE_FAMILY, amis[0]
+                )
+                return amis[0]["ImageId"], amis[0]
     raise Exception(
         f"No default AMI found for region {region}, architecture {architecture}, os_family {OS_IMAGE_FAMILY}"
     )

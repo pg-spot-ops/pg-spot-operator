@@ -37,6 +37,7 @@ def test_get_ami_debian_amd():
     cd = datetime.datetime.fromisoformat(details["CreationDate"].rstrip("Z"))
     assert cd > datetime.datetime.now() - datetime.timedelta(days=365)
     assert details["Architecture"] == "x86_64"
+    assert "daily" not in details["Name"]
 
 
 def test_get_ami_debian_arm():
@@ -51,6 +52,7 @@ def test_get_ami_debian_arm():
     cd = datetime.datetime.fromisoformat(details["CreationDate"].rstrip("Z"))
     assert cd > datetime.datetime.now() - datetime.timedelta(days=365)
     assert details["Architecture"] == "arm64"
+    assert "daily" not in details["Name"]
 
 
 @unittest.SkipTest
