@@ -882,7 +882,7 @@ def ensure_spot_vm(
     m: InstanceManifest,
     resolved_instance_types: list[InstanceTypeInfo],
     dry_run: bool = False,
-) -> tuple[CloudVM, bool]:
+) -> tuple[CloudVM | None, bool]:
     """Returns [CloudVM, was_actually_created].
     Tries resolved instance types one-by-one if fails due to no capacity available
     """
@@ -959,6 +959,12 @@ def ensure_spot_vm(
                     )
                 break
             except Exception as e:
+                if "MaxSpotInstanceCountExceeded" in str(e):
+                    logger.error(
+                        "Max spot instance count exceeded in region %s - quota increase required, see docs/README_common_issues.md for more",
+                        m.region,
+                    )
+                    return None, False
                 if "InsufficientInstanceCapacity" in str(e):
                     logger.error(
                         "Failed to launch - no Spot capacity available for %s in AZ %s",
