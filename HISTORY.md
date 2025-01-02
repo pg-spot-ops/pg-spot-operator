@@ -4,6 +4,60 @@ Changelog
 
 (unreleased)
 ------------
+- AWS AMIs search - ignore "daily" AMIs. [Kaarel Moppel]
+
+  As not really test according to google
+- Example manifest - remove deprecated comment about explicit NICs.
+  [Kaarel Moppel]
+- Don't create explicit NICs anymore. [Kaarel Moppel]
+
+  This effectively disables persitent private IP addresses...but not a
+  huge loss anyways, as this disabled moving between AZs once launced
+- Fix new CLI flags handling for non-default values. [Kaarel Moppel]
+
+  Logically false string were not set to empty
+- Wait less on teardown befor deleting Elastic IPs. [Kaarel Moppel]
+
+  60s > 10s
+- Change CLI input flags logic - all boolean flags accepting values now.
+  [Kaarel Moppel]
+
+  --check-price > --check-price=yes/true/on.
+
+  To a) be better aligned with K8s env params b) to be able to override
+  e.g. public IP on the CLI without using ENV
+- CLI: add --ip-floating flag. [Kaarel Moppel]
+
+  To control Elastic IP creation
+- K8s README - document how to create a K8s service for an instance.
+  [Kaarel Moppel]
+
+  To use the external VM transparently from within the K8s cluster
+- Helm - set pullPolicy to IfNotPresent. [Kaarel Moppel]
+
+  Was "Always" - but not using tags yet, meaning could get a breaking API
+  change with Always
+- Merge pull request #119 from pg-spot-ops/dont-retry-vm-create-on-
+  quota-breach. [Kaarel Moppel]
+
+  Dont retry vm create on Spot vCPU quota breach
+- Show a nicer error when Spot quota exceeded. [Kaarel Moppel]
+
+  As quite a common case probably for first-time users
+- VM creation - don't re-try during one loop in case Spot quota reached.
+  [Kaarel Moppel]
+- Merge pull request #118 from pg-spot-ops/os-disk-size. [Kaarel Moppel]
+
+  New HW attribute: --os-disk-size with 20GB default
+- New HW attribute: --os-disk-size with 20GB default. [Kaarel Moppel]
+- Run tests on only Python 3.12. [Kaarel Moppel]
+
+  Faster feedback loop, linting should catch most of version differences
+
+
+0.9.21 (2024-12-30)
+-------------------
+- Release: version 0.9.21 🚀 [Kaarel Moppel]
 - Minor correct last. [Kaarel Moppel]
 - Add jumpy CPU perf to common issues README. [Kaarel Moppel]
 - Env input naming - get rid of the PGSO prefix. [Kaarel Moppel]
