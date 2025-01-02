@@ -147,6 +147,9 @@ class ArgumentParser(Tap):
         os.getenv("SELF_TERMINATION", "false")
     )
     assign_public_ip: bool = str_to_bool(os.getenv("ASSIGN_PUBLIC_IP", "true"))
+    ip_floating: bool = str_to_bool(
+        os.getenv("IP_FLOATING", "true")
+    )  # If "false" and in Public IP mode then a fixed Elastic IP is assigned. Has extra cost, plus limited availability on account level usually.
     cpu_arch: str = os.getenv("CPU_ARCH", "")  # [ arm | x86 ]
     instance_family: str = os.getenv(
         "INSTANCE_FAMILY", ""
@@ -272,6 +275,7 @@ def compile_manifest_from_cmdline_params(
     m.vm.persistent_vms = args.persistent_vms
     m.expiration_date = args.expiration_date
     m.assign_public_ip = args.assign_public_ip
+    m.ip_floating = args.ip_floating
     m.integrations.setup_finished_callback = args.setup_finished_callback
     m.integrations.connstr_bucket = args.connstr_bucket
     m.integrations.connstr_bucket_filename = args.connstr_bucket_key

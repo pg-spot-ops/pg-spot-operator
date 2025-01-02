@@ -219,7 +219,7 @@ def ensure_public_elastic_ip_attached(
         logger.debug("An existing elastic IP found: %s", pip)
 
     if not pip:
-        logger.debug("Assign a new elastic IP in region %s", region)
+        logger.debug("Allocating a new elastic IP in region %s ...", region)
         response = client.allocate_address(
             TagSpecifications=[
                 {
