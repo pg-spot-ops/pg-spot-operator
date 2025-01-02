@@ -63,6 +63,8 @@ def str_boolean_false_to_empty_string(param: str) -> str:
         return ""
     if param.strip().lower() == "off":
         return ""
+    if param.strip().lower() == "0":
+        return ""
     if param.strip().lower() == "disabled":
         return ""
     return param
@@ -98,8 +100,8 @@ class ArgumentParser(Tap):
     list_instances: str = str_boolean_false_to_empty_string(
         os.getenv("LIST_INSTANCES", "false")
     )  # List running VMs for given region / region wildcards
-    list_strategies: str = str_boolean_false_to_empty_string(
-        os.getenv("LIST_STRATEGIES", "false")
+    list_strategies: str = os.getenv(
+        "LIST_STRATEGIES", "false"
     )  # Display available instance selection strategies and exit
     check_manifest: str = str_boolean_false_to_empty_string(
         os.getenv("CHECK_MANIFEST", "false")
@@ -268,6 +270,40 @@ def validate_and_parse_args() -> ArgumentParser:
         description="Maintains Postgres on Spot VMs",
         underscores_to_dashes=True,
     ).parse_args()
+
+    args.verbose = str_boolean_false_to_empty_string(args.verbose)
+    args.list_strategies = str_boolean_false_to_empty_string(
+        args.list_strategies
+    )
+    args.check_price = str_boolean_false_to_empty_string(args.check_price)
+    args.list_regions = str_boolean_false_to_empty_string(args.list_regions)
+    args.list_instances = str_boolean_false_to_empty_string(
+        args.list_instances
+    )
+    args.list_strategies = str_boolean_false_to_empty_string(
+        args.list_strategies
+    )
+    args.check_manifest = str_boolean_false_to_empty_string(
+        args.check_manifest
+    )
+    args.dry_run = str_boolean_false_to_empty_string(args.dry_run)
+    args.debug = str_boolean_false_to_empty_string(args.debug)
+    args.vm_only = str_boolean_false_to_empty_string(args.vm_only)
+    args.persistent_vms = str_boolean_false_to_empty_string(
+        args.persistent_vms
+    )
+    args.connstr_only = str_boolean_false_to_empty_string(args.connstr_only)
+    args.teardown = str_boolean_false_to_empty_string(args.teardown)
+    args.teardown_region = str_boolean_false_to_empty_string(
+        args.teardown_region
+    )
+    args.self_termination = str_boolean_false_to_empty_string(
+        args.self_termination
+    )
+    args.assign_public_ip = str_boolean_false_to_empty_string(
+        args.assign_public_ip
+    )
+    args.ip_floating = str_boolean_false_to_empty_string(args.ip_floating)
 
     return args
 
@@ -1107,7 +1143,7 @@ def main():  # pragma: no cover
             args.region,
             args.aws_access_key_id,
             args.aws_secret_access_key,
-            args.dry_run,
+            str_to_bool(args.dry_run),
         )
         logger.info("Teardown complete")
         exit(0)
