@@ -2,7 +2,7 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/pgspotops/pg-spot-operator)](https://hub.docker.com/r/pgspotops/pg-spot-operator)
 [![Tests passing](https://github.com/pg-spot-ops/pg-spot-operator/actions/workflows/main.yml/badge.svg)](https://github.com/pg-spot-ops/pg-spot-operator/actions)
 
-# PG Spot Operator [Community Edition]
+# PG Spot Operator
 
 According to various estimates 30-40% of cloud servers are idling - why not to make good use of them, and save some money in the process?
 
@@ -280,23 +280,20 @@ via this form [https://tinyurl.com/pgspotops](https://tinyurl.com/pgspotops) to 
 
 Most import features of the Enterprise Edition:
 
+  * Hybrid-provisioning - fall back to regular non-spot VMs once downtime budget burned
   * HA / multi-node setups
   * GCP and Azure Spot instances support
-  * Advanced eviction rate heuristics for better uptimes
   * Volume auto-growth
-  * Temporary fallbacks to regular non-spot VMs once uptime budget burned
-  * Major version upgrades
   * Stop / sleep schedules for even more savings
-  * Better integration with typical DevOps flows
   * More security, e.g. certificate access
   * A CLI for ad-hoc DBA operations
+  * Native K8s integration
 
 ## Sustainable Open Source / VC info
 
-As crazy as it might sound, we believe that such a solution (in a more polished form) would be a great addition to the
-Postgres ecosystem and also commercially viable, so we're going to give it a try. To speed up the development though,
-we'd also be interested in VC dollars - thus feel free to reach out to info@pgspotops.com if you happen to possess some
-and find the niche interesting.
+As crazy as it might sound, we believe that such a solution in a more polished, Enterprise-friendly form would be a great
+addition to the Postgres ecosystem and make Postgres even more accessible. To speed up the development we'd be interested
+in VC dollars - thus feel free to reach out to info@pgspotops.com if you happen to possess some and find the niche interesting.
 
 # Project status
 
