@@ -1057,7 +1057,7 @@ def write_connstr_to_output_path(
 ) -> None:
     """Non-critical"""
     try:
-        if m.vm_only:
+        if m.vm_only or connstr_format in ("ssh", "ansible"):
             connstr = get_ssh_connstr(m, connstr_format)
         else:
             connstr = get_instance_connect_string(m)
