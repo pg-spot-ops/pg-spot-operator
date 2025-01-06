@@ -131,6 +131,7 @@ def resolve_hardware_requirements_to_instance_types(
                     cpu_min=m.vm.cpu_min,
                     cpu_max=m.vm.cpu_max,
                     ram_min=m.vm.ram_min,
+                    ram_max=m.vm.ram_max,
                     architecture=m.vm.cpu_arch,
                     storage_type=m.vm.storage_type,
                     storage_min=m.vm.storage_min,

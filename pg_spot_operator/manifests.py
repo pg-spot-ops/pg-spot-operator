@@ -79,6 +79,7 @@ class SectionVm(BaseModel):
     cpu_min: int = 0
     cpu_max: int = 0
     ram_min: int = 0
+    ram_max: int = 0
     storage_min: int = 0
     storage_type: str = "network"
     storage_speed_class: str = "ssd"

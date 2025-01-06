@@ -250,7 +250,9 @@ def populate_temp_workdir_for_action_exec(
     logging.debug("Ensuring temp exec dir %s ...", temp_workdir)
     os.makedirs(temp_workdir, exist_ok=True)
 
-    handler_dir_to_fork = os.path.join("./ansible", manifest.api_version)  # Dev mode
+    handler_dir_to_fork = os.path.join(
+        "./ansible", manifest.api_version
+    )  # Dev mode
     if os.path.exists(os.path.expanduser(ansible_root_path)):
         handler_dir_to_fork = os.path.expanduser(
             os.path.join(ansible_root_path, manifest.api_version)

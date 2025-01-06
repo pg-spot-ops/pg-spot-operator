@@ -146,7 +146,8 @@ class ArgumentParser(Tap):
     cpu_min: int = int(os.getenv("CPU_MIN", "0"))
     cpu_max: int = int(os.getenv("CPU_MAX", "0"))
     selection_strategy: str = os.getenv("SELECTION_STRATEGY", "balanced")
-    ram_min: int = int(os.getenv("RAM_MIN", "0"))
+    ram_min: int = int(os.getenv("RAM_MIN", "0"))  # In GB
+    ram_max: int = int(os.getenv("RAM_MAX", "0"))  # In GB
     storage_min: int = int(os.getenv("STORAGE_MIN", "0"))
     storage_type: str = os.getenv("STORAGE_TYPE", "network")
     storage_speed_class: str = os.getenv(
@@ -346,6 +347,7 @@ def compile_manifest_from_cmdline_params(
     m.vm.cpu_min = args.cpu_min
     m.vm.cpu_max = args.cpu_max
     m.vm.ram_min = args.ram_min
+    m.vm.ram_max = args.ram_max
     m.vm.os_disk_size = args.os_disk_size
     m.vm.storage_min = args.storage_min
     m.vm.storage_type = args.storage_type

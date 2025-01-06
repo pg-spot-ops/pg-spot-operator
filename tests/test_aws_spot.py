@@ -604,6 +604,9 @@ def test_filter_instances():
     )
     assert len(filtered_instance_family) == 2
 
+    filtered_ram = filter_instance_types_by_hw_req(iti, ram_min=1, ram_max=4)
+    assert len(filtered_ram) == 3
+
 
 def test_get_avg_spot_price_from_pricing_history_data_by_sku_and_az():
     sku_az_price_data = (

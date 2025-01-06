@@ -289,6 +289,7 @@ def filter_instance_types_by_hw_req(
     cpu_min: int | None = 0,
     cpu_max: int | None = 0,
     ram_min: int | None = 0,
+    ram_max: int | None = 0,
     cpu_arch: str = "",
     storage_min: int | None = 0,
     storage_type: str = "network",
@@ -356,7 +357,12 @@ def filter_instance_types_by_hw_req(
         if cpu_max and ii.cpu > cpu_max:
             continue
 
-        if ram_min and ii.ram_mb / 1000 < ram_min:  # User input in GBs
+        if (
+            ram_min and ii.ram_mb / 1000 < ram_min
+        ):  # 1000 on purpose to use almost matching RAM SKUs as well
+            continue
+
+        if ram_max and ii.ram_mb / 1024 > ram_max:  # User input in GBs
             continue
 
         if (
@@ -517,6 +523,7 @@ def resolve_hardware_requirements_to_instance_types(
     cpu_min: int = 0,
     cpu_max: int = 0,
     ram_min: int = 0,
+    ram_max: int = 0,
     architecture: str = "any",
     storage_type: str = "network",
     storage_min: int = 0,
@@ -541,6 +548,7 @@ def resolve_hardware_requirements_to_instance_types(
             cpu_min=cpu_min,
             cpu_max=cpu_max,
             ram_min=ram_min,
+            ram_max=ram_max,
             cpu_arch=architecture,
             storage_min=storage_min,
             storage_type=storage_type,
