@@ -66,8 +66,9 @@ def apply_base_tuning(ti: TuningInput) -> dict[str, Any]:
         o["max_wal_size"] = "4GB" if ti.storage_speed_class == "ssd" else "8GB"
     if ti.cpus > 8:
         o["max_worker_processes"] = ti.cpus
-        o["max_parallel_workers"] = int(min(ti.cpus / 4, 4))
-        o["max_parallel_maintenance_workers"] = int(min(ti.cpus / 4, 4))
+        o["max_parallel_workers"] = ti.cpus
+        o["max_parallel_workers_per_gather"] = int(min(ti.cpus / 4, 4)) or 2
+        o["max_parallel_maintenance_workers"] = int(min(ti.cpus / 4, 4)) or 2
 
     return o
 
