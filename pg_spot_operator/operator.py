@@ -1066,6 +1066,7 @@ def write_connstr_to_output_path(
                 "Could not get a connstr to output to %s", connstr_output_path
             )
             return
+        current_file_contents = ""
         if os.path.exists(os.path.expanduser(connstr_output_path)):
             with open(os.path.expanduser(connstr_output_path)) as f:
                 current_file_contents = f.read()
