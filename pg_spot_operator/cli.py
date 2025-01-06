@@ -23,7 +23,10 @@ from pg_spot_operator.constants import (
     SPOT_OPERATOR_EXPIRES_TAG,
     SPOT_OPERATOR_ID_TAG,
 )
-from pg_spot_operator.instance_type_selection import InstanceTypeSelection
+from pg_spot_operator.instance_type_selection import (
+    SELECTION_STRATEGY_RANDOM,
+    InstanceTypeSelection,
+)
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.operator import clean_up_old_logs_if_any
 from pg_spot_operator.pgtuner import TUNING_PROFILES
@@ -815,7 +818,10 @@ def resolve_manifest_and_display_price(
         )
         exit(1)
 
-    if len(regions) > 1:
+    if (
+        len(regions) > 1
+        or m.vm.instance_selection_strategy == SELECTION_STRATEGY_RANDOM
+    ):
         # Do an extra sort in case have multi-regions or "random" strategy
         instance_selection_strategy_cls = (
             InstanceTypeSelection.get_selection_strategy("cheapest")
