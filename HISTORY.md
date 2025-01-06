@@ -4,6 +4,19 @@ Changelog
 
 (unreleased)
 ------------
+- Better max_parallel_workers tuning. [Kaarel Moppel]
+- Respect --connstr-format=ansible for --connstr-output-path. [Kaarel
+  Moppel]
+
+  Was storing PG connstr in normal non-vm-only mode
+- Fix local file connstr integration via --connstr-output-path. [Kaarel
+  Moppel]
+- README updates on commerical edition / features. [Kaarel Moppel]
+
+
+0.9.30 (2025-01-02)
+-------------------
+- Release: version 0.9.30 🚀 [Kaarel Moppel]
 - AWS AMIs search - ignore "daily" AMIs. [Kaarel Moppel]
 
   As not really test according to google
