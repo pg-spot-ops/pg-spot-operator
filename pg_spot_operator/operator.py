@@ -65,7 +65,7 @@ MAX_PARALLEL_ACTIONS = 2
 ACTION_MAX_DURATION = 600
 VM_KEEPALIVE_SCANNER_INTERVAL_S = 60
 ACTION_HANDLER_TEMP_SPACE_ROOT = "~/.pg-spot-operator/tmp"
-ANSIBLE_DEFAULT_ROOT_PATH = "./ansible"
+ANSIBLE_DEFAULT_ROOT_PATH = "~/.pg-spot-operator/ansible"
 
 logger = logging.getLogger(__name__)
 
@@ -250,9 +250,11 @@ def populate_temp_workdir_for_action_exec(
     logging.debug("Ensuring temp exec dir %s ...", temp_workdir)
     os.makedirs(temp_workdir, exist_ok=True)
 
-    handler_dir_to_fork = os.path.expanduser(
-        os.path.join(ansible_root_path, manifest.api_version)
-    )
+    handler_dir_to_fork = os.path.join("./ansible", manifest.api_version)  # Dev mode
+    if os.path.exists(os.path.expanduser(ansible_root_path)):
+        handler_dir_to_fork = os.path.expanduser(
+            os.path.join(ansible_root_path, manifest.api_version)
+        )
     if not os.path.exists(handler_dir_to_fork):
         raise Exception(f"Ansible folder at {handler_dir_to_fork} not found")
     # Copy the whole Ansible dir for now into temp dir
