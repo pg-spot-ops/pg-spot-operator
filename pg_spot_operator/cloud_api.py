@@ -190,14 +190,11 @@ def summarize_region_spot_pricing(
     regional_spot_instances_with_price: dict[str, float],
 ) -> RegionalSpotPricingStats:
     logger.debug("Summarizing Spot statistics for region %s ...", region)
-    avg_max_ev_rate_group = mean(
+    avg_ev_rate_group = mean(
         [eri.eviction_rate_group for _, eri in eviction_rate_infos.items()]
     )
     avg_savings_rate = mean(
-        [
-            spot_price
-            for _, spot_price in regional_spot_instances_with_price.items()
-        ]
+        [eri.spot_savings_rate for _, eri in eviction_rate_infos.items()]
     )
 
     public_ev_rate_infos = get_spot_eviction_rates_from_public_json()
@@ -220,11 +217,11 @@ def summarize_region_spot_pricing(
     ev_rate_brackets = get_eviction_rate_brackets_from_public_eviction_info(
         public_ev_rate_infos
     )
-    ev_rate_group = round(avg_max_ev_rate_group)
+    ev_rate_group = round(avg_ev_rate_group)
 
     return RegionalSpotPricingStats(
         region=region,
-        avg_spot_savings_rate=round(avg_savings_rate * -100, 1),
+        avg_spot_savings_rate=round(avg_savings_rate, 1),
         avg_vcpu_price=avg_vcpu_price,
         avg_ram_gb_price=avg_ram_gb_price,
         avg_eviction_rate_group=ev_rate_group,

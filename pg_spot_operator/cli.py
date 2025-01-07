@@ -1128,7 +1128,7 @@ def show_regional_spot_pricing_and_eviction_summary_and_exit(
             reg_pricing.append(get_spot_pricing_summary_for_region(reg))
         except Exception as e:
             logger.warning(str(e))
-    reg_pricing.sort(key=lambda x: x.avg_spot_savings_rate)
+    reg_pricing.sort(key=lambda x: x.avg_spot_savings_rate, reverse=True)
 
     table: list[list] = [
         [
@@ -1138,9 +1138,18 @@ def show_regional_spot_pricing_and_eviction_summary_and_exit(
         ]
     ]
     tab = PrettyTable(table[0])
+    max_reg_len = max(
+        [len(x.region) for x in reg_pricing]
+    )  # To justify nicely for multi-region
     for r in reg_pricing:
         tab.add_rows(
-            [[r.region, r.avg_spot_savings_rate, r.eviction_rate_group_label]]
+            [
+                [
+                    r.region.ljust(max_reg_len, " "),
+                    r.avg_spot_savings_rate,
+                    r.eviction_rate_group_label,
+                ]
+            ]
         )
     print(tab)
 
