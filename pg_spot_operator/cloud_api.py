@@ -1,16 +1,24 @@
 import logging
+from statistics import mean
 
 from pg_spot_operator.cloud_impl import aws_spot
 from pg_spot_operator.cloud_impl.aws_cache import (
     get_aws_static_ondemand_pricing_info,
+    get_spot_eviction_rates_from_public_json,
     get_spot_pricing_from_public_json,
 )
 from pg_spot_operator.cloud_impl.aws_spot import (
+    extract_instance_type_eviction_rates_from_public_eviction_info,
     get_all_ec2_spot_instance_types,
     get_all_instance_types_from_aws_regional_pricing_info,
+    get_eviction_rate_brackets_from_public_eviction_info,
     get_spot_instance_types_with_price_from_s3_pricing_json,
 )
-from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
+from pg_spot_operator.cloud_impl.cloud_structs import (
+    EvictionRateInfo,
+    InstanceTypeInfo,
+    RegionalSpotPricingStats,
+)
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_cpu_arch_from_sku_desc,
 )
@@ -174,3 +182,45 @@ def get_all_operator_vms_in_manifest_region(
                 if tag["Key"] == SPOT_OPERATOR_ID_TAG:
                     vms_in_region[tag["Value"]] = vm
     return vms_in_region
+
+
+def summarize_region_spot_pricing(
+    region: str,
+    eviction_rate_infos: dict[str, EvictionRateInfo],
+) -> RegionalSpotPricingStats:
+    logger.debug("Summarizing Spot statistics for region %s ...", region)
+    avg_ev_rate_group = mean(
+        [eri.eviction_rate_group for _, eri in eviction_rate_infos.items()]
+    )
+    avg_savings_rate = mean(
+        [eri.spot_savings_rate for _, eri in eviction_rate_infos.items()]
+    )
+
+    public_ev_rate_infos = get_spot_eviction_rates_from_public_json()
+
+    ev_rate_brackets = get_eviction_rate_brackets_from_public_eviction_info(
+        public_ev_rate_infos
+    )
+    ev_rate_group = round(avg_ev_rate_group)
+
+    return RegionalSpotPricingStats(
+        region=region,
+        avg_spot_savings_rate=round(avg_savings_rate, 1),
+        avg_eviction_rate_group=ev_rate_group,
+        eviction_rate_group_label=ev_rate_brackets[ev_rate_group]["label"],
+    )
+
+
+def get_spot_pricing_summary_for_region(
+    region: str,
+) -> RegionalSpotPricingStats:
+
+    ev_rates = extract_instance_type_eviction_rates_from_public_eviction_info(
+        region
+    )
+    if not ev_rates:
+        raise Exception(
+            f"Could not fetch public Spot eviction rates info for region {region}"
+        )
+
+    return summarize_region_spot_pricing(region, ev_rates)

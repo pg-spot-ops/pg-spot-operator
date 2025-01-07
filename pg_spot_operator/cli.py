@@ -9,13 +9,17 @@ from prettytable import PrettyTable
 from tap import Tap
 
 from pg_spot_operator import cloud_api, cmdb, manifests, operator
+from pg_spot_operator.cloud_api import get_spot_pricing_summary_for_region
 from pg_spot_operator.cloud_impl.aws_client import set_access_keys
 from pg_spot_operator.cloud_impl.aws_spot import (
     get_all_active_operator_instances_from_region,
     get_current_hourly_spot_price_static,
     try_get_monthly_ondemand_price_for_sku,
 )
-from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
+from pg_spot_operator.cloud_impl.cloud_structs import (
+    InstanceTypeInfo,
+    RegionalSpotPricingStats,
+)
 from pg_spot_operator.cloud_impl.cloud_util import is_explicit_aws_region_code
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.constants import (
@@ -31,6 +35,7 @@ from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.operator import clean_up_old_logs_if_any
 from pg_spot_operator.pgtuner import TUNING_PROFILES
 from pg_spot_operator.util import (
+    extract_mtf_months_from_eviction_rate_group_label,
     extract_region_from_az,
     get_aws_region_code_to_name_mapping,
     region_regex_to_actual_region_codes,
@@ -100,6 +105,9 @@ class ArgumentParser(Tap):
     list_regions: str = str_boolean_false_to_empty_string(
         os.getenv("LIST_REGIONS", "false")
     )  # Display all known AWS region codes + names and exit
+    list_avg_spot_savings: str = str_boolean_false_to_empty_string(
+        os.getenv("LIST_AVG_SPOT_SAVINGS", "false")
+    )  # Display avg. regional Spot savings and eviction rates to choose the best region. Can apply the --region filter.
     list_instances: str = str_boolean_false_to_empty_string(
         os.getenv("LIST_INSTANCES", "false")
     )  # List running VMs for given region / region wildcards
@@ -714,7 +722,7 @@ def display_selected_skus_for_region(
                 )
             )
             approx_rds_x_int = math.ceil(
-                i.monthly_ondemand_price / i.monthly_spot_price * 1.5
+                (i.monthly_ondemand_price * 1.5) / i.monthly_spot_price
             )
             approx_rds_x = f"{approx_rds_x_int}x"
 
@@ -1097,6 +1105,68 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
     exit(errors)
 
 
+def show_regional_spot_pricing_and_eviction_summary_and_exit(
+    args: ArgumentParser,
+) -> None:
+    if is_explicit_aws_region_code(args.region):
+        regions = [args.region]
+    else:
+        regions = region_regex_to_actual_region_codes(args.region)
+        if not regions:
+            logger.error(
+                "Could not resolve region regex '%s' to any regions",
+                args.region,
+            )
+            exit(1)
+    logger.info(
+        "Regions in consideration based on --region='%s' input: %s",
+        args.region,
+        regions,
+    )
+    reg_pricing: list[RegionalSpotPricingStats] = []
+    for reg in regions:
+        try:
+            reg_pricing.append(get_spot_pricing_summary_for_region(reg))
+        except Exception as e:
+            logger.warning(str(e))
+    reg_pricing.sort(key=lambda x: x.avg_spot_savings_rate, reverse=True)
+
+    table: list[list] = [
+        [
+            "Region",
+            "Avg. Spot EC2 Savings %",
+            "Approx. RDS diff",
+            "Avg. Eviction Rate % (Mo)",
+            "Mean Time to Eviction (Mo)",
+        ]
+    ]
+    tab = PrettyTable(table[0])
+    max_reg_len = max(
+        [len(x.region) for x in reg_pricing]
+    )  # To justify nicely for multi-region
+    for r in reg_pricing:
+        approx_rds_savings_mult = round(
+            (100.0 / (100 - r.avg_spot_savings_rate)) * 1.5, 1
+        )
+        tab.add_rows(
+            [
+                [
+                    r.region.ljust(max_reg_len, " "),
+                    r.avg_spot_savings_rate,
+                    f"{approx_rds_savings_mult}x",
+                    r.eviction_rate_group_label,
+                    extract_mtf_months_from_eviction_rate_group_label(
+                        r.eviction_rate_group_label
+                    ),
+                ]
+            ]
+        )
+
+    print(tab)
+
+    exit(0)
+
+
 def main():  # pragma: no cover
 
     global args
@@ -1121,6 +1191,9 @@ def main():  # pragma: no cover
 
     if args.list_regions:
         list_regions_and_exit()
+
+    if args.list_avg_spot_savings:
+        show_regional_spot_pricing_and_eviction_summary_and_exit(args)
 
     if args.list_strategies:
         list_strategies_and_exit()
