@@ -4,6 +4,49 @@ Changelog
 
 (unreleased)
 ------------
+- Merge pull request #122 from pg-spot-ops/readme-up. [Kaarel Moppel]
+
+  Readme update - Rework TOC, move to header.
+- Rework TOC. [Kaarel Moppel]
+- README - highlight the AI / GPU use case. [Kaarel Moppel]
+
+  Under Not only for Postgres
+- README: mention the new --list-avg-spot-savings flag. [Kaarel Moppel]
+
+  And tidy the --list-avg-spot-savings output a bit
+- Merge pull request #121 from pg-spot-ops/regional-spot-stats-summary.
+  [Kaarel Moppel]
+
+  New flag `--list-avg-spot-savings` to show regional spot savings and eviction rate summary
+- Add a Mean Time to Eviction column to --list-avg-spot-savings output.
+  [Kaarel Moppel]
+- Rename flag to --list-avg-spot-savings. [Kaarel Moppel]
+
+  And leave out the avg vCPU price as hard to calculate reliably
+- Show correct avg. saving rate + ljustify. [Kaarel Moppel]
+- Rename new flag to --regional-spot-stats. [Kaarel Moppel]
+
+  Plus table output
+- New CLI flag to get avg Spot pricing / eviction rate stats. [Kaarel
+  Moppel]
+
+  Skel
+- Random selection strategy needs an extra price sort. [Kaarel Moppel]
+
+  Even in single region search
+- New flag: --ram-max / RAM_MAX. [Kaarel Moppel]
+
+  To limit cost for eviction-rate strategy, as lowest eviction rate
+  bracket machines could get huge and expensive
+- Set Ansible default root to ~/.pg-spot-operator/ansible. [Kaarel
+  Moppel]
+
+  And make dev location secondary
+
+
+0.9.31 (2025-01-06)
+-------------------
+- Release: version 0.9.31 🚀 [Kaarel Moppel]
 - Better max_parallel_workers tuning. [Kaarel Moppel]
 - Respect --connstr-format=ansible for --connstr-output-path. [Kaarel
   Moppel]
