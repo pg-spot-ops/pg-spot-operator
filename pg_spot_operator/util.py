@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import urllib.request
 import zipfile
+from statistics import mean
 
 import humanize
 import requests
@@ -356,3 +357,26 @@ def timestamp_to_human_readable_delta(
     if not dt2:
         dt2 = datetime.datetime.now(datetime.timezone.utc)
     return humanize.naturaldelta(dt2 - dt1)
+
+
+def extract_numbers_from_string(input: str) -> list[float]:
+    pattern = r"(\d+(?:\.\d+)?)"
+    matches = re.findall(pattern, input)
+    return [float(match) for match in matches]
+
+
+def extract_mtf_months_from_eviction_rate_group_label(
+    ev_rate_range: str,
+) -> int:
+    """Months until get a 50% chance to get evicted
+    10-15% -> 12.5 -> 50 / 12.5 = 4mons
+    Special case: >20% = 0
+    """
+    evic_rate_percentages = extract_numbers_from_string(ev_rate_range)
+    if len(evic_rate_percentages) > 1:
+        avg_evic_rate = mean(evic_rate_percentages)
+    else:
+        avg_evic_rate = evic_rate_percentages[0]
+    if avg_evic_rate >= 20:
+        return 0
+    return round(50 / avg_evic_rate)

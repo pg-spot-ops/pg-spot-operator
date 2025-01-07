@@ -12,6 +12,7 @@ from pg_spot_operator.util import (
     space_pad_manifest,
     merge_user_and_tuned_non_conflicting_config_params,
     timestamp_to_human_readable_delta,
+    extract_mtf_months_from_eviction_rate_group_label,
 )
 from tests.test_manifests import TEST_MANIFEST_VAULT_SECRETS
 
@@ -101,3 +102,9 @@ def test_timestamp_str_to_human_readable_delta():
         datetime.datetime(2024, 10, 1), datetime.datetime(2024, 12, 1)
     )
     assert "month" in hr
+
+
+def test_extract_mtf_months_from_eviction_rate_group_label():
+    assert extract_mtf_months_from_eviction_rate_group_label("<5%") == 10
+    assert extract_mtf_months_from_eviction_rate_group_label("10-15%") == 4
+    assert extract_mtf_months_from_eviction_rate_group_label(">20%") == 0

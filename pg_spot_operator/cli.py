@@ -35,6 +35,7 @@ from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.operator import clean_up_old_logs_if_any
 from pg_spot_operator.pgtuner import TUNING_PROFILES
 from pg_spot_operator.util import (
+    extract_mtf_months_from_eviction_rate_group_label,
     extract_region_from_az,
     get_aws_region_code_to_name_mapping,
     region_regex_to_actual_region_codes,
@@ -1136,6 +1137,7 @@ def show_regional_spot_pricing_and_eviction_summary_and_exit(
             "Avg. Spot EC2 Savings %",
             "Approx. RDS diff",
             "Avg. Eviction Rate % (Mo)",
+            "Mean Time to Eviction (Mo)",
         ]
     ]
     tab = PrettyTable(table[0])
@@ -1153,6 +1155,9 @@ def show_regional_spot_pricing_and_eviction_summary_and_exit(
                     r.avg_spot_savings_rate,
                     f"{approx_rds_savings_mult}x",
                     r.eviction_rate_group_label,
+                    extract_mtf_months_from_eviction_rate_group_label(
+                        r.eviction_rate_group_label
+                    ),
                 ]
             ]
         )
