@@ -16,7 +16,10 @@ from pg_spot_operator.cloud_impl.aws_spot import (
     get_current_hourly_spot_price_static,
     try_get_monthly_ondemand_price_for_sku,
 )
-from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo, RegionalSpotPricingStats
+from pg_spot_operator.cloud_impl.cloud_structs import (
+    InstanceTypeInfo,
+    RegionalSpotPricingStats,
+)
 from pg_spot_operator.cloud_impl.cloud_util import is_explicit_aws_region_code
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.constants import (
@@ -101,9 +104,9 @@ class ArgumentParser(Tap):
     list_regions: str = str_boolean_false_to_empty_string(
         os.getenv("LIST_REGIONS", "false")
     )  # Display all known AWS region codes + names and exit
-    check_price_regional_stats: str = str_boolean_false_to_empty_string(
-        os.getenv("CHECK_PRICE_REGIONAL_STATS", "false")
-    )  # Display avg region Spot pricing statistics to choose the best region
+    regional_spot_stats: str = str_boolean_false_to_empty_string(
+        os.getenv("CHECK_SPOT_STATS", "false")
+    )  # Display avg region Spot pricing and eviction rates to choose the best region
     list_instances: str = str_boolean_false_to_empty_string(
         os.getenv("LIST_INSTANCES", "false")
     )  # List running VMs for given region / region wildcards
@@ -1101,17 +1104,17 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
     exit(errors)
 
 
-
-
-
-def show_regional_pricing_summary_and_exit(args: ArgumentParser) -> None:
+def show_regional_spot_pricing_and_eviction_summary_and_exit(
+    args: ArgumentParser,
+) -> None:
     if is_explicit_aws_region_code(args.region):
         regions = [args.region]
     else:
         regions = region_regex_to_actual_region_codes(args.region)
         if not regions:
             logger.error(
-                "Could not resolve region regex '%s' to any regions", args.region
+                "Could not resolve region regex '%s' to any regions",
+                args.region,
             )
             exit(1)
     logger.info(
@@ -1125,8 +1128,23 @@ def show_regional_pricing_summary_and_exit(args: ArgumentParser) -> None:
             reg_pricing.append(get_spot_pricing_summary_for_region(reg))
         except Exception as e:
             logger.warning(str(e))
-    # sort
-    print(reg_pricing)
+    reg_pricing.sort(key=lambda x: x.avg_spot_savings_rate)
+
+    table: list[list] = [
+        [
+            "Region",
+            "Avg. Spot Savings %",
+            "Avg. Eviction Rate % (Mo)",
+        ]
+    ]
+    tab = PrettyTable(table[0])
+    for r in reg_pricing:
+        tab.add_rows(
+            [[r.region, r.avg_spot_savings_rate, r.eviction_rate_group_label]]
+        )
+    print(tab)
+
+    # print(reg_pricing)
     exit(0)
 
 
@@ -1155,8 +1173,8 @@ def main():  # pragma: no cover
     if args.list_regions:
         list_regions_and_exit()
 
-    if args.check_price_regional_stats:
-        show_regional_pricing_summary_and_exit(args)
+    if args.regional_spot_stats:
+        show_regional_spot_pricing_and_eviction_summary_and_exit(args)
 
     if args.list_strategies:
         list_strategies_and_exit()
