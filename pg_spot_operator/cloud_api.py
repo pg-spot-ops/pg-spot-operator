@@ -1,16 +1,19 @@
 import logging
+from statistics import mean
 
 from pg_spot_operator.cloud_impl import aws_spot
 from pg_spot_operator.cloud_impl.aws_cache import (
     get_aws_static_ondemand_pricing_info,
-    get_spot_pricing_from_public_json,
+    get_spot_pricing_from_public_json, get_spot_eviction_rates_from_public_json,
 )
 from pg_spot_operator.cloud_impl.aws_spot import (
     get_all_ec2_spot_instance_types,
     get_all_instance_types_from_aws_regional_pricing_info,
     get_spot_instance_types_with_price_from_s3_pricing_json,
+    extract_instance_type_eviction_rates_from_public_eviction_info,
+    get_eviction_rate_brackets_from_public_eviction_info,
 )
-from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
+from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo, RegionalSpotPricingStats, EvictionRateInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_cpu_arch_from_sku_desc,
 )
@@ -174,3 +177,65 @@ def get_all_operator_vms_in_manifest_region(
                 if tag["Key"] == SPOT_OPERATOR_ID_TAG:
                     vms_in_region[tag["Value"]] = vm
     return vms_in_region
+
+
+def summarize_region_spot_pricing(region: str, eviction_rate_infos: dict[str, EvictionRateInfo], regional_spot_instances_with_price: dict[str, float]) -> RegionalSpotPricingStats:
+    logger.debug("Summarizing Spot statistics for region %s ...", region)
+    print(len(eviction_rate_infos))
+    print(eviction_rate_infos.popitem())
+    print(len(regional_spot_instances_with_price))
+    print(regional_spot_instances_with_price.popitem())
+    avg_max_ev_rate_group = mean([eri.eviction_rate_group for _, eri in eviction_rate_infos.items()])
+    avg_savings_rate = mean([spot_price for _, spot_price in regional_spot_instances_with_price.items()])
+    print('avg_max_ev_rate_group', avg_max_ev_rate_group)
+    print('avg_savings_rate', avg_savings_rate)
+
+    public_ev_rate_infos = get_spot_eviction_rates_from_public_json()
+    print(len(public_ev_rate_infos["instance_types"]))
+
+    prices_per_core: list[float] = []
+    prices_per_ram_gb: list[float] = []
+
+    for ins_type, price in regional_spot_instances_with_price.items():
+        price_mon = price * 24 * 30
+        if ins_type in public_ev_rate_infos["instance_types"]:
+            cores = public_ev_rate_infos["instance_types"][ins_type]["cores"]
+            ram_gb = public_ev_rate_infos["instance_types"][ins_type]["ram_gb"]
+
+            prices_per_core.append(price_mon / cores)
+            prices_per_ram_gb.append(price_mon / float(ram_gb))
+
+    avg_vcpu_price=mean(prices_per_core)
+    print('mean(prices_per_core)')
+    print(mean(prices_per_core))
+    prices_per_ram_gb=mean(prices_per_ram_gb)
+    print('mean(prices_per_ram_gb)')
+    print(prices_per_ram_gb)
+
+    ev_rate_brackets = get_eviction_rate_brackets_from_public_eviction_info(public_ev_rate_infos)
+    ev_rate_group = round(avg_max_ev_rate_group)
+
+    return RegionalSpotPricingStats(
+        region=region,
+        avg_spot_savings_rate=avg_savings_rate,
+        avg_vcpu_price=avg_vcpu_price,
+        avg_ram_gb_price=prices_per_ram_gb,
+        avg_eviction_rate_group=ev_rate_group,
+        eviction_rate_group_label=ev_rate_brackets[ev_rate_group]["label"]
+    )
+
+
+def get_spot_pricing_summary_for_region(region: str) -> RegionalSpotPricingStats:
+    all_spot_instances_for_region_with_price = (
+        get_spot_instance_types_with_price_from_s3_pricing_json(
+            region, get_spot_pricing_from_public_json()
+        )
+    )
+    if not all_spot_instances_for_region_with_price:
+        raise Exception(f"Could not fetch public Spot pricing info for region {region}")
+
+    ev_rates = extract_instance_type_eviction_rates_from_public_eviction_info(region)
+    if not all_spot_instances_for_region_with_price:
+        raise Exception(f"Could not fetch public Spot eviction rates info for region {region}")
+
+    return summarize_region_spot_pricing(region, ev_rates, all_spot_instances_for_region_with_price)
