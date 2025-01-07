@@ -187,7 +187,6 @@ def get_all_operator_vms_in_manifest_region(
 def summarize_region_spot_pricing(
     region: str,
     eviction_rate_infos: dict[str, EvictionRateInfo],
-    regional_spot_instances_with_price: dict[str, float],
 ) -> RegionalSpotPricingStats:
     logger.debug("Summarizing Spot statistics for region %s ...", region)
     avg_ev_rate_group = mean(
@@ -199,21 +198,6 @@ def summarize_region_spot_pricing(
 
     public_ev_rate_infos = get_spot_eviction_rates_from_public_json()
 
-    prices_per_core: list[float] = []
-    prices_per_ram_gb: list[float] = []
-
-    for ins_type, price in regional_spot_instances_with_price.items():
-        price_mon = price * 24 * 30
-        if ins_type in public_ev_rate_infos["instance_types"]:
-            cores = public_ev_rate_infos["instance_types"][ins_type]["cores"]
-            ram_gb = public_ev_rate_infos["instance_types"][ins_type]["ram_gb"]
-
-            prices_per_core.append(price_mon / cores)
-            prices_per_ram_gb.append(price_mon / float(ram_gb))
-
-    avg_vcpu_price = mean(prices_per_core)
-    avg_ram_gb_price = mean(prices_per_ram_gb)
-
     ev_rate_brackets = get_eviction_rate_brackets_from_public_eviction_info(
         public_ev_rate_infos
     )
@@ -222,8 +206,6 @@ def summarize_region_spot_pricing(
     return RegionalSpotPricingStats(
         region=region,
         avg_spot_savings_rate=round(avg_savings_rate, 1),
-        avg_vcpu_price=avg_vcpu_price,
-        avg_ram_gb_price=avg_ram_gb_price,
         avg_eviction_rate_group=ev_rate_group,
         eviction_rate_group_label=ev_rate_brackets[ev_rate_group]["label"],
     )
@@ -232,24 +214,13 @@ def summarize_region_spot_pricing(
 def get_spot_pricing_summary_for_region(
     region: str,
 ) -> RegionalSpotPricingStats:
-    all_spot_instances_for_region_with_price = (
-        get_spot_instance_types_with_price_from_s3_pricing_json(
-            region, get_spot_pricing_from_public_json()
-        )
-    )
-    if not all_spot_instances_for_region_with_price:
-        raise Exception(
-            f"Could not fetch public Spot pricing info for region {region}"
-        )
 
     ev_rates = extract_instance_type_eviction_rates_from_public_eviction_info(
         region
     )
-    if not all_spot_instances_for_region_with_price:
+    if not ev_rates:
         raise Exception(
             f"Could not fetch public Spot eviction rates info for region {region}"
         )
 
-    return summarize_region_spot_pricing(
-        region, ev_rates, all_spot_instances_for_region_with_price
-    )
+    return summarize_region_spot_pricing(region, ev_rates)

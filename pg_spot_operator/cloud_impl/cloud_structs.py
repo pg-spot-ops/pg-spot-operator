@@ -60,7 +60,5 @@ class EvictionRateInfo:
 class RegionalSpotPricingStats:
     region: str
     avg_spot_savings_rate: float
-    avg_vcpu_price: float
-    avg_ram_gb_price: float
     avg_eviction_rate_group: int
     eviction_rate_group_label: str

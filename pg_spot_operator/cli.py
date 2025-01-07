@@ -104,9 +104,9 @@ class ArgumentParser(Tap):
     list_regions: str = str_boolean_false_to_empty_string(
         os.getenv("LIST_REGIONS", "false")
     )  # Display all known AWS region codes + names and exit
-    regional_spot_stats: str = str_boolean_false_to_empty_string(
-        os.getenv("CHECK_SPOT_STATS", "false")
-    )  # Display avg region Spot pricing and eviction rates to choose the best region
+    list_avg_spot_savings: str = str_boolean_false_to_empty_string(
+        os.getenv("LIST_AVG_SPOT_SAVINGS", "false")
+    )  # Display avg. regional Spot savings and eviction rates to choose the best region. Can apply the --region filter.
     list_instances: str = str_boolean_false_to_empty_string(
         os.getenv("LIST_INSTANCES", "false")
     )  # List running VMs for given region / region wildcards
@@ -721,7 +721,7 @@ def display_selected_skus_for_region(
                 )
             )
             approx_rds_x_int = math.ceil(
-                i.monthly_ondemand_price / i.monthly_spot_price * 1.5
+                (i.monthly_ondemand_price * 1.5) / i.monthly_spot_price
             )
             approx_rds_x = f"{approx_rds_x_int}x"
 
@@ -1133,7 +1133,8 @@ def show_regional_spot_pricing_and_eviction_summary_and_exit(
     table: list[list] = [
         [
             "Region",
-            "Avg. Spot Savings %",
+            "Avg. Spot EC2 Savings %",
+            "Approx. RDS diff",
             "Avg. Eviction Rate % (Mo)",
         ]
     ]
@@ -1142,18 +1143,22 @@ def show_regional_spot_pricing_and_eviction_summary_and_exit(
         [len(x.region) for x in reg_pricing]
     )  # To justify nicely for multi-region
     for r in reg_pricing:
+        approx_rds_savings_mult = round(
+            (100.0 / (100 - r.avg_spot_savings_rate)) * 1.5, 1
+        )
         tab.add_rows(
             [
                 [
                     r.region.ljust(max_reg_len, " "),
                     r.avg_spot_savings_rate,
+                    f"{approx_rds_savings_mult}x",
                     r.eviction_rate_group_label,
                 ]
             ]
         )
+
     print(tab)
 
-    # print(reg_pricing)
     exit(0)
 
 
@@ -1182,7 +1187,7 @@ def main():  # pragma: no cover
     if args.list_regions:
         list_regions_and_exit()
 
-    if args.regional_spot_stats:
+    if args.list_avg_spot_savings:
         show_regional_spot_pricing_and_eviction_summary_and_exit(args)
 
     if args.list_strategies:

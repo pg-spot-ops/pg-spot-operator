@@ -13,7 +13,7 @@ Obviously not meant for all projects as a general RDS replacement, as Spot could
 term setups. Data remains persistent though!
 
 On the other hand - Spot eviction rates are insanely good for the price! The average frequency of interruption is only
-around 5% per month according to AWS [data](https://aws.amazon.com/ec2/spot/instance-advisor/), meaning - one **can expect to run a few months uninterrupted**, i.e.
+around 10% per month according to AWS [data](https://aws.amazon.com/ec2/spot/instance-advisor/), meaning - one **can expect to run a few months uninterrupted**, i.e.
 still in the 99.9+% uptime range!
 
 Based on concepts familiar from the Kubernetes world - user describes a desired state (min. hardware specs, Postgres version,
