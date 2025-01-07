@@ -159,6 +159,27 @@ pg_spot_operator --teardown=yes --region=us-east-1 --instance-name custom
 There's also a `--persistent-vms` flag to use normal long-lived non-spot VMs to just quickly get a self-managed instance
 for some hardware specs.
 
+PS To avoid too many evictions for Spots one can also use the `--list-avg-spot-savings / LIST_AVG_SPOT_SAVINGS` flag to
+look for regions with low average eviction rates. E.g.:
+
+```
+pg_spot_operator --list-avg-spot-savings yes --region ^eu
+
+2025-01-07 16:23:46,760 INFO Regions in consideration based on --region='^eu' input: ['eu-central-1', 'eu-central-2', 'eu-north-1', 'eu-south-1', 'eu-south-2', 'eu-west-1', 'eu-west-2', 'eu-west-3']
++--------------+-------------------------+------------------+---------------------------+----------------------------+
+|    Region    | Avg. Spot EC2 Savings % | Approx. RDS diff | Avg. Eviction Rate % (Mo) | Mean Time to Eviction (Mo) |
++--------------+-------------------------+------------------+---------------------------+----------------------------+
+| eu-south-1   |           72.6          |       5.5x       |           10-15%          |             4              |
+| eu-south-2   |           69.4          |       4.9x       |           10-15%          |             4              |
+| eu-north-1   |           68.2          |       4.7x       |           5-10%           |             7              |
+| eu-central-2 |           66.8          |       4.5x       |           10-15%          |             4              |
+| eu-central-1 |           66.5          |       4.5x       |           10-15%          |             4              |
+| eu-west-3    |           63.0          |       4.1x       |           5-10%           |             7              |
+| eu-west-2    |           62.5          |       4.0x       |           10-15%          |             4              |
+| eu-west-1    |           54.1          |       3.3x       |           5-10%           |             7              |
++--------------+-------------------------+------------------+---------------------------+----------------------------+
+```
+
 # General idea
 
 * The user:

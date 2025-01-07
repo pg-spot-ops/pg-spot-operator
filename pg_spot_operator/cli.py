@@ -1134,9 +1134,8 @@ def show_regional_spot_pricing_and_eviction_summary_and_exit(
     table: list[list] = [
         [
             "Region",
-            "Avg. Spot EC2 Savings %",
-            "Approx. RDS diff",
-            "Avg. Eviction Rate % (Mo)",
+            "Avg. Spot EC2 Discount",
+            "Expected Eviction Rate (Mo)",
             "Mean Time to Eviction (Mo)",
         ]
     ]
@@ -1145,15 +1144,11 @@ def show_regional_spot_pricing_and_eviction_summary_and_exit(
         [len(x.region) for x in reg_pricing]
     )  # To justify nicely for multi-region
     for r in reg_pricing:
-        approx_rds_savings_mult = round(
-            (100.0 / (100 - r.avg_spot_savings_rate)) * 1.5, 1
-        )
         tab.add_rows(
             [
                 [
                     r.region.ljust(max_reg_len, " "),
-                    r.avg_spot_savings_rate,
-                    f"{approx_rds_savings_mult}x",
+                    str(-1 * r.avg_spot_savings_rate) + "%",
                     r.eviction_rate_group_label,
                     extract_mtf_months_from_eviction_rate_group_label(
                         r.eviction_rate_group_label
