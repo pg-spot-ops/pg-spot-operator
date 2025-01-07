@@ -6,7 +6,8 @@
 
 According to various estimates 30-40% of cloud servers are idling - why not to make good use of them, and save some money in the process?
 
-Think of it as one-liner RDS, but at a fraction of the cost! Typical [savings](https://aws.amazon.com/ec2/spot/pricing/)
+Main use case of the utility is to provide a **one-liner RDS experience, but at a fraction of the cost** - for those who don't
+have multi-year Savings Plans, or run lots of irregular workloads. Typical [savings](https://aws.amazon.com/ec2/spot/pricing/)
 of running self-managed EC2 Spot instances are around 5x compared to [RDS](https://aws.amazon.com/rds/postgresql/pricing/).
 
 Obviously not meant for all projects as a general RDS replacement, as Spot could mean more service interruptions for longer
@@ -18,6 +19,27 @@ still in the 99.9+% uptime range!
 
 Based on concepts familiar from the Kubernetes world - user describes a desired state (min. hardware specs, Postgres version,
 extensions, admin user password etc) and there's a reconciliation loop of sorts.
+
+## Topics
+
+* [Quickstart](#quickstart)
+* [Non-Postgres Use Cases](#not-only-for-postgres)
+* [Using normal persistent VMs](#persistent-vm-mode)
+* [General idea](#general-idea)
+* [Usage](#usage)
+* [Integrating with user applications](#integrating-with-user-applications)
+* [Features](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_features.md)
+* [CLI/ENV parameters](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_env_options.md)
+* [Security](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_security.md)
+* [Extensions](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_extensions.md)
+* [Monitoring](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_monitoring.md)
+* [Backups](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_backups.md)
+* [Development](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_development.md)
+* [Advanced features](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_advanced_features.md)
+* [AWS CLI basics](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_aws_cli_basics.md)
+* [Running on K8s](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/k8s/README_k8s.md)
+* [Common issues](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_common_issues.md)
+
 
 # Quickstart
 
@@ -134,30 +156,64 @@ pg_spot_operator --region='^(us|ca)' --list-instances
 
 ## Not only for Postgres
 
-Spot Operator can also be used to provision and sustain VMs for any custom workloads, in need of cheap VMs. Relevant
-flags: `--vm-only`, `--connstr-only` and `--connstr-format`.
+Spot Operator can also be used to "just" provision and sustain VMs for any custom workloads in need of cheap VMs. Relevant
+flags: `--vm-only`, `--connstr-only` or `--connstr-output-path` + `--connstr-format=ssh|ansible`.
 
 For example to run your custom Ansible scripted verification of some large multi-DB backups on fast local storage for
 peanuts, one could go:
 
 ```
-pg_spot_operator --vm-only --connstr-only --connstr-format ansible --region=us-east-1 \
-  --cpu-min=8 --ram-min=32 --storage-min=5000 --storage-type=local --instance-name=custom > inventory
+pg_spot_operator --vm-only=y --connstr-only=y --connstr-output-path=inventory.ini --connstr-format=ansible \
+  --region=us-east-1 --cpu-min=8 --ram-min=32 --storage-min=5000 --storage-type=local --instance-name=custom
 ...
 INFO SKU i7ie.2xlarge main specs - vCPU: 8, RAM: 64 GB, instance storage: 5000 GB ssd
 INFO Current Spot vs Ondemand discount rate: -88.4% ($86.7 vs $748.5), approx. 13x to non-HA RDS
 INFO Current expected monthly eviction rate range: <5%
 ...
 
-ansible-playbook -i inventory mycustom_verification.yml && report_success.sh
+ansible-playbook -i inventory.ini mycustom_verification.yml && report_success.sh
 
 pg_spot_operator --teardown=yes --region=us-east-1 --instance-name custom
 ```
 
+Or add the `--instance-family` flag get some cheap (well, cheapish) Tensor cores for your next AI project:
+
+```
+pg_spot_operator --region=us-west --check-price=y --instance-family=^p
+
++-----------+---------------+------+------+---------+------------------+-------------+------------------+--------------+-----------------+-----------------+
+|   Region  |      SKU      | Arch | vCPU |   RAM   | Instance storage | Spot $ (Mo) | On-Demand $ (Mo) | EC2 discount | Approx. RDS win | Evic. rate (Mo) |
++-----------+---------------+------+------+---------+------------------+-------------+------------------+--------------+-----------------+-----------------+
+| us-west-2 | p4d.24xlarge  | x86  |  96  | 1152 GB |  8000 GB ssd     |     8387    |      23596       |     -64%     |        5x       |       <5%       |
+| us-west-2 | p5en.48xlarge | x86  | 192  | 2048 GB |  30720 GB nvme   |    13064    |      61056       |     -79%     |        8x       |      15-20%     |
+| us-west-1 | p5.48xlarge   | x86  | 192  | 2048 GB |  30720 GB ssd    |    17360    |      88488       |     -80%     |        8x       |      5-10%      |
++-----------+---------------+------+------+---------+------------------+-------------+------------------+--------------+-----------------+-----------------+
+```
+
 ## Persistent VM mode
 
-There's also a `--persistent-vms` flag to use normal long-lived non-spot VMs to just quickly get a self-managed instance
-for some hardware specs.
+There's also a `--persistent-vms` flag to use normal, non-Spot, VMs for some hardware specs.
+
+PS To avoid too many evictions for Spots one can also use the `--list-avg-spot-savings / LIST_AVG_SPOT_SAVINGS` flag to
+look for regions with low average eviction rates. E.g.:
+
+```
+pg_spot_operator --list-avg-spot-savings yes --region ^eu
+
+2025-01-07 16:23:46,760 INFO Regions in consideration based on --region='^eu' input: ['eu-central-1', 'eu-central-2', 'eu-north-1', 'eu-south-1', 'eu-south-2', 'eu-west-1', 'eu-west-2', 'eu-west-3']
++--------------+------------------------+-----------------------------+----------------------------+
+|    Region    | Avg. Spot EC2 Discount | Expected Eviction Rate (Mo) | Mean Time to Eviction (Mo) |
++--------------+------------------------+-----------------------------+----------------------------+
+| eu-south-1   |         -72.6%         |            10-15%           |             4              |
+| eu-south-2   |         -69.4%         |            10-15%           |             4              |
+| eu-north-1   |         -68.2%         |            5-10%            |             7              |
+| eu-central-2 |         -66.8%         |            10-15%           |             4              |
+| eu-central-1 |         -66.5%         |            10-15%           |             4              |
+| eu-west-3    |         -63.0%         |            5-10%            |             7              |
+| eu-west-2    |         -62.5%         |            10-15%           |             4              |
+| eu-west-1    |         -54.1%         |            5-10%            |             7              |
++--------------+------------------------+-----------------------------+----------------------------+
+```
 
 # General idea
 
@@ -302,18 +358,3 @@ in VC dollars - thus feel free to reach out to info@pgspotops.com if you happen 
 * Manifest API not yet fully fixed (not relevant though when using Docker or the CLI).
 * No guarantees on internal configuration being kept backwards compatible - thus might need to remove `~/.pg-spot-operator`
   if getting weird errors after a version update.
-
-# Other topics
-
-* [Features](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_features.md)
-* [Integrating with user applications](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_integration.md)
-* [CLI/ENV parameters](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_env_options.md)
-* [Security](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_security.md)
-* [Extensions](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_extensions.md)
-* [Monitoring](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_monitoring.md)
-* [Backups](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_backups.md)
-* [Development](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_development.md)
-* [Advanced features](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_advanced_features.md)
-* [AWS CLI basics](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_aws_cli_basics.md)
-* [Running on K8s](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/k8s/README_k8s.md)
-* [Common issues](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_common_issues.md)
