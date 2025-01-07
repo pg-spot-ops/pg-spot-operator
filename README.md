@@ -20,6 +20,27 @@ still in the 99.9+% uptime range!
 Based on concepts familiar from the Kubernetes world - user describes a desired state (min. hardware specs, Postgres version,
 extensions, admin user password etc) and there's a reconciliation loop of sorts.
 
+## Topics
+
+* [Quickstart](#quickstart)
+* [Non-Postgres Use Cases](#not-only-for-postgres)
+* [Using normal persistent VMs](#persistent-vm-mode)
+* [General idea](#general-idea)
+* [Usage](#usage)
+* [Integrating with user applications](#integrating-with-user-applications)
+* [Features](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_features.md)
+* [CLI/ENV parameters](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_env_options.md)
+* [Security](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_security.md)
+* [Extensions](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_extensions.md)
+* [Monitoring](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_monitoring.md)
+* [Backups](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_backups.md)
+* [Development](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_development.md)
+* [Advanced features](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_advanced_features.md)
+* [AWS CLI basics](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_aws_cli_basics.md)
+* [Running on K8s](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/k8s/README_k8s.md)
+* [Common issues](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_common_issues.md)
+
+
 # Quickstart
 
 Let's say we're Data Scientists (sexiest job of 21st century, remember?) and need to perform some advanced ad-hoc
@@ -337,18 +358,3 @@ in VC dollars - thus feel free to reach out to info@pgspotops.com if you happen 
 * Manifest API not yet fully fixed (not relevant though when using Docker or the CLI).
 * No guarantees on internal configuration being kept backwards compatible - thus might need to remove `~/.pg-spot-operator`
   if getting weird errors after a version update.
-
-# Other topics
-
-* [Features](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_features.md)
-* [Integrating with user applications](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_integration.md)
-* [CLI/ENV parameters](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_env_options.md)
-* [Security](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_security.md)
-* [Extensions](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_extensions.md)
-* [Monitoring](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_monitoring.md)
-* [Backups](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_backups.md)
-* [Development](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_development.md)
-* [Advanced features](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_advanced_features.md)
-* [AWS CLI basics](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_aws_cli_basics.md)
-* [Running on K8s](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/k8s/README_k8s.md)
-* [Common issues](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_common_issues.md)
