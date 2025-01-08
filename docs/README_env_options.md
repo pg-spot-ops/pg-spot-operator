@@ -27,7 +27,7 @@
 * **--manifest / MANIFEST** Full manifest input as YAML text
 * **--teardown / TEARDOWN** Delete VM and any other created resources for the give instance
 * **--teardown-region / TEARDOWN_REGION** Delete all operator tagged resources in the whole region. Not safe if there are multiple Spot Operator users under the account!
-* **--expiration-date / EXPIRATION_DATE** ISO 8601 datetime.
+* **--expiration-date / EXPIRATION_DATE** ISO 8601 datetime. E.g.: "2025-02-01 00:00+02"
 * **--self-termination / SELF_TERMINATION** On --expiration-date. Assumes --self-termination-access-key-id / --self-termination-secret-access-key set.
 * **--user-tags / USER_TAGS** Any custom tags / labels to attach to the VM. E.g. team=backend
 

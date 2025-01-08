@@ -175,7 +175,7 @@ class ArgumentParser(Tap):
     )  # gp3 def=125, max=1000, relevant only for gp3
     expiration_date: str = os.getenv(
         "EXPIRATION_DATE", ""
-    )  # ISO 8601 datetime
+    )  # ISO 8601 datetime, optionally with time zone
     self_termination: str = str_boolean_false_to_empty_string(
         os.getenv("SELF_TERMINATION", "false")
     )
