@@ -13,6 +13,8 @@ from statistics import mean
 import humanize
 import requests
 
+from pg_spot_operator.constants import DEFAULT_SSH_PUBKEY_PATH
+
 logger = logging.getLogger(__name__)
 
 
@@ -380,3 +382,17 @@ def extract_mtf_months_from_eviction_rate_group_label(
     if avg_evic_rate >= 20:
         return 0
     return round(50 / avg_evic_rate)
+
+
+def check_default_ssh_key_exists_and_readable() -> bool:
+    default_ssh_pubkey_path = os.path.expanduser(DEFAULT_SSH_PUBKEY_PATH)
+    try:
+        if os.path.exists(default_ssh_pubkey_path):
+            with open(default_ssh_pubkey_path) as f:
+                kd = f.read()
+                if kd:
+                    return True
+        return False
+    except Exception:
+        logger.debug("No default SSH key found at default location: %s", DEFAULT_SSH_PUBKEY_PATH)
+        return False

@@ -33,3 +33,5 @@ DEFAULT_CONFIG_DIR = "~/.pg-spot-operator"
 DEFAULT_INSTANCE_SELECTION_STRATEGY = "balanced"
 
 ALL_ENABLED_REGIONS = "all-enabled-regions"
+
+DEFAULT_SSH_PUBKEY_PATH = "~/.ssh/id_rsa.pub"

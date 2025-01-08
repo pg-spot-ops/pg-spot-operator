@@ -27,6 +27,7 @@ from pg_spot_operator.cloud_impl.cloud_util import (
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.constants import (
     ALL_ENABLED_REGIONS,
+    DEFAULT_SSH_PUBKEY_PATH,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
     SPOT_OPERATOR_EXPIRES_TAG,
     SPOT_OPERATOR_ID_TAG,
@@ -39,6 +40,7 @@ from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.operator import clean_up_old_logs_if_any
 from pg_spot_operator.pgtuner import TUNING_PROFILES
 from pg_spot_operator.util import (
+    check_default_ssh_key_exists_and_readable,
     extract_mtf_months_from_eviction_rate_group_label,
     extract_region_from_az,
     get_aws_region_code_to_name_mapping,
@@ -461,6 +463,20 @@ def get_manifest_from_args(args: ArgumentParser) -> InstanceManifest | None:
     raise Exception("Could not find / compile a manifest string")
 
 
+def need_ssh_access(a: ArgumentParser) -> bool:
+    return not (
+        a.check_price
+        or a.check_manifest
+        or a.list_instances
+        or a.list_regions
+        or a.list_strategies
+        or a.list_avg_spot_savings
+        or a.dry_run
+        or a.teardown
+        or a.teardown_region
+    )
+
+
 def check_cli_args_valid(args: ArgumentParser):
     fixed_vm = bool(args.vm_login_user and args.vm_host)
 
@@ -472,8 +488,22 @@ def check_cli_args_valid(args: ArgumentParser):
         )
         exit(1)
 
+    if (
+        need_ssh_access(args)
+        and not (
+            args.ssh_private_key or args.aws_key_pair_name or args.ssh_keys
+        )
+        and not check_default_ssh_key_exists_and_readable()
+    ):
+        logger.warning(
+            "No SSH access keys provided / found (%s) - might not be able to access the VM later. Relevant flags: --ssh-keys, --ssh-private-key, --aws-key-pair-name",
+            DEFAULT_SSH_PUBKEY_PATH,
+        )
+
     if not fixed_vm:
-        if not args.region and not args.zone and not args.check_price:
+        if not (args.region or args.zone) and not (
+            args.check_price or args.list_instances
+        ):
             logger.error("--region input expected")
             exit(1)
         if not args.instance_name and not (
