@@ -20,9 +20,13 @@ from pg_spot_operator.cloud_impl.cloud_structs import (
     InstanceTypeInfo,
     RegionalSpotPricingStats,
 )
-from pg_spot_operator.cloud_impl.cloud_util import is_explicit_aws_region_code
+from pg_spot_operator.cloud_impl.cloud_util import (
+    is_explicit_aws_region_code,
+    resolve_regions_from_fuzzy_input,
+)
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.constants import (
+    ALL_ENABLED_REGIONS,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
     SPOT_OPERATOR_EXPIRES_TAG,
     SPOT_OPERATOR_ID_TAG,
@@ -331,7 +335,7 @@ def compile_manifest_from_cmdline_params(
         region=(
             args.region
             if args.region
-            else ".*" if args.check_price else args.vm_host
+            else ALL_ENABLED_REGIONS if args.check_price else args.vm_host
         ),
         availability_zone=args.zone,
     )
@@ -459,13 +463,7 @@ def get_manifest_from_args(args: ArgumentParser) -> InstanceManifest | None:
 
 def check_cli_args_valid(args: ArgumentParser):
     fixed_vm = bool(args.vm_login_user and args.vm_host)
-    if args.list_instances:
-        if not args.region:
-            logger.error(
-                "--region input expected. Can be fuzzy / regex",
-            )
-            exit(1)
-        return
+
     if args.tuning_profile and args.tuning_profile not in TUNING_PROFILES:
         logger.error(
             "Invalid --tuning-profile %s. Available profiles: %s",
@@ -798,20 +796,18 @@ def resolve_manifest_and_display_price(
         )
         use_boto3 = True
 
-    if is_explicit_aws_region_code(m.region):
-        regions = [m.region]
-    else:
-        regions = region_regex_to_actual_region_codes(m.region)
-        if not regions:
-            logger.error(
-                "Could not resolve region regex '%s' to any regions", m.region
-            )
-            exit(1)
-        logger.info(
-            "Regions in consideration based on --region='%s' input: %s",
-            m.region,
-            regions,
+    regions = resolve_regions_from_fuzzy_input(m.region)
+
+    if not regions:
+        logger.error(
+            "Could not resolve region regex '%s' to any regions", m.region
         )
+        exit(1)
+    logger.info(
+        "Regions in consideration based on --region='%s' input: %s",
+        m.region,
+        regions,
+    )
 
     selected_skus = cloud_api.resolve_hardware_requirements_to_instance_types(
         m, use_boto3=use_boto3, regions=regions
@@ -1026,7 +1022,9 @@ def list_strategies_and_exit() -> None:
 
 
 def list_instances_and_exit(args: ArgumentParser) -> None:
-    regions = region_regex_to_actual_region_codes(args.region)
+    if not args.region:
+        args.region = ALL_ENABLED_REGIONS
+    regions = resolve_regions_from_fuzzy_input(args.region)
     if not regions:
         logger.error("No regions provided")
         exit(1)

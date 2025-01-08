@@ -26,13 +26,15 @@ def get_client(
     if AWS_PROFILE:
         session = boto3.session.Session(
             profile_name=AWS_PROFILE,
-            region_name=region,
+            region_name=(
+                region if region else None
+            ),  # None assumes default region set
             aws_access_key_id=AWS_ACCESS_KEY_ID,
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
         )
     else:
         session = boto3.session.Session(
-            region_name=region,
+            region_name=region if region else None,
             aws_access_key_id=AWS_ACCESS_KEY_ID,
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
         )

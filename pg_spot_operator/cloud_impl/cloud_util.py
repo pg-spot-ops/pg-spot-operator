@@ -1,7 +1,9 @@
 import logging
 import re
 
+from pg_spot_operator.cloud_impl.aws_vm import try_get_all_enabled_aws_regions
 from pg_spot_operator.constants import (
+    ALL_ENABLED_REGIONS,
     CLOUD_AWS,
     CLOUD_AZURE,
     CLOUD_GCP,
@@ -9,6 +11,7 @@ from pg_spot_operator.constants import (
     CPU_ARCH_ARM,
     CPU_ARCH_X86,
 )
+from pg_spot_operator.util import region_regex_to_actual_region_codes
 
 logger = logging.getLogger(__name__)
 
@@ -184,3 +187,23 @@ def extract_instance_family_from_instance_type_code(instance_type: str) -> str:
             f"Unexpected instance_type input - expecting '.' as family separator. Got: {instance_type}"
         )
     return instance_type.strip().lower().split(".")[0]
+
+
+def resolve_regions_from_fuzzy_input(region_fuzzy_input: str) -> list[str]:
+    if (
+        not region_fuzzy_input or region_fuzzy_input == ALL_ENABLED_REGIONS
+    ):  # Special case, try to fetch enabled regions for the AWS setup
+        regions = try_get_all_enabled_aws_regions()
+        if regions:
+            logger.debug(
+                "Regions not explicitly set, assuming all enabled regions: %s",
+                regions,
+            )
+            return regions
+        else:
+            region_fuzzy_input = ".*"  # Consider all regions still
+
+    if is_explicit_aws_region_code(region_fuzzy_input):
+        return [region_fuzzy_input]
+
+    return region_regex_to_actual_region_codes(region_fuzzy_input)

@@ -9,6 +9,7 @@ from pg_spot_operator.cloud_impl import aws_vm
 from pg_spot_operator.cloud_impl.aws_vm import (
     ensure_spot_vm,
     compile_cloud_init_user_data_config,
+    try_get_all_enabled_aws_regions,
 )
 
 TEST_MANIFEST = """
@@ -82,3 +83,13 @@ def test_compile_cloud_init_user_data_config():
     d = yaml.safe_load(user_data)
     # print(d)
     assert len(d["users"][0]["ssh-authorized-keys"]) == 2
+
+
+def test_try_get_all_enabled_aws_regions():
+    """Assumes local AWS CLI setup"""
+    if not (
+        os.path.exists(os.path.expanduser("~/.aws/config"))
+        and os.path.exists(os.path.expanduser("~/.aws/credentials"))
+    ):
+        return
+    assert len(try_get_all_enabled_aws_regions()) > 5
