@@ -79,9 +79,6 @@ def str_boolean_false_to_empty_string(param: str) -> str:
 
 
 class ArgumentParser(Tap):
-    show_help: str = str_boolean_false_to_empty_string(
-        os.getenv("SHOW_HELP", "False")
-    )  # Don't actually execute actions
     manifest_path: str = os.getenv("MANIFEST_PATH", "")  # User manifest path
     ansible_path: str = os.getenv(
         "ANSIBLE_PATH", ""
@@ -1162,6 +1159,30 @@ def show_regional_spot_pricing_and_eviction_summary_and_exit(
     exit(0)
 
 
+def any_action_flags_set(a: ArgumentParser) -> bool:
+    return bool(
+        a.instance_name
+        or a.instance_types
+        or a.instance_family
+        or a.vm_only
+        or a.vm_host
+        or a.vm_login_user
+        or a.cpu_min
+        or a.ram_min
+        or a.storage_min
+        or a.teardown
+        or a.teardown_region
+        or a.list_regions
+        or a.list_strategies
+        or a.list_instances
+        or a.list_avg_spot_savings
+        or a.check_price
+        or a.check_manifest
+        or a.manifest
+        or a.manifest_path
+    )
+
+
 def main():  # pragma: no cover
 
     global args
@@ -1180,7 +1201,7 @@ def main():  # pragma: no cover
         level=(logging.DEBUG if args.verbose else logging.INFO),
     )
 
-    if args.show_help:
+    if not any_action_flags_set(args):
         args.print_help()
         exit(0)
 

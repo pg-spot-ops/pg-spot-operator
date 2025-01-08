@@ -159,7 +159,7 @@ pg_spot_operator --region='^(us|ca)' --list-instances
 Spot Operator can also be used to "just" provision and sustain VMs for any custom workloads in need of cheap VMs. Relevant
 flags: `--vm-only`, `--connstr-only` or `--connstr-output-path` + `--connstr-format=ssh|ansible`.
 
-For example to run your custom Ansible scripted verification of some large multi-DB backups on fast local storage for
+For example to run your custom Ansible scripted verification of some large multi-TB backups on fast local storage for
 peanuts, one could go:
 
 ```
