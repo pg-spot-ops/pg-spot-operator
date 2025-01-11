@@ -516,6 +516,7 @@ def get_ssh_connstr(m: InstanceManifest, connstr_format: str = "ssh") -> str:
             return ""
 
         inventory_string = f"{vm.ip_public or vm.ip_private} ansible_user={vm.login_user} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'"
+        inventory_string += f"\n; cloud={vm.cloud} region={vm.region} provider_id={vm.provider_id} sku={vm.sku}\n"
 
         if m.ansible.private_key:
             inventory_string += (

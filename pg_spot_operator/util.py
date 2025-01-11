@@ -394,5 +394,8 @@ def check_default_ssh_key_exists_and_readable() -> bool:
                     return True
         return False
     except Exception:
-        logger.debug("No default SSH key found at default location: %s", DEFAULT_SSH_PUBKEY_PATH)
+        logger.debug(
+            "No default SSH key found at default location: %s",
+            DEFAULT_SSH_PUBKEY_PATH,
+        )
         return False
