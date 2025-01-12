@@ -159,6 +159,9 @@ class ArgumentParser(Tap):
     zone: str = os.getenv("ZONE", "")
     cpu_min: int = int(os.getenv("CPU_MIN", "0"))
     cpu_max: int = int(os.getenv("CPU_MAX", "0"))
+    allow_burstable: str = str_boolean_false_to_empty_string(
+        os.getenv("ALLOW_BURSTABLE", "false")
+    )  # Allow t-class instance types
     selection_strategy: str = os.getenv("SELECTION_STRATEGY", "balanced")
     ram_min: int = int(os.getenv("RAM_MIN", "0"))  # In GB
     ram_max: int = int(os.getenv("RAM_MAX", "0"))  # In GB
@@ -360,6 +363,7 @@ def compile_manifest_from_cmdline_params(
     m.vm.cpu_arch = args.cpu_arch
     m.vm.cpu_min = args.cpu_min
     m.vm.cpu_max = args.cpu_max
+    m.vm.allow_burstable = str_to_bool(args.allow_burstable)
     m.vm.ram_min = args.ram_min
     m.vm.ram_max = args.ram_max
     m.vm.os_disk_size = args.os_disk_size

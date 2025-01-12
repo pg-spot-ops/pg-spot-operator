@@ -592,10 +592,12 @@ def test_filter_instances():
     filtered_no_filters = filter_instance_types_by_hw_req(
         iti,
     )
-    assert len(filtered_no_filters) == 4
+    assert (
+        len(filtered_no_filters) == 3
+    )  # No burstable t-class instances by default
 
     filtered_instance_family = filter_instance_types_by_hw_req(
-        iti, instance_family="t4"
+        iti, instance_family="t4", allow_burstable=True
     )
     assert len(filtered_instance_family) == 1
 
@@ -605,7 +607,7 @@ def test_filter_instances():
     assert len(filtered_instance_family) == 2
 
     filtered_ram = filter_instance_types_by_hw_req(iti, ram_min=1, ram_max=4)
-    assert len(filtered_ram) == 3
+    assert len(filtered_ram) == 2
 
 
 def test_get_avg_spot_price_from_pricing_history_data_by_sku_and_az():

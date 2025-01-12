@@ -293,7 +293,7 @@ def filter_instance_types_by_hw_req(
     cpu_arch: str = "",
     storage_min: int | None = 0,
     storage_type: str = "network",
-    allow_burstable: bool = True,
+    allow_burstable: bool = False,
     storage_speed_class: str | None = "any",
     instance_types: list[str] | None = None,
     instance_types_to_avoid: list[str] | None = None,
@@ -527,7 +527,7 @@ def resolve_hardware_requirements_to_instance_types(
     architecture: str = "any",
     storage_type: str = "network",
     storage_min: int = 0,
-    allow_burstable: bool = True,
+    allow_burstable: bool = False,
     storage_speed_class: str = "any",
     instance_types: list[str] | None = None,
     instance_types_to_avoid: list[str] | None = None,
@@ -824,6 +824,7 @@ def get_all_instance_types_from_aws_regional_pricing_info(
                         )[
                             1
                         ],
+                        is_burstable=sku_data["Instance Type"].startswith("t"),
                         provider_description=sku_data,
                     )
                 )
