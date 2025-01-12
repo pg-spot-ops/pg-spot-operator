@@ -4,6 +4,45 @@ Changelog
 
 (unreleased)
 ------------
+- Increase MAX_SKUS_FOR_SPOT_PRICE_COMPARE from 15 to 25. [Kaarel
+  Moppel]
+
+  To cover case where cheaper burstable instances did not get selected as
+  they had more cores, when --allow-burstable set
+- Expose the vm.allow_burstable attribute on the CLI. [Kaarel Moppel]
+
+  As --allow-burstable. Disabled by default
+- Add cloud / SKU details to Ansible inventory output. [Kaarel Moppel]
+
+  Effective for --connstr-output-path + --connstr-format=ansible
+
+  Outputs now smth like: cat ans1.ini
+  51.92.207.184 ansible_user=pgspotops ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+  ; cloud=aws region=eu-south-2 provider_id=i-038f8779f966b8d73 sku=c6gd.medium
+- Warn if no SSH access keys provided / found in real modes. [Kaarel
+  Moppel]
+
+  Proceed though as might be a test run still
+- Docs - add an example date to --expiration-date. [Kaarel Moppel]
+
+  As ISO 8601 might require googling for most people
+- Consider only enabled regions by default for price check. [Kaarel
+  Moppel]
+
+  And --list-instances, if --region not set explicitly. Fall back to all
+  known regions if describe_regions call fails
+- README document that CLI assumes a local Ansible installation. [Kaarel
+  Moppel]
+
+  To be able to actually configure Postgres
+- CLI - show help when no action params set. [Kaarel Moppel]
+
+  Also remove the --show-help param as not needed anymore
+
+
+0.9.35 (2025-01-07)
+-------------------
+- Release: version 0.9.35 🚀 [Kaarel Moppel]
 - Merge pull request #122 from pg-spot-ops/readme-up. [Kaarel Moppel]
 
   Readme update - Rework TOC, move to header.
