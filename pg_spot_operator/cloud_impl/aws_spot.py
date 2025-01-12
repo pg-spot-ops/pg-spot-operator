@@ -34,7 +34,7 @@ from pg_spot_operator.instance_type_selection import (
 )
 from pg_spot_operator.util import timed_cache
 
-MAX_SKUS_FOR_SPOT_PRICE_COMPARE = 15
+MAX_SKUS_FOR_SPOT_PRICE_COMPARE = 25
 SPOT_HISTORY_LOOKBACK_DAYS = 1
 
 
