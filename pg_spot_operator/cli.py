@@ -163,7 +163,7 @@ class ArgumentParser(Tap):
         os.getenv("ALLOW_BURSTABLE", "false")
     )  # Allow t-class instance types
     selection_strategy: str = os.getenv("SELECTION_STRATEGY", "balanced")
-    ram_min: int = int(os.getenv("RAM_MIN", "0"))  # In GB
+    ram_min: int = int(os.getenv("RAM_MIN", "1"))  # In GB
     ram_max: int = int(os.getenv("RAM_MAX", "0"))  # In GB
     storage_min: int = int(os.getenv("STORAGE_MIN", "0"))
     storage_type: str = os.getenv("STORAGE_TYPE", "network")

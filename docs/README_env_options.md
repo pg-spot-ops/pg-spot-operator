@@ -59,7 +59,7 @@
 * **--cpu-min / CPU_MIN** Minimal CPUs to consider an instance type suitable
 * **--cpu-max / CPU_MAX** Maximum CPUs to consider an instance type suitable. Required for the random selection strategy to cap the costs. 
 * **--allow-burstable / ALLOW_BURSTABLE** Allow t-class instance types
-* **--ram-min / RAM_MIN** Minimal RAM (in GB) to consider an instance type suitable
+* **--ram-min / RAM_MIN** Minimal RAM (in GB) to consider an instance type suitable. Default: 1
 * **--ram-max / RAM_MAX** Maximum RAM (in GB) to consider an instance type suitable. To limit cost for eviction-rate strategy.
 * **--selection-strategy / SELECTION_STRATEGY** (Default: balanced) Allowed values: \[ balanced | cheapest | eviction-rate | random \]. Random can work better when getting a lot of evictions. 
 * **--instance-types / INSTANCE_TYPES** To explicitly control the instance type selection. E.g. "i3.xlarge,i3.2xlarge"
