@@ -34,7 +34,7 @@ TUNING_PROFILES = [
 ]
 RANDOM_PAGE_COST_MAP = {
     "local": {"hdd": 2.5, "ssd": 1.25, "nvme": 1.0},
-    "network": {"hdd": 4, "ssd": 1.5, "nvme": 1.1},
+    "network": {"hdd": 4, "ssd": 1.5, "nvme": 1.25},
 }
 
 
