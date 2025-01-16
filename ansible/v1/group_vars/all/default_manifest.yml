@@ -68,6 +68,7 @@ default_manifest:
       log_truncate_on_rotation: 'on'
       log_connections: 'on'
       wal_compression: 'zstd'
+      default_toast_compression: 'lz4'
       track_functions: 'pl'
       track_io_timing: 'on'
       wal_keep_size: '1GB'
