@@ -1036,6 +1036,8 @@ def init_cmdb_and_apply_schema_migrations_if_needed(
 def list_regions_and_exit() -> None:
     print(
         "# Based on: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions"
+        "\n# PS Note that not all regions might not be available / enabled for an account! To list available regions via the AWS CLI:"
+        "\n# aws ec2 describe-regions --filter Name=opt-in-status,Values=opted-in,opt-in-not-required --query 'Regions[*].[RegionName]' --output text"
     )
     for code, location_name in sorted(
         get_aws_region_code_to_name_mapping().items()
