@@ -379,10 +379,16 @@ def ec2_launch_instance(
     if not m.vm.persistent_vms:
         instance_market_options = {"MarketType": "spot"}
     logger.info(
-        "Launching a new %s instance of type %s in region %s ...",
+        "Launching a new %s instance of type %s ($%s a month) in region %s%s ...",
         "ondemand" if m.vm.persistent_vms else "spot",
         instance_type,
+        (
+            rit.monthly_spot_price
+            if not m.vm.persistent_vms
+            else rit.monthly_ondemand_price
+        ),
         region,
+        f" (zone={availability_zone})" if availability_zone else "",
     )
 
     client = get_client("ec2", region)

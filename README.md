@@ -257,7 +257,7 @@ pgvector AI extension enabled.
 # Let's check the price first
 docker run --rm -e CHECK_PRICE=y \
   -e RAM_MIN=128 -e REGION=us-east-1 \
-  pg-spot-operator:latest
+  pgspotops/pg-spot-operator:latest
 ...
 +-----------+---------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
 |   Region  |      SKU      | Arch | vCPU |  RAM   | Instance storage | Spot $ (Mo) | On-Demand $ (Mo) | EC2 discount | Approx. RDS win | Evic. rate (Mo) |
