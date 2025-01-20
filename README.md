@@ -42,7 +42,7 @@ extensions, admin user password etc) and there's a reconciliation loop of sorts.
 * [Common issues](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_common_issues.md)
 
 
-# Quickstart
+# Quickstart (Python)
 
 Let's say we're Data Scientists (sexiest job of 21st century, remember?) and need to perform some advanced ad-hoc
 exploration/analytics on a medium-size dataset of a few hundred GB. Sadly all the available development DBs are not much
@@ -53,16 +53,11 @@ as-low-as-it-gets cost!
 
 Just in case let's check the pricing beforehand, though - in most cases it will be much better than 3 year Reserved Instances!
 ```
-# Step 0 - ensure Python CLI prerequsites (not needed when using the Docker image)
-# Install the pg-spot-operator package via pip/pipx, with pipx recommended nowadays:
+# Step 0 - ensure Python CLI prerequsites (not needed for Docker)
 pipx install pg-spot-operator
-# When actually launching Postgres instaces a local Ansible installation is also assumed!
-# (not needed for price checking or creating vanilla VMs with the --vm-only flag)
-pipx install --include-deps ansible
-# Or follow the offical Ansible docs at:
-# https://docs.ansible.com/ansible/2.9/installation_guide/intro_installation.html#installing-ansible
+pipx install --include-deps ansible  # If Ansible not yet installed
 
-# Resolve user requirements to actual EC2 instance types and show the best (cheap and with good eviction rates) instances.
+# Resolve user requirements to actual EC2 instance types and show the best (cheap and with good eviction rates) instance types.
 # Here we only consider North American regions, assuming were located there and want good latencies as well.
 pg_spot_operator --check-price=yes \
   --region='^(us|ca)' --ram-min=128 \
@@ -107,7 +102,7 @@ see the [Common issues](https://github.com/pg-spot-ops/pg-spot-operator/blob/mai
 # In --connstr-only mode we can land right into `psql`!
 psql $(pg_spot_operator --region=us-east-1 --ram-min=128 \
   --storage-min=500 --storage-type=local \
-  --instance-name=analytics --connstr-only \
+  --instance-name=analytics --connstr-only=y \
   --admin-user=pgspotops --admin-password=topsecret123
 )
 
@@ -234,8 +229,8 @@ pg_spot_operator --list-avg-spot-savings yes --region ^eu
     - A YAML manifest file via `--manifest-path`/`MANIFEST_PATH`. To get an idea of all possible options/features
       one could take a look at an example manifest [here](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/example_manifests/hello_aws.yaml)
   - Specifies AWS credentials if no default AWS CLI (`~/.aws/credentials`) set up or if using Docker
-  - Optionally specifies a callback (executable file) to do something with the resulting Postgres connect
-    string (just displayed by default), or just runs in `--connstr-only` mode to be pipe-friendly
+  - Optionally specifies how to propagate the resulting connect string to the user / app - just displayed by default. See
+    the [Integrating with user applications](#integrating-with-user-applications) section for options
 * The operator:
   - Finds the cheapest Spot instance with OK eviction rate (the default "balanced" `--selection-strategy`) for given HW
     requirements and launches a VM
@@ -285,8 +280,13 @@ PS The SSH key is optional, to be able to access the cloud VM directly from your
 ## Via Python
 
 ```bash
+# Install the pg-spot-operator package via pip/pipx, with pipx recommended nowadays:
 pipx install pg-spot-operator
-pipx install --include-deps ansible  # If not already installed. Not required for price-checking / vanilla VM launching
+# When actually launching Postgres instaces a local Ansible installation is also assumed!
+# (not needed for price checking or creating vanilla VMs with the --vm-only flag)
+pipx install --include-deps ansible
+# Or follow the offical Ansible docs at:
+# https://docs.ansible.com/ansible/2.9/installation_guide/intro_installation.html#installing-ansible
 
 # Let's check prices for some in-memory analytics on our 200GB dataset in all North American regions to get some great $$ value
 # PS in default persistent storage mode (--storage-type=network) we though still pay list price for the EBS volumes (~$0.09/GB)
