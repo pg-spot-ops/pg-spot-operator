@@ -1158,7 +1158,7 @@ def do_main_loop(
                     try_rm_file_if_exists(
                         cli_destroy_file_base_path + m.instance_name
                     )
-                logger.info(
+                logger.debug(
                     "Instance destroy signal file path: %s",
                     cli_destroy_file_base_path + m.instance_name,
                 )
