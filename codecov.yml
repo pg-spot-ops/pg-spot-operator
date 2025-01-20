@@ -1,0 +1,5 @@
+# https://docs.codecov.com/docs/codecovyml-reference
+coverage:
+  status:
+    project: off
+    patch: off
