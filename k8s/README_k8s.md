@@ -17,7 +17,7 @@ The operator runs just fine on K8s - a few things to be aware of though:
 # Declaring a K8s service to route to the VM
 
 To create a real K8s service for convenient app usage one needs to:
-  1. Run in non-floating IP mode (`ip_floating: false`)
+  1. Run in non-floating IP mode (`static_ip_addresses: true`)
   2. Create the deployment as normal via `helm install` and note the created public IP
   3. Create a K8s service with a fixed IP endpoint, pointing from the K8s cluster to the VM
   4. Clean up if the instance is destroyed

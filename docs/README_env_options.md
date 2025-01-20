@@ -83,8 +83,8 @@
 * **--aws-secret-access-key / AWS_SECRET_ACCESS_KEY** AWS creds. If not set the default profile is used.
 * **--self-termination-access-key-id / SELF_TERMINATION_ACCESS_KEY_ID** AWS creds to be placed on the VM if --self-termination set
 * **--self-termination-secret-access-key / SELF_TERMINATION_SECRET_ACCESS_KEY** AWS creds to be placed on the VM if --self-termination set
-* **--assign-public-ip / ASSIGN_PUBLIC_IP** (Default: true) If "false" then only VPC accessible.
-* **--ip-floating / IP_FLOATING** (Default: true) If "false" and in Public IP mode then a fixed Elastic IP is assigned. Has extra cost, plus limited availability on account level usually.
+* **--private-ip-only / PRIVATE_IP_ONLY** (Default: false) If "true" then only VPC / private subnet accessible.
+* **--static-ip-addresses / STATIC_IP_ADDRESSES** (Default: false) Set to disable the default "IP floating" behaviour. If "true" and in Public IP mode then a fixed Elastic IP is assigned. Has extra cost, plus limited availability on account level usually.
 * **--vault-password-file / VAULT_PASSWORD_FILE** Needed if using Ansible Vault encrypted strings in the manifest
 * **--aws-security-group-ids / AWS_SECURITY_GROUP_IDS** SG rules (a firewall essentially) are "merged" if multiple provided
 * **--aws-vpc-id / AWS_VPC_ID** If not set default VPC of --region used

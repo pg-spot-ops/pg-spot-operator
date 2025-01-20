@@ -20,14 +20,6 @@ from pg_spot_operator.cli import str_to_bool, str_boolean_false_to_empty_string
 #     assert len(m.aws.security_group_ids) == 0
 
 
-## TODO
-# tests/test_cli.py:3: in <module>
-#     from pg_spot_operator.cli import (
-# pg_spot_operator/cli.py:8: in <module>
-#     from prettytable import PrettyTable
-# E   ModuleNotFoundError: No module named 'prettytable'
-
-
 def test_str_to_bool():
     assert str_to_bool("True")
     assert str_to_bool("true")
