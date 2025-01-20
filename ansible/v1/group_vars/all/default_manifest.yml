@@ -8,7 +8,7 @@ default_manifest:
 #  instance_name: hello-aws  # Required
 #  description: My play instance # Optional
   private_ip_only: false  # Default: false
-  ip_floating: true  # Default: true, as Elastic IPs are very limited per account
+  static_ip_addresses: false  # Default: false, as Elastic IPs are very limited per account
 #  expiration_date: "2024-12-22 00:00+03"  # Optional. Instance will be deleted after that (if engine running)
 #  self_termination: false  # Optional. Instance will auto-destroy itself (if AWS keys )
 #  is_paused: false  # No engine actions on the instance

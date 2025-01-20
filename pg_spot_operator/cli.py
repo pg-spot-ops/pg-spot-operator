@@ -178,10 +178,12 @@ class ArgumentParser(Tap):
     self_termination: bool = str_to_bool(
         os.getenv("SELF_TERMINATION", "false")
     )
-    private_ip_only: bool = str_to_bool(os.getenv("PRIVATE_IP_ONLY", "false"))
-    ip_floating: bool = str_to_bool(
-        os.getenv("IP_FLOATING", "true")
-    )  # If "false" and in Public IP mode then a fixed Elastic IP is assigned. Has extra cost, plus limited availability on account level usually.
+    private_ip_only: bool = str_to_bool(
+        os.getenv("PRIVATE_IP_ONLY", "false")
+    )  # Public IPs (default mode) cost ~$4 a month
+    static_ip_addresses: bool = str_to_bool(
+        os.getenv("STATIC_IP_ADDRESSES", "false")
+    )  # If set and in Public IP mode then a fixed Elastic IP is assigned (has limited availability on account level)
     cpu_arch: str = os.getenv("CPU_ARCH", "")  # [ arm | x86 ]
     instance_family: str = os.getenv(
         "INSTANCE_FAMILY", ""
@@ -307,7 +309,7 @@ def compile_manifest_from_cmdline_params(
     m.vm.persistent_vms = args.persistent_vms
     m.expiration_date = args.expiration_date
     m.private_ip_only = args.private_ip_only
-    m.ip_floating = args.ip_floating
+    m.static_ip_addresses = args.static_ip_addresses
     m.integrations.setup_finished_callback = args.setup_finished_callback
     m.integrations.connstr_bucket = args.connstr_bucket
     m.integrations.connstr_bucket_filename = args.connstr_bucket_key

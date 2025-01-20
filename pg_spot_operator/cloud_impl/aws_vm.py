@@ -340,7 +340,7 @@ def ec2_launch_instance(
 
     network_interface: dict[str, Any] = {
         "AssociatePublicIpAddress": not m.private_ip_only
-        and m.ip_floating,  # A normal (non-elastic) PIP
+        and not m.static_ip_addresses,  # A normal (non-elastic) PIP
         "DeviceIndex": 0,
         "DeleteOnTermination": True,
     }
@@ -917,7 +917,7 @@ def ensure_spot_vm(
     if m.vm.storage_type == STORAGE_TYPE_NETWORK:
         vol_desc = ensure_volume_attached(m, i_desc)
 
-    if not m.private_ip_only and not m.ip_floating:
+    if not m.private_ip_only and m.static_ip_addresses:
         pip = ensure_public_elastic_ip_attached(
             region, instance_name, i_desc["InstanceId"]
         )

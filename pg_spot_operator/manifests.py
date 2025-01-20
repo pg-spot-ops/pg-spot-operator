@@ -202,8 +202,8 @@ class InstanceManifest(BaseModel):
     instance_name: str
     # Optional fields
     private_ip_only: bool = False
-    ip_floating: bool = (
-        True  # If False NIC resources can be left hanging if not cleaned up properly
+    static_ip_addresses: bool = (
+        False  # If True we create an explicit NIC resource
     )
     description: str = ""
     availability_zone: str = ""
