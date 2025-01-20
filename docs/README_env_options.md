@@ -35,10 +35,8 @@
 
 * **--connstr-only / CONNSTR_ONLY** Ensure VM + Postgres, output the connstr to stdout and exit. Pipe-friendly
 * **--connstr-format / CONNSTR_FORMAT** \[auto* | ssh | ansible | postgres\]. auto = "postgres" if admin user / password set, otherwise "ssh"
-* **--setup-finished-callback / SETUP_FINISHED_CALLBACK** An optional executable to propagate the connect string somewhere
-    connstr_output_path: str = os.getenv(
-        "CONNSTR_OUTPUT_PATH", ""
-    )  # When set write PG / VM connect string into a file
+* **--setup-finished-callback / SETUP_FINISHED_CALLBACK** An optional executable to propagate the connect string / VM IPs somewhere.
+  See README_integration.md for input parameters description fed into the script by the engine.  
 * **--connstr-output-path / CONNSTR_OUTPUT_PATH** When set write Postgres (or SSH if --vm-only) connect string into a file
 * **--connstr-bucket / CONNSTR_BUCKET** (Required for S3 push to work)
 * **--connstr-bucket-key / CONNSTR_BUCKET_KEY** (Required for S3 push to work)

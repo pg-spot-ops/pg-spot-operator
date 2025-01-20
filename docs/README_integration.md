@@ -71,6 +71,7 @@ Currently the callback be a self-contained executable which gets following 4 inp
 - User provided tags as JSON, if any
 
 PS Note that the callback execution is **limited to 30 seconds!**
+Also - for `--vm-only` mode the VM IP addresses are used instead of Postgres connect strings.
 
 Example usage:
 

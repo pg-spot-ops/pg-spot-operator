@@ -63,7 +63,8 @@ from pg_spot_operator.util import (
 )
 
 MAX_PARALLEL_ACTIONS = 2
-ACTION_MAX_DURATION = 600
+ACTION_MAX_DURATION_S = 600
+CALLBACK_MAX_DURATION_S = 30
 VM_KEEPALIVE_SCANNER_INTERVAL_S = 60
 ACTION_HANDLER_TEMP_SPACE_ROOT = "~/.pg-spot-operator/tmp"
 ANSIBLE_DEFAULT_ROOT_PATH = "~/.pg-spot-operator/ansible"
@@ -373,14 +374,14 @@ def run_ansible_handler(
         # https://alexandra-zaharia.github.io/posts/kill-subprocess-and-its-children-on-timeout-python/ works ??
         # logging.debug("Starting handler at %s", executable_full_path)
         p = subprocess.Popen(
-            [executable_full_path, str(ACTION_MAX_DURATION)],
+            [executable_full_path, str(ACTION_MAX_DURATION_S)],
             start_new_session=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             cwd=temp_workdir,
             text=True,
         )
-        stdout, _ = p.communicate(timeout=ACTION_MAX_DURATION)
+        stdout, _ = p.communicate(timeout=ACTION_MAX_DURATION_S)
     except subprocess.TimeoutExpired:
         logging.error(
             "Handler %s ran over max duration, terminating the process ...",
@@ -420,6 +421,63 @@ def run_ansible_handler(
     register_results_in_cmdb(action, merged_output_params, m)
 
     return p.returncode, merged_output_params
+
+
+def os_execute_setup_finished_callback_vm_only(
+    executable_full_path: str,
+    connstr_format: str,
+    m: InstanceManifest,
+) -> None:
+    """For --vm-only mode using VM ssh / ansible connstr
+    - timeout
+    - "30"
+    - "{{ setup_finished_callback }}"
+    - "{{ instance_name }}"
+    - "{{ connstr_private }}"
+    - "{{ connstr_public }}"
+    - "{{ user_tags }}"
+    """
+    p: subprocess.Popen = None  # type: ignore
+    stdout = None
+
+    try:
+        logging.debug("Starting callback handler at %s", executable_full_path)
+        vm = get_latest_vm_by_uuid(m.uuid)
+        if not vm:
+            raise Exception(
+                f"Failed to determine VM IP addresses for instance {m.instance_name}"
+            )
+        p = subprocess.Popen(
+            [
+                "timeout",
+                str(CALLBACK_MAX_DURATION_S),
+                executable_full_path,
+                m.instance_name,
+                str(vm.ip_private),
+                str(vm.ip_public),
+                get_ssh_connstr(m, connstr_format),
+                json.dumps(m.user_tags),
+            ],
+            start_new_session=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        stdout, _ = p.communicate(timeout=CALLBACK_MAX_DURATION_S + 1)
+        logging.info("Callback handler succeeded")
+    except subprocess.TimeoutExpired:
+        logging.error(
+            "Callback handler %s ran over max duration, terminating the process ...",
+            executable_full_path,
+        )
+        os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+    except Exception:
+        logging.exception(
+            "Exception in handler %s, terminating the process ...",
+            executable_full_path,
+        )
+        logging.debug(p.stdout) if p and p.stdout else None
+        os.killpg(os.getpgid(p.pid), signal.SIGKILL)
 
 
 def generate_ansible_run_script_for_action(
@@ -1347,6 +1405,25 @@ def do_main_loop(
                     logger.info(
                         "*** SSH connect string *** - '%s'", get_ssh_connstr(m)
                     )
+                    if (
+                        m.integrations.setup_finished_callback
+                    ):  # Run the callback still if set
+                        if os.path.exists(
+                            os.path.expanduser(
+                                m.integrations.setup_finished_callback
+                            )
+                        ):
+                            os_execute_setup_finished_callback_vm_only(
+                                m.integrations.setup_finished_callback,
+                                cli_connstr_format,
+                                m,
+                            )
+                        else:
+                            logger.warning(
+                                "Setup finished callback not found at %s",
+                                m.integrations.setup_finished_callback,
+                            )
+
                     cmdb.mark_manifest_snapshot_as_succeeded(m)
                 else:
                     run_action(constants.ACTION_INSTANCE_SETUP, m)
