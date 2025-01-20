@@ -24,6 +24,12 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 from pg_spot_operator import manifests, util
 from pg_spot_operator.cloud_impl.cloud_structs import CloudVM
 from pg_spot_operator.cmdb_impl import sqlite
+from pg_spot_operator.constants import (
+    CONNSTR_FORMAT_ANSIBLE,
+    CONNSTR_FORMAT_AUTO,
+    CONNSTR_FORMAT_POSTGRES,
+    CONNSTR_FORMAT_SSH,
+)
 from pg_spot_operator.manifests import InstanceManifest
 
 logger = logging.getLogger(__name__)
@@ -439,7 +445,7 @@ def load_manifest_by_snapshot_id(
     return None
 
 
-def get_instance_connect_string(m: InstanceManifest) -> str:
+def get_instance_connect_string_postgres(m: InstanceManifest) -> str:
     """Return a public connstr if a public instance otherwise private or local connstr"""
     main_ip: str = ""
     if m.vm.host:
@@ -492,8 +498,10 @@ def get_instance_connect_strings(m: InstanceManifest) -> tuple[str, str]:
     return connstr_private, connstr_public
 
 
-def get_ssh_connstr(m: InstanceManifest, connstr_format: str = "ssh") -> str:
-    if connstr_format == "ssh":
+def get_ssh_connstr(
+    m: InstanceManifest, connstr_format: str = CONNSTR_FORMAT_SSH
+) -> str:
+    if connstr_format == CONNSTR_FORMAT_SSH:
         if m.vm.host and m.vm.login_user:
             return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -l {m.vm.login_user} {m.vm.host}"
         vm = get_latest_vm_by_uuid(m.uuid)
@@ -502,7 +510,7 @@ def get_ssh_connstr(m: InstanceManifest, connstr_format: str = "ssh") -> str:
         if m.ansible.private_key:
             return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -l {vm.login_user} -i {m.ansible.private_key} {vm.ip_public or vm.ip_private}"
         return f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -l {vm.login_user} {vm.ip_public or vm.ip_private}"
-    elif connstr_format == "ansible":
+    elif connstr_format == CONNSTR_FORMAT_ANSIBLE:
         if m.vm.host and m.vm.login_user:
             inventory_string = f"{m.vm.host} ansible_user={m.vm.login_user}"
             if m.ansible.private_key:
@@ -526,6 +534,20 @@ def get_ssh_connstr(m: InstanceManifest, connstr_format: str = "ssh") -> str:
         return inventory_string
     else:
         raise Exception(f"Unexpected connstr_format: {connstr_format}")
+
+
+def get_instance_connect_string(
+    m: InstanceManifest, connstr_format: str
+) -> str:
+    if connstr_format == CONNSTR_FORMAT_AUTO:
+        if m.vm_only:
+            connstr_format = CONNSTR_FORMAT_SSH
+        else:
+            connstr_format = CONNSTR_FORMAT_POSTGRES
+    if connstr_format in (CONNSTR_FORMAT_ANSIBLE, CONNSTR_FORMAT_SSH):
+        return get_ssh_connstr(m, connstr_format)
+    else:
+        return get_instance_connect_string_postgres(m)
 
 
 def finalize_ensure_vm(m: InstanceManifest, vm: CloudVM):

@@ -27,6 +27,7 @@ from pg_spot_operator.cloud_impl.cloud_util import (
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.constants import (
     ALL_ENABLED_REGIONS,
+    CONNSTR_FORMAT_AUTO,
     DEFAULT_SSH_PUBKEY_PATH,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
     SPOT_OPERATOR_EXPIRES_TAG,
@@ -130,8 +131,8 @@ class ArgumentParser(Tap):
         os.getenv("CONNSTR_ONLY", "false")
     )  # Set up Postgres, print connstr and exit
     connstr_format: str = os.getenv(
-        "CONNSTR_FORMAT", "ssh"
-    )  # ssh | ansible. Effective currently only when --connstr-only and --vm-only set.
+        "CONNSTR_FORMAT", CONNSTR_FORMAT_AUTO
+    )  # auto = "postgres" if admin user / password set, otherwise "ssh". [auto | ssh | ansible | postgres]
     manifest: str = os.getenv("MANIFEST", "")  # Manifest to process
     teardown: bool = str_to_bool(
         os.getenv("TEARDOWN", "false")

@@ -40,6 +40,7 @@ from pg_spot_operator.cloud_impl.aws_vm import (
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
 from pg_spot_operator.cmdb import (
     get_instance_connect_string,
+    get_instance_connect_string_postgres,
     get_latest_vm_by_uuid,
     get_ssh_connstr,
 )
@@ -399,8 +400,9 @@ def run_ansible_handler(
 
     if not p or p.returncode != 0:
         logging.error(
-            "Handler at %s failed",
+            "Handler at %s failed with exit code %s",
             executable_full_path,
+            p.returncode,
         )
         return p.returncode, {}
 
@@ -664,8 +666,9 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
             clean_up_old_logs_if_any(
                 old_threshold_days=0
             )  # To avoid possibility of unencrypted secrets hanging around for too long
+        return rc == 0, outputs
 
-    return rc == 0, outputs
+    raise Exception("Ansible setup failed")
 
 
 def apply_short_life_time_instances_reordering(
@@ -1015,7 +1018,7 @@ def write_connstr_to_s3_if_bucket_set(m: InstanceManifest) -> None:
         )
         return
     try:
-        connstr = get_instance_connect_string(m)
+        connstr = get_instance_connect_string_postgres(m)
         if not connstr:
             logger.error("No valid connect string found for bucket writing")
             return
@@ -1057,19 +1060,10 @@ def write_connstr_to_s3_if_bucket_set(m: InstanceManifest) -> None:
 
 
 def write_connstr_to_output_path(
-    m: InstanceManifest, connstr_output_path: str, connstr_format: str
+    connstr_output_path: str, connstr: str
 ) -> None:
     """Non-critical"""
     try:
-        if m.vm_only or connstr_format in ("ssh", "ansible"):
-            connstr = get_ssh_connstr(m, connstr_format)
-        else:
-            connstr = get_instance_connect_string(m)
-        if not connstr:
-            logger.warning(
-                "Could not get a connstr to output to %s", connstr_output_path
-            )
-            return
         current_file_contents = ""
         if os.path.exists(os.path.expanduser(connstr_output_path)):
             with open(os.path.expanduser(connstr_output_path)) as f:
@@ -1389,22 +1383,21 @@ def do_main_loop(
 
         if cli_connstr_output_path and not loop_errors:
             logger.info(
-                "Outputting the connect string to %s ...",
+                "Outputting the connect string (--connstr-format=%s) to %s ...",
+                cli_connstr_format,
                 cli_connstr_output_path,
             )
             write_connstr_to_output_path(
-                m, cli_connstr_output_path, cli_connstr_format
+                cli_connstr_output_path,
+                get_instance_connect_string(m, cli_connstr_format),
             )
 
         if cli_connstr_only and not loop_errors:
             logger.info(
-                "Outputting the %s connect string to stdout and exiting.",
-                cli_connstr_format if m.vm_only else "libpq",
+                "Outputting the connect string (--connstr-format=%s) to stdout and exiting ...",
+                cli_connstr_format,
             )
-            if m.vm_only:
-                print(get_ssh_connstr(m, cli_connstr_format))
-            else:
-                print(get_instance_connect_string(m))
+            print(get_instance_connect_string(m, cli_connstr_format))
             exit(0)
 
         first_loop = False

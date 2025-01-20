@@ -35,3 +35,10 @@ DEFAULT_INSTANCE_SELECTION_STRATEGY = "balanced"
 ALL_ENABLED_REGIONS = "all-enabled-regions"
 
 DEFAULT_SSH_PUBKEY_PATH = "~/.ssh/id_rsa.pub"
+
+CONNSTR_FORMAT_AUTO = (
+    "auto"  # auto = "postgres" if admin user / password set, otherwise "ssh"
+)
+CONNSTR_FORMAT_SSH = "ssh"
+CONNSTR_FORMAT_ANSIBLE = "ansible"
+CONNSTR_FORMAT_POSTGRES = "postgres"

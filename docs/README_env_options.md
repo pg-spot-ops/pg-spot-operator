@@ -34,7 +34,7 @@
 ## Integration
 
 * **--connstr-only / CONNSTR_ONLY** Ensure VM + Postgres, output the connstr to stdout and exit. Pipe-friendly
-* **--connstr-format / CONNSTR_FORMAT** ssh | ansible. Relevant when --connstr-only + --vm-only set
+* **--connstr-format / CONNSTR_FORMAT** \[auto* | ssh | ansible | postgres\]. auto = "postgres" if admin user / password set, otherwise "ssh"
 * **--setup-finished-callback / SETUP_FINISHED_CALLBACK** An optional executable to propagate the connect string somewhere
     connstr_output_path: str = os.getenv(
         "CONNSTR_OUTPUT_PATH", ""
