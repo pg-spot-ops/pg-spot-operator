@@ -223,7 +223,7 @@ pg_spot_operator --list-avg-spot-savings yes --region ^eu
   - Specifies a few key parameters like region (required), and optionally some minimum hardware specs - CPU, RAM, target instance
   families / generations, or a list of suitable instance types explicitly and for local storage also the min. storage size, and maybe also
   the Postgres version (v15+ supported, defaults to latest stable) and some addon extensions. User input can come in 3 forms:
-    - CLI/Env parameters a la `--region`, `--instance-name`, `--ram-min`, `--assign-public-ip`. Note that in CLI mode not all
+    - CLI/Env parameters a la `--region`, `--instance-name`, `--ram-min`, `--private-ip-only`. Note that in CLI mode not all
       features can be configured and some common choices are made for the user
     - A YAML manifest as literal text via `--manifest`/`MANIFEST`
     - A YAML manifest file via `--manifest-path`/`MANIFEST_PATH`. To get an idea of all possible options/features

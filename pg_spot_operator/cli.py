@@ -178,7 +178,7 @@ class ArgumentParser(Tap):
     self_termination: bool = str_to_bool(
         os.getenv("SELF_TERMINATION", "false")
     )
-    assign_public_ip: bool = str_to_bool(os.getenv("ASSIGN_PUBLIC_IP", "true"))
+    private_ip_only: bool = str_to_bool(os.getenv("PRIVATE_IP_ONLY", "false"))
     ip_floating: bool = str_to_bool(
         os.getenv("IP_FLOATING", "true")
     )  # If "false" and in Public IP mode then a fixed Elastic IP is assigned. Has extra cost, plus limited availability on account level usually.
@@ -306,7 +306,7 @@ def compile_manifest_from_cmdline_params(
         m.region = extract_region_from_az(m.availability_zone)
     m.vm.persistent_vms = args.persistent_vms
     m.expiration_date = args.expiration_date
-    m.assign_public_ip = args.assign_public_ip
+    m.private_ip_only = args.private_ip_only
     m.ip_floating = args.ip_floating
     m.integrations.setup_finished_callback = args.setup_finished_callback
     m.integrations.connstr_bucket = args.connstr_bucket

@@ -47,7 +47,7 @@ spec:
             value: "mypostgres"
           - name: ADMIN_PASSWORD
             value: "mypostgressecret"
-          - name: ASSIGN_PUBLIC_IP
-            value: "true"
+          - name: PRIVATE_IP_ONLY
+            value: "false"
           - name: SSH_KEYS
             value: "ssh-rsa ..."

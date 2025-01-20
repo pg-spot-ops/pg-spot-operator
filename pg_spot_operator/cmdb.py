@@ -482,7 +482,7 @@ def get_instance_connect_strings(m: InstanceManifest) -> tuple[str, str]:
             m.postgres.admin_password,
             dbname=m.postgres.app_db_name or "postgres",
         )
-        if m.assign_public_ip and vm and vm.ip_public and m:
+        if not m.private_ip_only and vm and vm.ip_public and m:
             connstr_public = util.compose_postgres_connstr_uri(
                 vm.ip_public if vm.ip_public else m.vm.host,
                 m.postgres.admin_user,

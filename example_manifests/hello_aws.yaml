@@ -6,9 +6,9 @@ region: eu-south-2  # Optional if availability_zone or vm.host set
 #availability_zone: eu-south-2b  # Optional
 instance_name: hello-aws  # Required
 description: My play instance # Optional
-assign_public_ip: true  # Default: true. False = internal / VPC access only. PS Public IPs cost ~$4 per month.
+private_ip_only: false  # Default: false. True = internal / VPC access only. PS Public IPs cost ~$4 per month.
 ip_floating: true  # Default: true. If true we get a new IP after eviction i.e. don't reserve / manage a NIC.
-                    # If false and assign_public_ip set an Elastic IPs will be used (given available, very limited per account)
+                    # If false and private_ip_only set an Elastic IPs will be used (given available, very limited per account)
 #expiration_date: "2024-12-22 00:00+03"  # Optional. Instance will be deleted after that (if engine running)
 self_termination: false  # Optional. Instance will auto-destroy itself (needs according separate AWS keys set)
 is_paused: false  # No engine actions on the instance
