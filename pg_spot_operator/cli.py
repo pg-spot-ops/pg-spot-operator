@@ -2,6 +2,7 @@ import fcntl
 import logging
 import math
 import os.path
+import shutil
 
 import requests
 import yaml
@@ -1233,8 +1234,19 @@ def main():  # pragma: no cover
 
     logger.debug("Args: %s", args.as_dict()) if args.debug else None
 
-    if not (args.dry_run or args.check_price):
+    if not (args.dry_run or running_in_check_or_list_mode(args)):
         ensure_single_instance_running(args.instance_name)
+
+    if (
+        not running_in_check_or_list_mode(args)
+        and not args.dry_run
+        and not args.vm_only
+        and not (args.teardown_region or args.teardown)
+        and not shutil.which("ansible-playbook")
+    ):
+        logger.warning(
+            "ansible-playbook executable not found on the PATH - Postgres setup might not work!"
+        )
 
     if args.teardown_region:
         if not args.dry_run:
