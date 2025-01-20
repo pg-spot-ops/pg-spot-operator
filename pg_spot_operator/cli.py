@@ -285,6 +285,17 @@ def validate_and_parse_args() -> ArgumentParser:
     return args
 
 
+def running_in_check_or_list_mode(args: ArgumentParser) -> bool:
+    return (
+        args.check_price
+        or args.list_instances
+        or args.list_regions
+        or args.list_strategies
+        or args.list_avg_spot_savings
+        or args.check_manifest
+    )
+
+
 def compile_manifest_from_cmdline_params(
     args: ArgumentParser,
 ) -> InstanceManifest:
@@ -468,7 +479,7 @@ def check_cli_args_valid(args: ArgumentParser):
             logger.error("--region input expected")
             exit(1)
         if not args.instance_name and not (
-            args.check_price or args.teardown_region
+            running_in_check_or_list_mode(args) or args.teardown_region
         ):
             logger.error("--instance-name input expected")
             exit(1)
@@ -482,9 +493,15 @@ def check_cli_args_valid(args: ArgumentParser):
             )
             exit(1)
         if (
-            not (args.teardown or args.teardown_region)
-            and not args.check_price
+            (
+                not running_in_check_or_list_mode(args)
+                or (
+                    running_in_check_or_list_mode(args)
+                    and args.storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
+                )
+            )
             and not args.storage_min
+            and not (args.teardown or args.teardown_region)
         ):
             logger.error("--storage-min input expected")
             exit(1)
