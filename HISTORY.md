@@ -4,6 +4,47 @@ Changelog
 
 (unreleased)
 ------------
+- Merge pull request #126 from pg-spot-ops/revert-boolean-cli-flag-
+  handling. [Kaarel Moppel]
+
+  Revert to original boolean CLI flag input handling + rename 2 flags to accomodate that
+
+  Don't require true/yes input for booleans
+- Rename --ip-floating to --static-ip-addresses. [Kaarel Moppel]
+
+  For CLI convenience
+- Rename --assign-public-ip to --private-ip-only. [Kaarel Moppel]
+
+  So that it works better via Py CLI
+- Revert ba6518633: Change CLI input flags logic - all boolean flags
+  accepting values now. [Kaarel Moppel]
+
+  As quite inconvenient and non-pythonic in practice and given most people
+  will probably go for Docker usage anyways
+- Some more README readability improvements. [Kaarel Moppel]
+- Adjust network NVme random_page_cost to 1.25 from 1.1. [Kaarel Moppel]
+- Set default_toast_compression to 'lz4' [Kaarel Moppel]
+
+  Replacing postgres default pglz as seems to be overall better:
+  https://www.timescale.com/blog/optimizing-postgresql-performance-compression-pglz-vs-lz4
+- README - add a beta status label. [Kaarel Moppel]
+- --list-regions - mention that not all regions might be actually
+  usable. [Kaarel Moppel]
+
+  And add an AWS CLI command to list enabled regions
+- Show the monthly spot price + AZ when re-trying a launch. [Kaarel
+  Moppel]
+
+  As in case of not enough Spot capacity the the next tried price / zones can
+  already be different
+- Set --ram-min default to 1GB. [Kaarel Moppel]
+
+  As 512MB instances occasionally throw OOM during Ansible setup
+
+
+0.9.36 (2025-01-12)
+-------------------
+- Release: version 0.9.36 🚀 [Kaarel Moppel]
 - Increase MAX_SKUS_FOR_SPOT_PRICE_COMPARE from 15 to 25. [Kaarel
   Moppel]
 
