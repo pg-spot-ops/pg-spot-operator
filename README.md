@@ -2,6 +2,7 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/pgspotops/pg-spot-operator)](https://hub.docker.com/r/pgspotops/pg-spot-operator)
 [![Tests passing](https://github.com/pg-spot-ops/pg-spot-operator/actions/workflows/main.yml/badge.svg)](https://github.com/pg-spot-ops/pg-spot-operator/actions)
 [![Status](https://img.shields.io/badge/status-beta-orange)](https://img.shields.io/badge/status-beta-orange)
+[![codecov](https://codecov.io/gh/pg-spot-ops/pg-spot-operator/graph/badge.svg?token=DVAAIQXKFO)](https://codecov.io/gh/pg-spot-ops/pg-spot-operator)
 
 # PG Spot Operator
 
