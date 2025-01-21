@@ -4,6 +4,35 @@ Changelog
 
 (unreleased)
 ------------
+- Add a CodeCov badge. [Kaarel Moppel]
+- Set CodeCov to "informational" mode. [Kaarel Moppel]
+- Merge pull request #127 from pg-spot-ops/add-codecov-config. [Kaarel
+  Moppel]
+
+  Add codecov.yml
+- Add codecov.yml. [Kaarel Moppel]
+
+  Don't force quotas for now
+- Run the setup finished callback also in --vm-only mode. [Kaarel
+  Moppel]
+
+  Feed VM IP addresses as input instead of PG connstr though
+- Degrade instance destroy signal file path msg to debug. [Kaarel
+  Moppel]
+- Warn if ansible-playbook executable not found on the PATH. [Kaarel
+  Moppel]
+
+  and if full Postgres setup mode
+- Don't require setting of --storage-min for --list-instances to work.
+  [Kaarel Moppel]
+- Connstr outputting improvements. [Kaarel Moppel]
+
+  Add a new "auto" --connstr-format and respect "postgres" format even when --vm-only set
+
+
+0.9.40 (2025-01-20)
+-------------------
+- Release: version 0.9.40 🚀 [Kaarel Moppel]
 - Merge pull request #126 from pg-spot-ops/revert-boolean-cli-flag-
   handling. [Kaarel Moppel]
 
