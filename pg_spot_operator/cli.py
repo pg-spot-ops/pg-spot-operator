@@ -405,6 +405,7 @@ def compile_manifest_from_cmdline_params(
 
     if args.monitoring:
         m.monitoring.prometheus_node_exporter.enabled = True
+        m.monitoring.pgwatch.enabled = True
         m.monitoring.grafana.enabled = True
         m.monitoring.grafana.anonymous_access = args.grafana_anonymous
         m.monitoring.grafana.externally_accessible = (

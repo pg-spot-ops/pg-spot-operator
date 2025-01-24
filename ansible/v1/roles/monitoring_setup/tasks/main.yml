@@ -35,7 +35,7 @@
         - time
         - vmstat
 
-  when: monitoring.prometheus_node_exporter.enabled | d(False)
+  when: monitoring.prometheus_node_exporter.enabled | d(False) or monitoring.pgwatch.enabled | d(False)
 
 - block:
 
@@ -139,3 +139,38 @@
     ansible.builtin.service: name=grafana-server state=restarted
 
   when: monitoring.grafana.enabled | d(False)
+
+- block:
+    # pgwatch setup
+  - name: Check if pgwatch exist already
+    ansible.builtin.stat:
+      path: /usr/bin/pgwatch
+    register: pgwatch_exists
+
+  - name: Install a .deb package from the internet
+    ansible.builtin.apt:
+      deb: https://github.com/cybertec-postgresql/pgwatch/releases/download/3.0.0/pgwatch_Linux_{{ ansible_architecture }}.deb
+    when: not pgwatch_exists.stat.exists
+
+  - name: Set up a sources file
+    # https://github.com/cybertec-postgresql/pgwatch/blob/master/internal/sources/sample.sources.yaml
+    ansible.builtin.template:
+      src: pgwatch_sources.yaml.j2
+      dest: /etc/pgwatch/sources.yaml
+
+  - name: Set up a SystemD unit
+    ansible.builtin.template:
+      src: pgwatch.service.j2
+      dest: /etc/systemd/system/pgwatch.service
+
+  - name: Reload daemon
+    ansible.builtin.systemd_service:
+      daemon_reload: true
+
+  - name: Ensure service
+    ansible.builtin.systemd_service:
+      state: started
+      enabled: true
+      name: pgwatch
+
+  when: monitoring.pgwatch.enabled | d(False)
