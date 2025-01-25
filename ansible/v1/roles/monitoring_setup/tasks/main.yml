@@ -11,6 +11,7 @@
         node:
         - targets:
           - localhost:9100
+          - localhost:9187
 
   - name: Install the node exporter
     ansible.builtin.include_role:
@@ -162,6 +163,18 @@
     ansible.builtin.template:
       src: pgwatch.service.j2
       dest: /etc/systemd/system/pgwatch.service
+
+  - name: Provisiong pgwatch prom dashboards
+    ansible.builtin.copy:
+      src: files/{{ item }}
+      dest: /var/lib/grafana/dashboards/{{ item }}
+      owner: grafana
+    loop:
+      - db-overview.json
+      - health-check.json
+      - sessions-overview.json
+      - table-details.json
+      - tables-top.json
 
   - name: Reload daemon
     ansible.builtin.systemd_service:

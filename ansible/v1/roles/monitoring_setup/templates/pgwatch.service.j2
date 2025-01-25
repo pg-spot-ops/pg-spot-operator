@@ -11,7 +11,7 @@ After=postgresql.service
 
 [Service]
 User=postgres
-Type=notify
+Type=simple
 ExecStart=/usr/bin/pgwatch --sources /etc/pgwatch/sources.yaml --sink=prometheus://:9187 --web-disable
 Restart=on-failure
 TimeoutStartSec=0
