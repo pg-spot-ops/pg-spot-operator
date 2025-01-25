@@ -154,6 +154,10 @@ class SubSectionMonitoringPrometheus(BaseModel):
     externally_accessible: bool = False
 
 
+class SubSectionMonitoringPgwatch(BaseModel):
+    enabled: bool = False
+
+
 class SubSectionMonitoringGrafana(BaseModel):
     enabled: bool = False
     externally_accessible: bool = True
@@ -169,6 +173,9 @@ class SectionMonitoring(BaseModel):
     )
     grafana: SubSectionMonitoringGrafana = field(
         default_factory=SubSectionMonitoringGrafana
+    )
+    pgwatch: SubSectionMonitoringPgwatch = field(
+        default_factory=SubSectionMonitoringPgwatch
     )
 
 

@@ -9,6 +9,7 @@ default_initdb_opts:
   - --locale-provider=icu
   - --icu-locale=en
   - --locale=en_US.utf8
+  - --auth=trust  # For local on-VM connections
 non_su_roles_14: "pg_checkpoint,pg_monitor,pg_read_all_data,pg_read_all_settings,pg_read_all_stats,pg_signal_backend,pg_stat_scan_tables,pg_write_all_data"
 non_su_roles_15: "{{non_su_roles_14}}"
 non_su_roles_16: "{{non_su_roles_15}},pg_create_subscription"
