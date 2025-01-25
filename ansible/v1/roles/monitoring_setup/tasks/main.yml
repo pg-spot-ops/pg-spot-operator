@@ -137,7 +137,7 @@
       dest: /etc/grafana/grafana.ini
 
   - name: Ensure Grafana started
-    ansible.builtin.service: name=grafana-server state=restarted
+    ansible.builtin.service: name=grafana-server state=restarted enabled=true
 
   when: monitoring.grafana.enabled | d(False)
 
