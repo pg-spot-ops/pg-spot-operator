@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 import urllib.request
 import zipfile
 from statistics import mean
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 def run_process_with_output(
     runnable_path: str, input_params: list[str]
 ) -> tuple[int, str]:
+    # logger.debug("Running subprocess.Popen for: %s", [runnable_path] + input_params)
     p = subprocess.Popen(
         [runnable_path] + input_params,
         stdout=subprocess.PIPE,
@@ -176,22 +178,46 @@ def try_rm_file_if_exists(file_path: str) -> None:
 
 
 def check_ssh_ping_ok(
-    login: str, host: str, private_key_file: str = ""
+    login: str, host: str, private_key_file: str = "", max_retries: int = 0
 ) -> bool:
     try:
-        logger.debug("Testing SSH connection to %s@%s ...", login, host)
         ssh_args = [
             "-o",
             "StrictHostKeyChecking=no",
             "-o",
             "UserKnownHostsFile=/dev/null",
+            "-o",
+            "ConnectTimeout=3",
             "-l",
             login,
         ]
         if private_key_file:
             ssh_args += ["-i", private_key_file]
-        rc, _ = run_process_with_output("ssh", ssh_args + [host, "date"])
-        logger.debug("Retcode: %s", rc)
+        rc: int = 0
+        for try_count in range(1, max_retries + 1):
+            try:
+                logger.debug(
+                    "Testing SSH connection to %s@%s, try %s/%s...",
+                    login,
+                    host,
+                    try_count,
+                    max_retries + 1,
+                )
+                rc, _ = run_process_with_output(
+                    "ssh", ssh_args + [host, "date"]
+                )
+                logger.debug("Retcode: %s. Sleeping 3s ...", rc)
+                if rc == 0:
+                    break
+                else:
+                    time.sleep(3)
+            except Exception:
+                logger.debug(
+                    "SSH ping try %s NOK with retcode: %s. Sleeping 3s",
+                    try_count,
+                    rc,
+                )
+                time.sleep(3)
         return rc == 0
     except Exception as e:
         logger.error("Failed to connect to %s@%s: %s", e)

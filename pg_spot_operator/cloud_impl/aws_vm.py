@@ -11,14 +11,13 @@ from pg_spot_operator.cloud_impl.cloud_structs import CloudVM, InstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_instance_family_from_instance_type_code,
 )
-from pg_spot_operator.constants import CLOUD_AWS
+from pg_spot_operator.constants import CLOUD_AWS, DEFAULT_VM_LOGIN_USER
 from pg_spot_operator.manifests import InstanceManifest
 
 # Attached to all created cloud resources
 SPOT_OPERATOR_ID_TAG = "pg-spot-operator-instance"
 STORAGE_TYPE_NETWORK = "network"
 MAX_WAIT_SECONDS: int = 300
-LOGIN_USER = "pgspotops"
 OS_IMAGE_FAMILY = "debian-12"
 
 
@@ -857,7 +856,7 @@ def ensure_spot_vm(
                         pub_key_file = m.ansible.private_key + ".pub"
                 user_data = compile_cloud_init_user_data_config(
                     region,
-                    LOGIN_USER,
+                    DEFAULT_VM_LOGIN_USER,
                     pub_key_file,
                     m.os.ssh_pub_keys,
                     m.aws.key_pair_name,
@@ -891,7 +890,7 @@ def ensure_spot_vm(
                                     else "N/A"
                                 )
                             ),
-                            login_user=LOGIN_USER,
+                            login_user=DEFAULT_VM_LOGIN_USER,
                             ip_private="dummy",
                         ),
                         False,
@@ -938,7 +937,7 @@ def ensure_spot_vm(
         cloud=CLOUD_AWS,
         region=region,
         instance_type=i_desc["InstanceType"],
-        login_user=LOGIN_USER,
+        login_user=DEFAULT_VM_LOGIN_USER,
         ip_private=i_desc["PrivateIpAddress"],
         ip_public=i_desc.get("PublicIpAddress", ""),
         availability_zone=i_desc["Placement"]["AvailabilityZone"],
