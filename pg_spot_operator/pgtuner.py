@@ -123,7 +123,9 @@ def activate_huge_pages(base_tuned: dict[str, Any]) -> dict[str, Any]:
     """Setting a 3% extra margin seems to work. Background - Postgres also wants to pre-allocate some structures for
     connection slots and locks. If set too high the memory for huge pages remains reserved and unavailable for general use.
     """
-    base_tuned["huge_pages"] = "try"  # Stay on default 'try' for a test period still instead of 'on' which fails if not enough huge pages available
+    base_tuned["huge_pages"] = (
+        "try"  # Stay on default 'try' for a test period still instead of 'on' which fails if not enough huge pages available
+    )
     base_tuned["huge_page_size"] = "2MB"
     sb_bytes = pg_size_bytes(base_tuned["shared_buffers"])
     base_tuned["pg_spot_operator_shadow_os_huge_pages_needed"] = int(
