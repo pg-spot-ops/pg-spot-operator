@@ -58,3 +58,14 @@ Some AWS documentation on the topic:
 
 * https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html
 * https://docs.aws.amazon.com/cli/latest/reference/ec2/authorize-security-group-ingress.html
+
+# Secrets handling
+
+FYI Although some precaucions are taken, currently a trusted execution environment is assumed. Meaning:
+
+* In `--verbose` and `--debug` mode it's not guaranteed that no secrets will leak to stout / Ansible logs, like admin
+  user password or AWS credentials (if explicitly fed in). Ansible logs though are deleted after successful completion
+  if `--debug` not set.
+* If plain text password are provided they will also land in the local SQLite config DB (`~/.pg-spot-operator/pgso.db`)
+  for change detection purposes. Thus **for untrusted execution environments manifest usage + encrypting all secrets
+  with Ansible Vault is recommended.**
