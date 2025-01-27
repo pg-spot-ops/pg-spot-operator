@@ -399,3 +399,38 @@ def check_default_ssh_key_exists_and_readable() -> bool:
             DEFAULT_SSH_PUBKEY_PATH,
         )
         return False
+
+
+def pg_size_bytes(size_str: str) -> int:
+    """Reimplement PG-s pg_size_bytes basically. 1024 based!
+    https://pgpedia.info/p/pg_size_bytes.html
+    """
+    size_units = {
+        "bytes": 1,
+        "byte": 1,
+        "kb": 1024,
+        "k": 1024,
+        "mb": 1024**2,
+        "m": 1024**2,
+        "gb": 1024**3,
+        "g": 1024**3,
+        "tb": 1024**4,
+        "t": 1024**4,
+        "pb": 1024**5,
+        "p": 1024**5,
+    }
+    size_str = size_str.lower()
+    # Regular expression to match the size format
+    match = re.match(r"^\s*([\d.]+)\s*([a-zA-Z]*)\s*$", size_str)
+    if not match:
+        raise ValueError(f"Invalid size format: {size_str}")
+
+    value, unit = match.groups()
+    value = float(value)  # Convert the numeric part to a float
+    unit = unit.lower() if unit else "bytes"  # Default unit is bytes
+
+    if unit not in size_units:
+        raise ValueError(f"Unknown size unit: {unit}")
+
+    # Convert to bytes
+    return int(value * size_units[unit])

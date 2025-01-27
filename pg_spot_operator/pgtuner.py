@@ -2,6 +2,8 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
+from pg_spot_operator.util import pg_size_bytes
+
 logger = logging.getLogger(__name__)
 
 
@@ -117,6 +119,19 @@ def apply_throwaway(ti: TuningInput, base: dict[str, Any]) -> dict[str, Any]:
     return base
 
 
+def activate_huge_pages(base_tuned: dict[str, Any]) -> dict[str, Any]:
+    """Setting a 3% extra margin seems to work. Background - Postgres also wants to pre-allocate some structures for
+    connection slots and locks. If set too high the memory for huge pages remains reserved and unavailable for general use.
+    """
+    base_tuned["huge_pages"] = "on"
+    base_tuned["huge_page_size"] = "2MB"
+    sb_bytes = pg_size_bytes(base_tuned["shared_buffers"])
+    base_tuned["pg_spot_operator_shadow_os_huge_pages_needed"] = int(
+        (sb_bytes / (2048 * 1024)) * 1.03
+    )
+    return base_tuned
+
+
 def apply_postgres_tuning(
     ti: TuningInput, tuning_profile: str
 ) -> dict[str, Any]:
@@ -127,19 +142,19 @@ def apply_postgres_tuning(
 
     logger.debug("Tuning Postgres based on following HW info: %s", ti)
     base_tuned = apply_base_tuning(ti)
-    if tuning_profile.lower() == TUNING_PROFILE_DEFAULT:
-        return base_tuned
 
     if tuning_profile.lower() == TUNING_PROFILE_OLTP:
-        return apply_oltp(ti, base_tuned)
+        base_tuned = apply_oltp(ti, base_tuned)
+    elif tuning_profile.lower() == TUNING_PROFILE_WEB:
+        base_tuned = apply_web(ti, base_tuned)
+    elif tuning_profile.lower() == TUNING_PROFILE_ANALYTICS:
+        base_tuned = apply_analytics(ti, base_tuned)
+    elif tuning_profile.lower() == TUNING_PROFILE_THROWAWAY:
+        base_tuned = apply_throwaway(ti, base_tuned)
 
-    if tuning_profile.lower() == TUNING_PROFILE_WEB:
-        return apply_web(ti, base_tuned)
-
-    if tuning_profile.lower() == TUNING_PROFILE_ANALYTICS:
-        return apply_analytics(ti, base_tuned)
-
-    if tuning_profile.lower() == TUNING_PROFILE_THROWAWAY:
-        return apply_throwaway(ti, base_tuned)
+    if pg_size_bytes(base_tuned["shared_buffers"]) > pg_size_bytes(
+        "8GB"
+    ):  # Require huge pages from 8GB SB
+        base_tuned = activate_huge_pages(base_tuned)
 
     return base_tuned

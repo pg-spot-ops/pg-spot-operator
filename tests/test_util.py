@@ -13,6 +13,7 @@ from pg_spot_operator.util import (
     merge_user_and_tuned_non_conflicting_config_params,
     timestamp_to_human_readable_delta,
     extract_mtf_months_from_eviction_rate_group_label,
+    pg_size_bytes,
 )
 from tests.test_manifests import TEST_MANIFEST_VAULT_SECRETS
 
@@ -108,3 +109,25 @@ def test_extract_mtf_months_from_eviction_rate_group_label():
     assert extract_mtf_months_from_eviction_rate_group_label("<5%") == 10
     assert extract_mtf_months_from_eviction_rate_group_label("10-15%") == 4
     assert extract_mtf_months_from_eviction_rate_group_label(">20%") == 0
+
+
+def test_pg_size_bytes():
+    # Test valid inputs
+    assert pg_size_bytes("10 MB") == 10485760
+    assert pg_size_bytes("1GB") == 1073741824
+    assert pg_size_bytes("512 K") == 524288
+    assert pg_size_bytes("100") == 100  # Default to bytes
+
+    # Test with extra spaces
+    assert pg_size_bytes("  2 TB ") == 2199023255552
+    assert pg_size_bytes("3  PB") == 3377699720527872
+
+    # Test lowercase units
+    assert pg_size_bytes("5m") == 5242880
+
+    # Test edge cases
+    with pytest.raises(ValueError, match=r"Invalid size format: .*"):
+        pg_size_bytes("invalid input")
+
+    with pytest.raises(ValueError, match=r"Unknown size unit: .*"):
+        pg_size_bytes("10 XB")

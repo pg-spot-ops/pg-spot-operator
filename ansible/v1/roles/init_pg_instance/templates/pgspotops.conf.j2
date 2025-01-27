@@ -1,6 +1,6 @@
 
 {% for _param in postgres.config_lines | d({}, True) %}
-{% if postgres.config_lines[_param] != None %}
+{% if postgres.config_lines[_param] != None and not _param.startswith("pg_spot_operator_shadow") %}
 {{ _param }} = '{{ postgres.config_lines[_param] }}'
 {% endif %}
 {% endfor %}
