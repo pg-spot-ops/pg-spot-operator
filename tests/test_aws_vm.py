@@ -9,6 +9,8 @@ from pg_spot_operator.cloud_impl import aws_vm
 from pg_spot_operator.cloud_impl.aws_vm import (
     ensure_spot_vm,
     compile_cloud_init_user_data_config,
+)
+from pg_spot_operator.cloud_impl.cloud_util import (
     try_get_all_enabled_aws_regions,
 )
 

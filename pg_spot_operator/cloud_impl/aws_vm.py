@@ -950,13 +950,3 @@ def ensure_spot_vm(
     )
 
     return ret, new_vm_created
-
-
-def try_get_all_enabled_aws_regions() -> list[str]:
-    try:
-        client = get_client("ec2", "us-east-1")
-        response = client.describe_regions(AllRegions=False)
-        return [x["RegionName"] for x in response.get("Regions", [])]
-    except Exception as e:
-        logger.warning("Failed to inquiry enabled AWS regions: %s", e)
-        return []

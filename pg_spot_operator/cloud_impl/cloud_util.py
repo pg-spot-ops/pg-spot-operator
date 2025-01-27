@@ -1,7 +1,7 @@
 import logging
 import re
 
-from pg_spot_operator.cloud_impl.aws_vm import try_get_all_enabled_aws_regions
+from pg_spot_operator.cloud_impl.aws_client import get_client
 from pg_spot_operator.constants import (
     ALL_ENABLED_REGIONS,
     CLOUD_AWS,
@@ -207,3 +207,13 @@ def resolve_regions_from_fuzzy_input(region_fuzzy_input: str) -> list[str]:
         return [region_fuzzy_input]
 
     return region_regex_to_actual_region_codes(region_fuzzy_input)
+
+
+def try_get_all_enabled_aws_regions() -> list[str]:
+    try:
+        client = get_client("ec2", "us-east-1")
+        response = client.describe_regions(AllRegions=False)
+        return [x["RegionName"] for x in response.get("Regions", [])]
+    except Exception as e:
+        logger.warning("Failed to inquiry enabled AWS regions: %s", e)
+        return []
