@@ -43,3 +43,18 @@
     state: started
     enabled: true
     name: disable-thp
+
+# Activate normal Huge Pages if pg_spot_operator_temp.os_huge_pages_needed PG config tuning key set
+# https://www.cybertec-postgresql.com/en/huge-pages-postgresql/
+- block:
+
+  - name: Setting kernel parameters - vm.nr_hugepages
+    ansible.posix.sysctl:
+      name: vm.nr_hugepages
+      value: "{{ postgres.config_lines.pg_spot_operator_shadow_os_huge_pages_needed | string }}"
+    ignore_errors: true
+
+  - name: Make boot persistent
+    ansible.builtin.raw: echo 'vm.nr_hugepages={{ postgres.config_lines.pg_spot_operator_shadow_os_huge_pages_needed }}' > /etc/sysctl.d/01-nr-hugepages.conf
+
+  when: postgres.config_lines.pg_spot_operator_shadow_os_huge_pages_needed | d(0)
