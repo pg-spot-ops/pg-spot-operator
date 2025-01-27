@@ -27,3 +27,19 @@
     ignore_errors: true
 
   when: os.kernel_tuning|d(True)
+
+# Disable Transparent Huge Pages, generally considered bad for databases that manage their own memory
+- name: Set up a SystemD unit
+  ansible.builtin.template:
+    src: disable-thp.service.j2
+    dest: /etc/systemd/system/disable-thp.service
+
+- name: Reload daemon
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: Ensure service
+  ansible.builtin.systemd_service:
+    state: started
+    enabled: true
+    name: disable-thp
