@@ -96,19 +96,26 @@
   when: postgres.extensions | d([])
 
 - block:
-
   # https://github.com/pg-spot-ops/pg-spot-operator/issues/129
-  - name: Set up a .pgpass to back up the user provided password on the VM host
-    become: true
-    become_user: postgres
-    ansible.builtin.raw: "echo 'localhost:5432:postgres:{{postgres.admin_user }}:{{ postgres.admin_password }}' > ~/.pgpass"
-    no_log: true
 
-  - name: Set .pgpass privs
+  - name: Ensure .pgpass
     become: true
     become_user: postgres
     ansible.builtin.file:
       path:  ~/.pgpass
+      owner: postgres
+      group: postgres
+      state: touch
+      mode: "0600"
+
+  # Ensure / overwrite the password line, respecting any user modifications
+  - name: Overwrite local app user pass
+    become: true
+    become_user: postgres
+    ansible.builtin.lineinfile:
+      path: ~/.pgpass
+      regexp: "localhost:5432:postgres:{{ postgres.admin_user }}"
+      line: "localhost:5432:postgres:{{ postgres.admin_user }}:{{ postgres.admin_password }}"
       owner: postgres
       group: postgres
       mode: "0600"
