@@ -94,3 +94,23 @@
     cascade: true
   loop: "{{ postgres.extensions }}"
   when: postgres.extensions | d([])
+
+- block:
+
+  # https://github.com/pg-spot-ops/pg-spot-operator/issues/129
+  - name: Set up a .pgpass to back up the user provided password on the VM host
+    become: true
+    become_user: postgres
+    ansible.builtin.raw: "echo 'localhost:5432:postgres:{{postgres.admin_user }}:{{ postgres.admin_password }}' > ~/.pgpass"
+    no_log: true
+
+  - name: Set .pgpass privs
+    become: true
+    become_user: postgres
+    ansible.builtin.file:
+      path:  ~/.pgpass
+      owner: postgres
+      group: postgres
+      mode: "0600"
+
+  when: postgres.admin_user | d('') and postgres.admin_password | d('')
