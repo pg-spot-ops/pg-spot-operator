@@ -8,6 +8,9 @@ import botocore
 
 from pg_spot_operator.cloud_impl.aws_client import get_client
 from pg_spot_operator.cloud_impl.cloud_structs import CloudVM, InstanceTypeInfo
+from pg_spot_operator.cloud_impl.cloud_util import (
+    extract_instance_family_from_instance_type_code,
+)
 from pg_spot_operator.constants import CLOUD_AWS
 from pg_spot_operator.manifests import InstanceManifest
 
@@ -897,18 +900,22 @@ def ensure_spot_vm(
             except Exception as e:
                 if "MaxSpotInstanceCountExceeded" in str(e):
                     logger.error(
-                        "Max spot instance count exceeded in region %s - quota increase required, see docs/README_common_issues.md for more",
+                        "Max spot vCPU count exceeded in region %s for instance family %s - quota increase required, see docs/README_common_issues.md for more",
                         m.region,
+                        extract_instance_family_from_instance_type_code(
+                            rit.instance_type
+                        ),
                     )
-                    return None, False
+                    continue
                 if "InsufficientInstanceCapacity" in str(e):
                     logger.error(
                         "Failed to launch - no Spot capacity available for %s in AZ %s",
                         rit.instance_type,
                         rit.availability_zone,
                     )
-                else:
-                    logger.exception("Failed to launch an instance")
+                    continue
+
+                logger.exception("Failed to launch an instance")
                 time.sleep(1)
 
     if not i_desc:
