@@ -1383,7 +1383,7 @@ def do_main_loop(
                         m.vm.login_user,
                         vm_ip,
                         m.ansible.private_key,
-                        max_retries=9,
+                        max_wait_seconds=30,
                     )
 
             diff = m.diff_manifests(
