@@ -24,9 +24,16 @@ INSTANCE_NAME=smoke-test-1-network-storage  # From YAML
 
 
 function notify_failure() {
-  if [ ! -f $NOTIFY_URL_FILE ]; then
+  if [ -f $NOTIFY_URL_FILE ]; then
     NOTIFY_URL=$(cat $NOTIFY_URL_FILE)
-    curl -skL --retry 5 $NOTIFY_URL
+    if [ -n "$NOTIFY_URL" ]; then
+      echo "Sending a notify_failure to $NOTIFY_URL_FILE"
+      curl -skL --retry 5 $NOTIFY_URL
+    else
+      echo "Can't notify_failure - no NOTIFY_URL_FILE at $NOTIFY_URL_FILE found"
+    fi
+  else
+    echo "Can't notify_failure - no NOTIFY_URL_FILE at $NOTIFY_URL_FILE found"
   fi
 }
 
@@ -52,9 +59,6 @@ fi
 
 # Main loop
 
-# Set up trap for ERR signal
-trap 'notify_failure' ERR
-
 while true ; do
   BREAK_LOOP=0
   while [ "$BREAK_LOOP" -eq 0 ]; do
@@ -65,13 +69,13 @@ while true ; do
     CONNSTR=$(pg_spot_operator --manifest-path smoke1_network_storage.yaml --connstr-only --verbose 2>$LOGDIR/provision_`date +%s`.log)
 
     # Test Postgres connectivity
-    ROWCOUNT=$(psql "$CONNSTR" -Xc "select count(*) from pgbench_accounts")
+    ROWCOUNT=$(psql $CONNSTR -XAtc "select count(*) from pg_stat_user_tables where relname = 'pgbench_accounts'")
     if [ "$?" -ne 0 ]; then
       notify_failure
       break
     fi
 
-    if [ "$ROWCOUNT" -eq 0 ]; then
+    if [ "$ROWCOUNT" == '0' ]; then
       echo "Init pgbench schema ..."
       pgbench -iq "$CONNSTR" >/dev/null
       if [ "$?" -ne 0 ]; then
