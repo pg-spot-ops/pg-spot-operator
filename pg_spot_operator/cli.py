@@ -28,6 +28,7 @@ from pg_spot_operator.cloud_impl.cloud_util import (
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.constants import (
     ALL_ENABLED_REGIONS,
+    CONFIG_DIR,
     CONNSTR_FORMAT_AUTO,
     DEFAULT_SSH_PUBKEY_PATH,
     DEFAULT_VM_LOGIN_USER,
@@ -87,14 +88,11 @@ class ArgumentParser(Tap):
     manifest_path: str = os.getenv("MANIFEST_PATH", "")  # User manifest path
     ansible_path: str = os.getenv(
         "ANSIBLE_PATH", ""
-    )  # Use a non-default Ansible path
+    )  # Use a non-default Ansible path. Default is ~/.pg-spot-operator/ansible
     main_loop_interval_s: int = int(
         os.getenv("MAIN_LOOP_INTERVAL_S")
         or 60  # Increase if causing too many calls to the cloud API
     )
-    config_dir: str = os.getenv(
-        "CONFIG_DIR", "~/.pg-spot-operator"
-    )  # For internal state keeping
     vault_password_file: str = os.getenv(
         "VAULT_PASSWORD_FILE", ""
     )  # Can also be set on instance level
@@ -872,21 +870,19 @@ def download_ansible_from_github_if_not_set_locally(
 
     # Written after successful Ansible DL from a tag
     local_ansible_release_tag_file_path = os.path.expanduser(
-        os.path.join(args.config_dir, "ansible", "release_tag")
+        os.path.join(CONFIG_DIR, "ansible", "release_tag")
     )
 
     # If no release_tag file but setup file exists probably user pre-downloaded Ansible.
     # Leaves a slight chance for a race condition though when we DL but crash before writing the release_tag file, but good enough probably for now...
     if os.path.exists(
         os.path.expanduser(
-            os.path.join(
-                args.config_dir, "ansible", "v1/single_instance_setup.yml"
-            )
+            os.path.join(CONFIG_DIR, "ansible", "v1/single_instance_setup.yml")
         )
     ) and not os.path.exists(local_ansible_release_tag_file_path):
         logger.info(
             "Assuming manually downloaded Ansible files in %s as release_tag not found (remove the folder to auto re-download)",
-            os.path.join(args.config_dir, "ansible"),
+            os.path.join(CONFIG_DIR, "ansible"),
         )
         return
 
@@ -951,7 +947,7 @@ def download_ansible_from_github_if_not_set_locally(
                 and os.path.exists(
                     os.path.expanduser(
                         os.path.join(
-                            args.config_dir,
+                            CONFIG_DIR,
                             "ansible",
                             "v1/single_instance_setup.yml",
                         )
@@ -961,7 +957,7 @@ def download_ansible_from_github_if_not_set_locally(
                 logger.info(
                     "Found Ansible files for tag %s from %s",
                     target_tag,
-                    os.path.join(args.config_dir, "ansible"),
+                    os.path.join(CONFIG_DIR, "ansible"),
                 )
                 return
         except Exception:
@@ -974,7 +970,7 @@ def download_ansible_from_github_if_not_set_locally(
     dl_ok = try_download_ansible_from_github(
         target_tag,
         zip_url,
-        args.config_dir,
+        CONFIG_DIR,
     )
     if not dl_ok:
         logger.error(
@@ -987,19 +983,19 @@ def download_ansible_from_github_if_not_set_locally(
 
     logger.debug(
         "Setting --ansible-path to %s",
-        os.path.join(args.config_dir, "ansible"),
+        os.path.join(CONFIG_DIR, "ansible"),
     )
-    args.ansible_path = os.path.join(args.config_dir, "ansible")
+    args.ansible_path = os.path.join(CONFIG_DIR, "ansible")
 
 
 def init_cmdb_and_apply_schema_migrations_if_needed(
     args: ArgumentParser,
 ) -> None:
     cmdb.init_engine_and_check_connection(
-        os.path.join(args.config_dir, SQLITE_DBNAME)
+        os.path.join(CONFIG_DIR, SQLITE_DBNAME)
     )
     applied_count = schema_manager.do_ddl_rollout_if_needed(
-        os.path.join(args.config_dir, SQLITE_DBNAME)
+        os.path.join(CONFIG_DIR, SQLITE_DBNAME)
     )
     logger.debug("%s schema migration applied", applied_count)
 
@@ -1288,9 +1284,10 @@ def main():  # pragma: no cover
         or args.debug
         or args.list_regions
         or args.list_instances
+        or args.list_strategies
+        or args.list_avg_spot_savings
     ):
-        operator.operator_config_dir = args.config_dir
-        clean_up_old_logs_if_any()
+        clean_up_old_logs_if_any(CONFIG_DIR)
 
     # Download the Ansible scripts if missing and in some "real" mode, as not bundled to PyPI currently
     download_ansible_from_github_if_not_set_locally(args)

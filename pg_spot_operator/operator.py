@@ -46,7 +46,7 @@ from pg_spot_operator.cmdb import (
 )
 from pg_spot_operator.constants import (
     BACKUP_TYPE_PGBACKREST,
-    DEFAULT_CONFIG_DIR,
+    CONFIG_DIR,
     DEFAULT_INSTANCE_SELECTION_STRATEGY,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
     SPOT_OPERATOR_EXPIRES_TAG,
@@ -66,8 +66,8 @@ MAX_PARALLEL_ACTIONS = 2
 ACTION_MAX_DURATION_S = 600
 CALLBACK_MAX_DURATION_S = 30
 VM_KEEPALIVE_SCANNER_INTERVAL_S = 60
-ACTION_HANDLER_TEMP_SPACE_ROOT = "~/.pg-spot-operator/tmp"
-ANSIBLE_DEFAULT_ROOT_PATH = "~/.pg-spot-operator/ansible"
+ACTION_HANDLER_TEMP_SPACE_ROOT = os.path.join(CONFIG_DIR, "tmp")
+ANSIBLE_DEFAULT_ROOT_PATH = os.path.join(CONFIG_DIR, "ansible")
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,6 @@ dry_run: bool = False
 debug: bool = False
 operator_startup_time = time.time()
 ansible_root_path: str = ANSIBLE_DEFAULT_ROOT_PATH
-operator_config_dir: str = DEFAULT_CONFIG_DIR
 
 
 class NoOp(Exception):
@@ -638,9 +637,7 @@ def apply_postgres_config_tuning_to_manifest(
             )
 
 
-def clean_up_old_logs_if_any(
-    config_dir: str = operator_config_dir, old_threshold_days: int = 7
-):
+def clean_up_old_logs_if_any(config_dir: str, old_threshold_days: int = 7):
     """Leaves empty instance_name/action folders in place though to indicate what operations have happened / tried
     on which instances
     """
@@ -722,7 +719,7 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
 
         if not debug:
             clean_up_old_logs_if_any(
-                old_threshold_days=0
+                CONFIG_DIR, old_threshold_days=0
             )  # To avoid possibility of unencrypted secrets hanging around for too long
         return rc == 0, outputs
 

@@ -9,7 +9,7 @@ from datetime import date, datetime
 import requests
 from unidecode import unidecode
 
-from pg_spot_operator.constants import DEFAULT_CONFIG_DIR
+from pg_spot_operator.constants import CONFIG_DIR
 from pg_spot_operator.util import get_aws_region_code_to_name_mapping
 
 CONFIG_DIR_PRICE_CACHE_SUBDIR = "price_cache"
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 def get_cached_pricing_dict(cache_file: str) -> dict:
     cache_dir = os.path.expanduser(
-        os.path.join(DEFAULT_CONFIG_DIR, CONFIG_DIR_PRICE_CACHE_SUBDIR)
+        os.path.join(CONFIG_DIR, CONFIG_DIR_PRICE_CACHE_SUBDIR)
     )
     cache_path = os.path.join(cache_dir, cache_file)
     if os.path.exists(cache_path):
@@ -38,7 +38,7 @@ def write_pricing_cache_file_as_json(
     cache_file: str, pricing_info: dict
 ) -> None:
     cache_dir = os.path.expanduser(
-        os.path.join(DEFAULT_CONFIG_DIR, CONFIG_DIR_PRICE_CACHE_SUBDIR)
+        os.path.join(CONFIG_DIR, CONFIG_DIR_PRICE_CACHE_SUBDIR)
     )
     cache_path = os.path.join(cache_dir, cache_file)
     os.makedirs(cache_dir, exist_ok=True)
@@ -79,7 +79,7 @@ def try_clean_up_old_pricing_cache_files(older_than_days: int) -> None:
     ~/.pg-spot-operator/price_cache/aws_ondemand_us-east-1_20241115.json
     """
     cache_dir = os.path.expanduser(
-        os.path.join(DEFAULT_CONFIG_DIR, CONFIG_DIR_PRICE_CACHE_SUBDIR)
+        os.path.join(CONFIG_DIR, CONFIG_DIR_PRICE_CACHE_SUBDIR)
     )
     epoch = time.time()
     for pd in sorted(glob.glob(os.path.join(cache_dir, "aws_*"))):
@@ -118,7 +118,7 @@ def get_latest_spot_pricing_json() -> dict:
     Location: $config-dir/$price-cache/aws_spot_{now.year}{now.month}{now.day}_{now.hour}00.json
     """
     cache_dir = os.path.expanduser(
-        os.path.join(DEFAULT_CONFIG_DIR, CONFIG_DIR_PRICE_CACHE_SUBDIR)
+        os.path.join(CONFIG_DIR, CONFIG_DIR_PRICE_CACHE_SUBDIR)
     )
     g = glob.glob(os.path.join(cache_dir, "aws_spot_*"))
     if g:

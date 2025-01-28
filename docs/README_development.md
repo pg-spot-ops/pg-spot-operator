@@ -14,7 +14,7 @@ vagrant up && vagrant ssh -c 'hostname -I'  #  Or similar, add dev machine SSH k
 
 # Dev/test stuff
 
-python3 -m pg_spot_operator --verbose --instance-name pg1 --vm-host 192.168.121.182 --vm-login-user vagrant
+python3 -m pg_spot_operator --verbose --instance-name pg1 --vm-host 192.168.121.182 --vm-login-user vagrant --ansible-path ./ansible
 
 # If changing Python code
 
