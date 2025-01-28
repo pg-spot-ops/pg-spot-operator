@@ -4,6 +4,86 @@ Changelog
 
 (unreleased)
 ------------
+- README minor correction on boolean flags. [Kaarel Moppel]
+- Merge pull request #136 from pg-spot-ops/check-ssh-connectivity-after-
+  vm-provisioning. [Kaarel Moppel]
+
+  Check SSH connectivity not just wait 10s after VM provisioning and before Ansible setup, so that the first loop would always succeed
+- A time based SSH connectivity check loop instead count based. [Kaarel
+  Moppel]
+
+  For better predictibility
+- Check SSH connectivity after VM provisioning and before Ansible setup.
+  [Kaarel Moppel]
+
+  To avoid the occasional connectivity errors on the first loop, as
+  hard-coded 10s or 15s doesn't always seem to work.
+
+  As per https://github.com/pg-spot-ops/pg-spot-operator/issues/124
+- Security README - mention current secrets handling posture /
+  assumptions. [Kaarel Moppel]
+
+  Close for now https://github.com/pg-spot-ops/pg-spot-operator/issues/62
+- Merge pull request #135 from pg-spot-ops/record-app-user-password-in-
+  pgpass. [Kaarel Moppel]
+
+  Store app user password in postgres user .pgpass if set to be able to look it up later
+
+  As per https://github.com/pg-spot-ops/pg-spot-operator/issues/129
+- Formatter bycatch. [Kaarel Moppel]
+- Make .pgpass setting a bit nicer. [Kaarel Moppel]
+
+  Respect possible user modifications if any
+- Store app user password in postgres user .pgpass if set. [Kaarel
+  Moppel]
+
+  To be able to look it up later. As per https://github.com/pg-spot-ops/pg-spot-operator/issues/129
+- Merge pull request #134 from pg-spot-ops/enable-huge-pages-for-large-
+  ram-skus. [Kaarel Moppel]
+
+  Enable Linux huge pages for larger (>8GB) shared_buffers
+- Stay on default 'huge_pages=try' for a test period still. [Kaarel
+  Moppel]
+
+  Instead of 'on' which fails if not enough huge pages available
+- Enable huge pages for larger (>8GB) Shared Bufffers. [Kaarel Moppel]
+
+  As can bring visible performance improvements.
+
+  https://github.com/pg-spot-ops/pg-spot-operator/issues/132
+- Merge pull request #133 from pg-spot-ops/disable-transparent-huge-
+  pages-on-boot. [Kaarel Moppel]
+
+  Disable Linux Transparent Huge Pages directly after boot
+- Disable Linux Transparent Huge Pages directly after boot. [Kaarel
+  Moppel]
+
+  As generally negative for databases that manage their own memory
+- Amend last. [Kaarel Moppel]
+
+  Fix circular import not catched by linter
+- Keep trying other instance types when Spot vCPU count exceeded.
+  [Kaarel Moppel]
+
+  As limitations could apply only to a specific instance family
+- Merge pull request #131 from pg-spot-ops/add-postgres-monitoring-via-
+  pgwatch. [Kaarel Moppel]
+
+  Add postgres monitoring via pgwatch
+- Ensure Grafana service started on boot. [Kaarel Moppel]
+- Add some pgwatch Prom dashboards. [Kaarel Moppel]
+- Add Postgres monitoring via pgwatch. [Kaarel Moppel]
+
+  Using pgwatch 3.0 release from https://github.com/cybertec-postgresql/pgwatch/releases
+
+  Also adding local trust auth by default so that pgwatch can already
+  connect seamlessly during the setup
+- Add Python versions badge. [Kaarel Moppel]
+
+
+0.9.41 (2025-01-21)
+-------------------
+- Release: version 0.9.41 🚀 [Kaarel Moppel]
 - Add a CodeCov badge. [Kaarel Moppel]
 - Set CodeCov to "informational" mode. [Kaarel Moppel]
 - Merge pull request #127 from pg-spot-ops/add-codecov-config. [Kaarel
