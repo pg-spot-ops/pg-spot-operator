@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 import urllib.request
 import zipfile
 from statistics import mean
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 def run_process_with_output(
     runnable_path: str, input_params: list[str]
 ) -> tuple[int, str]:
+    # logger.debug("Running subprocess.Popen for: %s", [runnable_path] + input_params)
     p = subprocess.Popen(
         [runnable_path] + input_params,
         stdout=subprocess.PIPE,
@@ -176,25 +178,60 @@ def try_rm_file_if_exists(file_path: str) -> None:
 
 
 def check_ssh_ping_ok(
-    login: str, host: str, private_key_file: str = ""
+    login: str,
+    host: str,
+    private_key_file: str = "",
+    max_wait_seconds: int = 60,
 ) -> bool:
+    logger.info(
+        "Testing SSH connection to %s@%s (max_wait_seconds=%s) ...",
+        login,
+        host,
+        max_wait_seconds,
+    )
     try:
-        logger.debug("Testing SSH connection to %s@%s ...", login, host)
         ssh_args = [
             "-o",
             "StrictHostKeyChecking=no",
             "-o",
             "UserKnownHostsFile=/dev/null",
+            "-o",
+            "ConnectTimeout=2",
             "-l",
             login,
         ]
         if private_key_file:
             ssh_args += ["-i", private_key_file]
-        rc, _ = run_process_with_output("ssh", ssh_args + [host, "date"])
-        logger.debug("Retcode: %s", rc)
+        rc: int = 0
+        start_time: float = time.time()
+        try_count: int = 0
+        loop_sleep_seconds: int = 2
+
+        while time.time() < start_time + max_wait_seconds:
+            try:
+                try_count += 1
+                rc, _ = run_process_with_output(
+                    "ssh", ssh_args + [host, "date"]
+                )
+                logger.debug("Try %s retcode: %s", try_count, rc)
+                if rc == 0:
+                    break
+                else:
+                    logger.debug(
+                        "Sleeping %ss before retry...", loop_sleep_seconds
+                    )
+                    time.sleep(loop_sleep_seconds)
+            except Exception:
+                logger.debug(
+                    "SSH ping try %s NOK with retcode: %s. Sleeping %ss",
+                    try_count,
+                    rc,
+                    loop_sleep_seconds,
+                )
+                time.sleep(loop_sleep_seconds)
         return rc == 0
     except Exception as e:
-        logger.error("Failed to connect to %s@%s: %s", e)
+        logger.error("Failed to SSH connect to %s@%s: %s", login, host, e)
         return False
 
 

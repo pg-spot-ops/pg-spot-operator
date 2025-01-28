@@ -109,6 +109,6 @@
 # Develepment / testing
 
 * **--vm-host / VM_HOST** Skip the VM creation step and use the provided hostname / IP. Useful for dev-testing.
-* **--vm-login-user/ LOGIN_USER** User given user for Ansible SSH login. Useful for dev-testing.
+* **--vm-login-user/ VM_LOGIN_USER** Ansible SSH login user. Defaults to "pgspotops"
 * **--ansible-path / ANSIBLE_PATH** Use a non-default Ansible path. In case want to customize something etc.
 * **--destroy-file-base-path / DESTROY_FILE_BASE_PATH** (Default: /tmp/destroy-) If a file named base+instance detected, the instance is expired and the program exits

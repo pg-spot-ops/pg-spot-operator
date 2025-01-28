@@ -789,9 +789,9 @@ def apply_short_life_time_instances_reordering(
     return filtered
 
 
-def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
+def ensure_vm(m: InstanceManifest) -> tuple[bool, str, str]:
     """Make sure we have a VM
-    Returns True if a VM was created / recreated + Provider ID
+    Returns True if a VM was created / recreated + Provider ID + primary connect IP
     """
     logger.debug(
         "Ensuring instance %s (%s) %s has a backing VM ...",
@@ -823,7 +823,7 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
                 vm.ip_public,
                 vm.ip_private,
             )
-            return False, str(vm.provider_id)
+            return False, str(vm.provider_id), ip_pub or ip_priv
         logger.info("Backing instance found: %s", instance_id)
     else:
         logger.warning(
@@ -851,12 +851,16 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str]:
         m, resolved_instance_types, dry_run=dry_run
     )
     if dry_run:
-        return False, "dummy"
+        return False, "dummy", "dummy_ip"
 
     if cloud_vm:
         cmdb.finalize_ensure_vm(m, cloud_vm)
 
-    return created, cloud_vm.provider_id if cloud_vm else ""
+    return (
+        created,
+        cloud_vm.provider_id if cloud_vm else "",
+        cloud_vm.ip_public or cloud_vm.ip_private if cloud_vm else "",
+    )
 
 
 def ensure_s3_backup_bucket(m: InstanceManifest):
@@ -1372,13 +1376,15 @@ def do_main_loop(
                         raise Exception("Could not SSH connect to --vm-host")
                     logger.info("SSH connect OK")
             else:
-                vm_created_recreated, vm_provider_id = ensure_vm(m)
-                if vm_created_recreated:
-                    logger.info(
-                        "Sleeping 10s as VM %s created, give time to boot",
-                        vm_provider_id,
+                vm_created_recreated, vm_provider_id, vm_ip = ensure_vm(m)
+                if vm_created_recreated and not m.vm_only and not cli_dry_run:
+                    # Wait until SSH reachable so that first Ansible Postgres loop succeeds
+                    check_ssh_ping_ok(
+                        m.vm.login_user,
+                        vm_ip,
+                        m.ansible.private_key,
+                        max_wait_seconds=30,
                     )
-                    time.sleep(10)
 
             diff = m.diff_manifests(
                 prev_success_manifest, original_manifests_only=True

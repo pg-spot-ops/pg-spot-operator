@@ -30,6 +30,7 @@ from pg_spot_operator.constants import (
     ALL_ENABLED_REGIONS,
     CONNSTR_FORMAT_AUTO,
     DEFAULT_SSH_PUBKEY_PATH,
+    DEFAULT_VM_LOGIN_USER,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
     SPOT_OPERATOR_EXPIRES_TAG,
     SPOT_OPERATOR_ID_TAG,
@@ -227,7 +228,7 @@ class ArgumentParser(Tap):
         "VM_HOST", ""
     )  # Skip creation and use the provided IP
     vm_login_user: str = os.getenv(
-        "LOGIN_USER", ""
+        "VM_LOGIN_USER", DEFAULT_VM_LOGIN_USER
     )  # Default SSH key will be used
     destroy_file_base_path: str = os.getenv(
         "DESTROY_FILE_BASE_PATH", "/tmp/destroy-"
@@ -534,12 +535,6 @@ def check_cli_args_valid(args: ArgumentParser):
             logger.error(
                 "--vault-password-file not found at %s",
                 args.vault_password_file,
-            )
-            exit(1)
-    if args.vm_host or args.vm_login_user:
-        if not (args.vm_host and args.vm_login_user):
-            logger.error(
-                "Both --vm-host / --vm-login-user need to be provided",
             )
             exit(1)
     if args.user_tags:
