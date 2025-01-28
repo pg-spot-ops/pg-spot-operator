@@ -104,7 +104,7 @@ see the [Common issues](https://github.com/pg-spot-ops/pg-spot-operator/blob/mai
 # In --connstr-only mode we can land right into `psql`!
 psql $(pg_spot_operator --region=us-east-1 --ram-min=128 \
   --storage-min=500 --storage-type=local \
-  --instance-name=analytics --connstr-only=y \
+  --instance-name=analytics --connstr-only \
   --admin-user=pgspotops --admin-password=topsecret123
 )
 
@@ -183,7 +183,7 @@ pg_spot_operator --teardown --region=us-east-1 --instance-name custom
 Or add the `--instance-family` flag get some cheap (well, cheapish) Tensor cores for your next AI project:
 
 ```
-pg_spot_operator --region=us-west --check-price=y --instance-family=^p
+pg_spot_operator --region=us-west --check-price --instance-family=^p
 
 +-----------+---------------+------+------+---------+------------------+-------------+------------------+--------------+-----------------+-----------------+
 |   Region  |      SKU      | Arch | vCPU |   RAM   | Instance storage | Spot $ (Mo) | On-Demand $ (Mo) | EC2 discount | Approx. RDS win | Evic. rate (Mo) |
