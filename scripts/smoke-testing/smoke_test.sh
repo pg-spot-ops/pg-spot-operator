@@ -9,7 +9,7 @@ fi
 
 set -u -o pipefail
 
-ST_CONFIG_DIR=~/.pg-spot-operator-smoke
+ST_CONFIG_DIR=~/.pg-spot-operator-smoke-test
 ST_PIPX_DIR=$ST_CONFIG_DIR/pipx
 LOGDIR=$ST_CONFIG_DIR/logs
 USE_LATEST_PRIVATE_PIPX=f  # 'y' to update
@@ -20,15 +20,24 @@ NOTIFY_URL_FILE=~/.pg-spot-operator-smoke-test-notify-url  # If found a curl req
 
 # Operator params
 REGION=eu-north-1
-INSTANCE_NAME=smoke-test-1-network-storage  # From YAML
+INSTANCE_MANIFEST_PATH=smoke1_network_storage.yaml
+INSTANCE_NAME=$(cat $INSTANCE_MANIFEST_PATH | yq -r .instance_name)
 
+if [ -z "$INSTANCE_NAME" ]; then
+  echo "Could not parse instance_name, check manifest at $INSTANCE_MANIFEST_PATH"
+  exit 1
+fi
 
 function notify_failure() {
   if [ -f $NOTIFY_URL_FILE ]; then
     NOTIFY_URL=$(cat $NOTIFY_URL_FILE)
     if [ -n "$NOTIFY_URL" ]; then
       echo "Sending a notify_failure to $NOTIFY_URL_FILE"
-      curl -skL --retry 5 $NOTIFY_URL
+      if curl -skL --retry 5 $NOTIFY_URL ; then
+        echo "Notify OK"
+      else
+        echo "ERROR failed to notify"
+      fi
     else
       echo "Can't notify_failure - no NOTIFY_URL_FILE at $NOTIFY_URL_FILE found"
     fi
@@ -38,6 +47,7 @@ function notify_failure() {
 }
 
 echo "Starting at $(date --rfc-3339=s) ..."
+echo "ST_CONFIG_DIR=$ST_CONFIG_DIR"
 
 mkdir "$ST_CONFIG_DIR" "$LOGDIR" 2>/dev/null
 
@@ -49,7 +59,7 @@ fi
 
 echo "Using pg_spot_operator from: `which pg_spot_operator`"
 
-pg_spot_operator --check-price --region $REGION &> $LOGDIR/check_price_`date +%s`.log
+pg_spot_operator --check-price --region $REGION &>> $LOGDIR/check_price_${INSTANCE_NAME}_`date --rfc-3339=d`.log
 
 if [ -n "$CHECK_PRICE_ONLY" ]; then
   echo "Exiting due to $CHECK_PRICE_ONLY"
@@ -63,10 +73,12 @@ while true ; do
   BREAK_LOOP=0
   while [ "$BREAK_LOOP" -eq 0 ]; do
     BREAK_LOOP=1
+    echo "Loop start at $(date --rfc-3339=s) ..."
 
     # Create the instance and store the connect string
     echo "Provisioning ..."
-    CONNSTR=$(pg_spot_operator --manifest-path smoke1_network_storage.yaml --connstr-only --verbose 2>$LOGDIR/provision_`date +%s`.log)
+    CONNSTR=$(pg_spot_operator --manifest-path $INSTANCE_MANIFEST_PATH --connstr-only --verbose 2>>$LOGDIR/provision_${INSTANCE_NAME}_`date --rfc-3339=d`.log)
+    echo "OK. CONNSTR=$CONNSTR"
 
     # Test Postgres connectivity
     ROWCOUNT=$(psql $CONNSTR -XAtc "select count(*) from pg_stat_user_tables where relname = 'pgbench_accounts'")
@@ -93,7 +105,8 @@ while true ; do
     echo "OK"
   done
 
-  echo "sleeping $LOOP_SLEEP s ..."
+  echo "Loop done"
+  echo "Sleeping $LOOP_SLEEP s at $(date --rfc-3339=s) ..."
   sleep $LOOP_SLEEP
 
 done
