@@ -7,6 +7,11 @@ if ! command -v pipx >/dev/null ; then
   exit 1
 fi
 
+if ! command -v yq >/dev/null ; then
+  echo "yq not found"
+  exit 1
+fi
+
 set -u -o pipefail
 
 ST_CONFIG_DIR=~/.pg-spot-operator-smoke-test
