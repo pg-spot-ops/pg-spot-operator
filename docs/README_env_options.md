@@ -47,7 +47,7 @@
 
 ## Hardware selection
 
-* **--storage-min / STORAGE_MIN** Minimal disk size (in GB) to allocate. For local storage instances the actual size might be bigger.
+* **--storage-min / STORAGE_MIN** # In GB. Precise provisioning size for network volumes, minimum for --storage-type=local. -1 is a special value for --storage-type=network not to create a data volume.
 * **--storage-type / STORAGE_TYPE** (Default: network) Allowed values: \[ network | local \].
 * **--storage-speed-class / STORAGE_SPEED_CLASS** (Default: ssd) Allowed values: \[ hdd | ssd | nvme \].
 * **--volume-type / VOLUME_TYPE** Allowed values: \[ gp2, gp3\*, io1, io2 \]

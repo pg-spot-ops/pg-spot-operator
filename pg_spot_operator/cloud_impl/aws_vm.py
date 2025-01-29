@@ -921,7 +921,14 @@ def ensure_spot_vm(
         raise Exception("No running instance found / failed to launch")
 
     if m.vm.storage_type == STORAGE_TYPE_NETWORK:
-        vol_desc = ensure_volume_attached(m, i_desc)
+        if (
+            m.vm.storage_min == -1
+        ):  # a special don't create / attach anything mode, useful for development / testing
+            logger.info(
+                "Skipping data volume create / attach due to special --storage-min=-1"
+            )
+        else:
+            vol_desc = ensure_volume_attached(m, i_desc)
 
     if not m.private_ip_only and m.static_ip_addresses:
         pip = ensure_public_elastic_ip_attached(

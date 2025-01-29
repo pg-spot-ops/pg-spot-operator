@@ -162,7 +162,9 @@ class ArgumentParser(Tap):
     selection_strategy: str = os.getenv("SELECTION_STRATEGY", "balanced")
     ram_min: int = int(os.getenv("RAM_MIN", "1"))  # In GB
     ram_max: int = int(os.getenv("RAM_MAX", "0"))  # In GB
-    storage_min: int = int(os.getenv("STORAGE_MIN", "0"))
+    storage_min: int = int(
+        os.getenv("STORAGE_MIN", "0")
+    )  # In GB. Precise provisioning size for network volumes, minimum for --storage-type=local
     storage_type: str = os.getenv("STORAGE_TYPE", "network")
     storage_speed_class: str = os.getenv(
         "STORAGE_SPEED_CLASS", "ssd"
