@@ -11,7 +11,7 @@ class InstanceTypeInfo:
     region: str
     cloud: str = CLOUD_AWS
     availability_zone: str = ""
-    spot: bool = True
+    is_spot: bool = True
     hourly_spot_price: float = 0
     monthly_spot_price: float = 0
     hourly_ondemand_price: float = 0

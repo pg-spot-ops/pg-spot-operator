@@ -1,4 +1,5 @@
 import datetime
+import os
 import unittest
 
 from dateutil.tz import tzutc
@@ -18,6 +19,7 @@ from pg_spot_operator.cloud_impl.aws_spot import (
     get_all_instance_types_from_aws_regional_pricing_info,
     get_eviction_rate_brackets_from_public_eviction_info,
     extract_instance_type_eviction_rates_from_public_eviction_info,
+    attach_pricing_info_to_instance_type_info,
 )
 from pg_spot_operator.constants import (
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
@@ -701,3 +703,33 @@ def test_extract_instance_type_eviction_rates_from_public_eviction_info():
     assert evi
     assert len(evi) == 9
     assert evi["r7g.large"].eviction_rate_group == 0
+
+
+def test_attach_pricing_info_to_instance_type_info():
+    if not (
+        os.path.exists(os.path.expanduser("~/.aws/config"))
+        and os.path.exists(os.path.expanduser("~/.aws/credentials"))
+    ):
+        return
+    region = "eu-north-1"
+    iti = boto3_api_instance_list_to_instance_type_info(
+        region, INSTANCE_LISTING
+    )
+    assert len(iti) > 1
+    iti_w_price = attach_pricing_info_to_instance_type_info(iti)
+    assert len(iti_w_price) == len(iti)
+    for x in iti_w_price:
+        # print(
+        #     region,
+        #     x.instance_type,
+        #     x.monthly_ondemand_price,
+        #     x.monthly_spot_price,
+        #     x.hourly_ondemand_price,
+        #     x.hourly_spot_price,
+        # )
+        assert (
+            x.monthly_ondemand_price
+            and x.monthly_spot_price
+            and x.hourly_ondemand_price
+            and x.hourly_spot_price
+        )

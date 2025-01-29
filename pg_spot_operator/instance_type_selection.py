@@ -30,7 +30,7 @@ class InstanceTypeSelectionCheapest(InstanceTypeSelectionStrategy):
         cls, instance_types: list[InstanceTypeInfo]
     ) -> list[InstanceTypeInfo]:
         """Don't consider the worst eviction rate bracket instance types still"""
-        if instance_types[0].spot:
+        if instance_types[0].is_spot:
             non_zero_price = [
                 x
                 for x in instance_types
@@ -47,7 +47,7 @@ class InstanceTypeSelectionCheapest(InstanceTypeSelectionStrategy):
         return sorted(
             non_zero_price,
             key=lambda x: (
-                x.hourly_spot_price if x.spot else x.hourly_ondemand_price
+                x.hourly_spot_price if x.is_spot else x.hourly_ondemand_price
             ),
         )
 
@@ -58,7 +58,7 @@ class InstanceTypeSelectionRandom(InstanceTypeSelectionStrategy):
     def execute(
         cls, instance_types: list[InstanceTypeInfo]
     ) -> list[InstanceTypeInfo]:
-        if not instance_types[0].spot:
+        if not instance_types[0].is_spot:
             return InstanceTypeSelectionCheapest.execute(instance_types)
         random.shuffle(instance_types)
         return instance_types
@@ -70,7 +70,7 @@ class InstanceTypeSelectionEvictionRate(InstanceTypeSelectionStrategy):
     def execute(
         cls, instance_types: list[InstanceTypeInfo]
     ) -> list[InstanceTypeInfo]:
-        if not instance_types[0].spot:
+        if not instance_types[0].is_spot:
             return InstanceTypeSelectionCheapest.execute(instance_types)
         valid_instances = [
             x
@@ -94,7 +94,7 @@ class InstanceTypeSelectionBalanced(InstanceTypeSelectionStrategy):
     def execute(
         cls, instance_types: list[InstanceTypeInfo]
     ) -> list[InstanceTypeInfo]:
-        if not instance_types[0].spot:
+        if not instance_types[0].is_spot:
             return InstanceTypeSelectionCheapest.execute(instance_types)
         valid_instances = [
             x

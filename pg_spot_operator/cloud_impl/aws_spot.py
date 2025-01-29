@@ -503,11 +503,15 @@ def attach_pricing_info_to_instance_type_info(
                 if iti.hourly_spot_price * 24 * 30 < 100
                 else round(iti.hourly_spot_price * 24 * 30)
             )
-        if not iti.hourly_ondemand_price:
+        if not iti.monthly_ondemand_price:
             iti.monthly_ondemand_price = (
                 try_get_monthly_ondemand_price_for_sku(
                     iti.region, iti.instance_type
                 )
+            )
+        if not iti.hourly_ondemand_price and iti.monthly_ondemand_price:
+            iti.hourly_ondemand_price = round(
+                iti.monthly_ondemand_price / 30.0 / 24, 6
             )
 
     return instance_types
@@ -577,24 +581,34 @@ def resolve_hardware_requirements_to_instance_types(
         ]
 
     if persistent_vms:
-        # Only price sort makes sense for non-Spot VMs
+        # Overrride selection strategy - only price sort makes sense for non-Spot VMs
+        for x in qualified_instances_cpu_sorted:
+            x.is_spot = False
+
         logger.debug(
             "Sorting VM shortlist by ondemand price as persistent VMs wanted ...",
         )
-        ondemand_sorted = sorted(
-            qualified_instances_cpu_sorted,
-            key=lambda x: x.hourly_ondemand_price,
+
+        qualified_instances_cpu_sorted_with_ondemand_price = (
+            attach_pricing_info_to_instance_type_info(
+                qualified_instances_cpu_sorted
+            )
         )
+
+        ondemand_price_sorted = sorted(
+            qualified_instances_cpu_sorted_with_ondemand_price,
+            key=lambda x: x.monthly_ondemand_price,
+        )
+
         logger.debug(
-            "Instances / Prices in selection: %s",
+            "Instances / prices in selection: %s",
             [
-                (x.instance_type, x.hourly_ondemand_price)
-                for x in ondemand_sorted
+                (x.instance_type, x.monthly_ondemand_price)
+                for x in ondemand_price_sorted
             ],
         )
-        for x in ondemand_sorted:
-            x.spot = False
-        return ondemand_sorted[:max_skus_to_get]
+
+        return ondemand_price_sorted[:max_skus_to_get]
 
     instance_types_to_consider = [
         x.instance_type for x in qualified_instances_cpu_sorted
@@ -671,7 +685,7 @@ def resolve_hardware_requirements_to_instance_types(
             "Could not fetch eviction rate information from AWS, can't display expected eviction rate info"
         )
 
-    logger.debug("Instances / Prices in selection: %s", avg_by_sku_az)
+    logger.debug("Instances / prices in selection: %s", avg_by_sku_az)
 
     instance_selection_strategy_cls = (
         InstanceTypeSelection.get_selection_strategy(
