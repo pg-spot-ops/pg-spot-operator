@@ -1173,9 +1173,7 @@ def any_action_flags_set(a: ArgumentParser) -> bool:
         or a.instance_family
         or a.vm_only
         or a.vm_host
-        or a.vm_login_user
         or a.cpu_min
-        or a.ram_min
         or a.storage_min
         or a.teardown
         or a.teardown_region
