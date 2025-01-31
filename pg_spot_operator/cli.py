@@ -512,7 +512,7 @@ def check_cli_args_valid(args: ArgumentParser):
             exit(1)
         if (
             args.region
-            and not args.check_price
+            and not (args.check_price or args.list_instances)
             and len(args.region.split("-")) != 3
         ):
             logger.error(
@@ -609,7 +609,7 @@ def check_cli_args_valid(args: ArgumentParser):
         )
         exit(1)
     if not (
-        args.check_price or args.vm_host
+        args.check_price or args.list_instances or args.vm_host
     ) and not is_explicit_aws_region_code(args.region):
         logger.error(
             "Fuzzy or regex --region input only allowed in --check-price mode",
@@ -1056,6 +1056,7 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
         "AZ",
         "InstanceId",
         "InstanceType",
+        "Market type",
         "vCPU",
         "$ (Mon.)",
         "VolumeId",
@@ -1077,14 +1078,21 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
                 i.get("Placement", {}).get("AvailabilityZone"),
                 i.get("InstanceId"),
                 i.get("InstanceType"),
+                "spot" if i.get("InstanceLifecycle") else "on-demand",
                 i.get("CpuOptions", {}).get("CoreCount"),
-                round(
-                    get_current_hourly_spot_price_static(
-                        region, i.get("InstanceType")
+                (
+                    round(
+                        get_current_hourly_spot_price_static(
+                            region, i.get("InstanceType")
+                        )
+                        * 24
+                        * 30,
+                        1,
                     )
-                    * 24
-                    * 30,
-                    1,
+                    if i.get("InstanceLifecycle") == "spot"
+                    else try_get_monthly_ondemand_price_for_sku(
+                        region, i.get("InstanceType", "")
+                    )
                 ),
                 (
                     i["BlockDeviceMappings"][1].get("Ebs", {}).get("VolumeId")
