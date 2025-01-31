@@ -46,11 +46,13 @@ PS Note that for Ansible SSH access to work the default SSH key on the engine no
 To open port 22 for the engine node/workstation IP only, for Ansible setup to work, one could run:
 
 ```
-MYPUBIP=$(curl -s whatismyip.akamai.com)
+MYPUBIP=$(curl -sL whatismyip.akamai.com)
 
 aws ec2 authorize-security-group-ingress \
   --group-name default \
-  --ip-permissions IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges="[{CidrIp=${MYPUBIP}/32}]" \
+  --protocol tcp \
+  --port 22 \
+  --cidr "${MYPUBIP}/32" \
   --region eu-north-1
 ```
 
