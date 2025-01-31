@@ -82,20 +82,30 @@ while true ; do
 
     # Create the instance and store the connect string
     echo "Provisioning ..."
-    CONNSTR=$(pg_spot_operator --manifest-path $INSTANCE_MANIFEST_PATH --connstr-only --verbose 2>>$LOGDIR/provision_${INSTANCE_NAME}_`date --rfc-3339=d`.log)
+    echo "Log at $LOGDIR/provision_${INSTANCE_NAME}_`date --rfc-3339=d`.log"
+    CONNSTR=$(timeout 300 pg_spot_operator --manifest-path $INSTANCE_MANIFEST_PATH --connstr-only --verbose --debug 2>>$LOGDIR/provision_${INSTANCE_NAME}_`date --rfc-3339=d`.log)
     echo "OK. CONNSTR=$CONNSTR"
-
-    # Test Postgres connectivity
-    ROWCOUNT=$(psql $CONNSTR -XAtc "select count(*) from pg_stat_user_tables where relname = 'pgbench_accounts'")
     if [ "$?" -ne 0 ]; then
+      echo "Provisioning ERROR"
       notify_failure
       break
     fi
 
+    # Test Postgres connectivity
+    echo "Doing rowcount ..."
+    ROWCOUNT=$(psql $CONNSTR -XAtc "select count(*) from pg_stat_user_tables where relname = 'pgbench_accounts'")
+    if [ "$?" -ne 0 ]; then
+      echo "Rowcount ERROR"
+      notify_failure
+      break
+    fi
+
+    echo "ROWCOUNT $ROWCOUNT"
     if [ "$ROWCOUNT" == '0' ]; then
       echo "Init pgbench schema ..."
       pgbench -iq "$CONNSTR" >/dev/null
       if [ "$?" -ne 0 ]; then
+        echo "Init ERROR"
         notify_failure
         break
       fi
@@ -104,6 +114,7 @@ while true ; do
     echo "Doing 1 pgbench TX ..."
     pgbench -n -t 1 "$CONNSTR" >/dev/null
     if [ "$?" -ne 0 ]; then
+      echo "pgbench TX ERROR"
       notify_failure
       break
     fi
