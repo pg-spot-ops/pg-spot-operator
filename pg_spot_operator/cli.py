@@ -591,11 +591,6 @@ def check_cli_args_valid(args: ArgumentParser):
         if not os.path.exists(os.path.expanduser(args.ssh_private_key)):
             logger.error("--ssh-private-key file not found")
             exit(1)
-        if not os.path.exists(
-            os.path.expanduser(args.ssh_private_key + ".pub")
-        ):
-            logger.error("--ssh-private-key .pub file not found")
-            exit(1)
     if (
         args.ansible_path
         and not (
