@@ -4,6 +4,36 @@ Changelog
 
 (unreleased)
 ------------
+- Add a Lifecycle column to the --list-instances output. [Kaarel Moppel]
+
+  To show if it's a spot or on-demand instance. Also show the correct
+  on-demand price for the on-demand instances
+- Allow VM provisioning with --ssh-private-key pointing to a PEM file.
+  [Kaarel Moppel]
+
+  Currently we checked for .pub existance
+- Simplify aws ec2 authorize-security-group-ingress example. [Kaarel
+  Moppel]
+
+  To expose an SSH port for Ansible to work
+- Male fail2ban less aggressive. [Kaarel Moppel]
+
+  5 > 100 errors per 1h
+- Show help again if no CLI arguments set. [Kaarel Moppel]
+
+  Got messed up with default --vm-login-user set to pgspotops
+- Fix persistent VM (--persistent-vms) price sorting. [Kaarel Moppel]
+
+  Was random essentially
+- Add a special -1 value to --storage-min handling. [Kaarel Moppel]
+
+  Don't create / attach a data volume in that case and only run with root
+  volume. Default --os-disk-size is 20GB.
+
+
+0.9.45 (2025-01-28)
+-------------------
+- Release: version 0.9.45 🚀 [Kaarel Moppel]
 - README minor correction on boolean flags. [Kaarel Moppel]
 - Merge pull request #136 from pg-spot-ops/check-ssh-connectivity-after-
   vm-provisioning. [Kaarel Moppel]
