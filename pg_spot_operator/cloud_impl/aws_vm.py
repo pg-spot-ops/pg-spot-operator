@@ -6,6 +6,10 @@ from typing import Any
 
 import botocore
 
+from pg_spot_operator.cloud_impl.aws_cache import (
+    cache_ami_details_to_fs,
+    try_get_cached_ami_details,
+)
 from pg_spot_operator.cloud_impl.aws_client import get_client
 from pg_spot_operator.cloud_impl.cloud_structs import CloudVM, InstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
@@ -41,16 +45,25 @@ def get_latest_ami_for_region_arch(
     ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-20240423
     Returns (image ID, AMI details dict)
     """
-    logger.debug(
-        f"Getting AMI for region {region} architecture {architecture} os_family {OS_IMAGE_FAMILY} ..."
-    )
-
-    client = get_client("ec2", region)
 
     if "arm" in architecture.lower():
         architecture = "arm64"
     else:
         architecture = "amd64"
+
+    cached_ami_details = try_get_cached_ami_details(region, architecture)
+    if cached_ami_details:
+        ami_id = cached_ami_details["ImageId"]
+        logger.debug(
+            f"Using cached AMI {ami_id} for region {region} architecture {architecture} os_family {OS_IMAGE_FAMILY} ..."
+        )
+        return ami_id, cached_ami_details
+
+    logger.debug(
+        f"Getting AMI for region {region} architecture {architecture} os_family {OS_IMAGE_FAMILY} ..."
+    )
+
+    client = get_client("ec2", region)
 
     ami_name_search_str = f"{OS_IMAGE_FAMILY}-{architecture}-*"
 
@@ -87,6 +100,7 @@ def get_latest_ami_for_region_arch(
                 logger.debug(
                     "Latest %s AMI found: %s", OS_IMAGE_FAMILY, amis[0]
                 )
+                cache_ami_details_to_fs(region, architecture, amis[0])
                 return amis[0]["ImageId"], amis[0]
     raise Exception(
         f"No default AMI found for region {region}, architecture {architecture}, os_family {OS_IMAGE_FAMILY}"
