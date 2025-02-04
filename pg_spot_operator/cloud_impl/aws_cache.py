@@ -258,3 +258,42 @@ def get_spot_eviction_rates_from_public_json() -> dict:
     write_pricing_cache_file_as_json(cache_file, eviction_rate_info)
 
     return eviction_rate_info
+
+
+def try_get_cached_ami_details(region, architecture) -> dict:
+    """Weekly caching
+    https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-images.html
+    """
+    logger.debug(
+        f"Checking the AMI cache for region {region} architecture {architecture} ..."
+    )
+    try:
+        now = datetime.now()
+        week = now.isocalendar().week
+        cache_file = f"aws_ami_{region}_{architecture}_{now.year}_w{week}.json"
+        ami_info = get_cached_pricing_dict(cache_file)
+        if ami_info:
+            return ami_info
+        logger.debug(
+            f"No cached AMI found for region {region} architecture {architecture}"
+        )
+    except Exception:
+        logger.exception("Failed to check for a cached AMI")
+    return {}
+
+
+def cache_ami_details_to_fs(region: str, architecture: str, ami_details: dict):
+    try:
+        cache_dir = os.path.expanduser(
+            os.path.join(DEFAULT_CONFIG_DIR, CONFIG_DIR_PRICE_CACHE_SUBDIR)
+        )
+        now = datetime.now()
+        week = now.isocalendar().week
+        cache_file = f"aws_ami_{region}_{architecture}_{now.year}_w{week}.json"
+        cache_path = os.path.join(cache_dir, cache_file)
+        os.makedirs(cache_dir, exist_ok=True)
+        with open(cache_path, "w") as f:
+            json.dump(ami_details, f)
+        logger.debug("Wrote AMI cache to %s", cache_path)
+    except Exception:
+        logger.exception("Failed to cache AMI info")
