@@ -202,7 +202,7 @@ PS To avoid too many evictions for Spots one can also use the `--list-avg-spot-s
 look for regions with low average eviction rates. E.g.:
 
 ```
-pg_spot_operator --list-avg-spot-savings yes --region ^eu
+pg_spot_operator --list-avg-spot-savings --region ^eu
 
 2025-01-07 16:23:46,760 INFO Regions in consideration based on --region='^eu' input: ['eu-central-1', 'eu-central-2', 'eu-north-1', 'eu-south-1', 'eu-south-2', 'eu-west-1', 'eu-west-2', 'eu-west-3']
 +--------------+------------------------+-----------------------------+----------------------------+
