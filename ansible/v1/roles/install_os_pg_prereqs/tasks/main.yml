@@ -50,3 +50,24 @@
   delay: 30
   retries: 3
   when: ( os.extra_packages is defined ) and ( os.extra_packages | type_debug == "list" )
+
+# Add TimescaleDB repo if timescaledb in postgres.extensions, as the PDGD repo variant is gelded
+# https://docs.timescale.com/self-hosted/latest/install/installation-linux/
+- block:
+
+  - name: Add Timescale signing key
+    ansible.builtin.apt_key:
+      url: https://packagecloud.io/timescale/timescaledb/gpgkey
+      state: present
+
+  - name: Add Timescale repository
+    ansible.builtin.apt_repository:
+      repo: "deb https://packagecloud.io/timescale/timescaledb/debian/ {{ ansible_distribution_release }} main"
+      state: present
+
+  - name: Install Timescale
+    ansible.builtin.apt:
+      name: timescaledb-2-postgresql-{{ postgres.version | d(16) }}
+      state: present
+
+  when: '"timescaledb" in postgres.extensions | d("")'
