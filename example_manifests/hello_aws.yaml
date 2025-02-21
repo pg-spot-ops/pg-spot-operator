@@ -27,10 +27,11 @@ vm:
   storage_min: 100  # Required, as no auto-growth for now
   storage_type: local  # local | network. PS Using network volumes pins you to a specific AZ
   storage_speed_class: ssd  # hdd | ssd | nvme. For instance storage (storage_type=local)
-  volume_type: gp3  # gp2, gp3, io1, io2 Details: https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html
+  volume_type: gp3  # gp2, gp3, io1, io2, st1, sc1 Details: https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html
 #  volume_iops:  # For provisioned / paid IOPS, EBS gp3 default is 3000
-                # gp2 / gp3 max 16K, io1 64K, io2 256K
+                # gp2 / gp3 max 16K, io1 64K, io2 256K. Not applicable to st1, sc1
 #  volume_throughput:  # MBs. For provisioned / paid throughput for gp3. Default is 125, max 1000.
+                     # Not applicable to st1, sc1
   detailed_monitoring: false  # As incurs extra costs
 os:
   unattended_security_upgrades: true  # Might result in nightly restarts

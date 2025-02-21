@@ -169,7 +169,9 @@ class ArgumentParser(Tap):
         "STORAGE_SPEED_CLASS", "ssd"
     )  # hdd | ssd | nvme. ssd also includes nvme
     os_disk_size: int = int(os.getenv("OS_DISK_SIZE", "20"))
-    volume_type: str = os.getenv("VOLUME_TYPE", "gp3")  # gp2, gp3, io1, io2
+    volume_type: str = os.getenv(
+        "VOLUME_TYPE", "gp3"
+    )  # gp2, gp3, io1, io2, st1, sc1
     volume_iops: int = int(
         os.getenv("VOLUME_IOPS", "0")
     )  # max. gp2/gp3=16K, io1=64K, io2=256K, gp3 def=3K
@@ -521,6 +523,16 @@ def check_cli_args_valid(args: ArgumentParser):
         if args.zone and len(args.zone.split("-")) not in (3, 5):
             logger.error(
                 """Unexpected --zone format, expecting smth like: eu-west-1b or us-west-2-lax-1a""",
+            )
+            exit(1)
+        if args.volume_type in ("st1", "sc1") and args.storage_min < 125:
+            logger.error("st1 / sc1 volumes must be at least 125 GiB in size")
+            exit(1)
+        if args.volume_type in ("st1", "sc1") and (
+            args.volume_iops or args.volume_throughput
+        ):
+            logger.error(
+                "Provisioned throughput / iops not supported for st1 / sc1 volumes"
             )
             exit(1)
     if args.teardown_region and (
