@@ -23,7 +23,7 @@ def get_cached_pricing_dict(cache_file: str) -> dict:
     )
     cache_path = os.path.join(cache_dir, cache_file)
     if os.path.exists(cache_path):
-        logger.debug("Reading cached AWS pricing file: %s", cache_path)
+        # logger.debug("Reading cached AWS pricing file: %s", cache_path)
         try:
             with open(cache_path, "r") as f:
                 return json.loads(f.read())
