@@ -4,6 +4,30 @@ Changelog
 
 (unreleased)
 ------------
+- Merge pull request #138 from pg-spot-ops/ami-caching. [Kaarel Moppel]
+
+  Ami caching
+- Remove the reading cached AWS pricing debug message. [Kaarel Moppel]
+
+  Was too chatty
+- Cache AWS OS AMIs for a week. [Kaarel Moppel]
+- Allow provisioning of st1 and sc1 type (HDD) volumes. [Kaarel Moppel]
+
+  Can save some $$ so.
+  As per https://github.com/pg-spot-ops/pg-spot-operator/issues/130
+- Compact --check-price output a bit. [Kaarel Moppel]
+
+  Remove also column comparing approximate difference with RDS pricing
+- Install Timescale from Timescale repos, not PGDG. [Kaarel Moppel]
+
+  As the PGDG version has many features missing. Also auto-install the
+  OS package to make it more convenient
+- README Minor --list-avg-spot-savings correction. [Kaarel Moppel]
+
+
+0.9.46 (2025-02-03)
+-------------------
+- Release: version 0.9.46 🚀 [Kaarel Moppel]
 - Add a Lifecycle column to the --list-instances output. [Kaarel Moppel]
 
   To show if it's a spot or on-demand instance. Also show the correct
