@@ -72,7 +72,7 @@ def get_default_azure_subscription_id_from_local_profile() -> str | None:
     profiles = {}
     try:
         profiles = json.loads(
-            open(local_az_profile_file).read().replace("\uFEFF", "")
+            open(local_az_profile_file).read().replace("\ufeff", "")
         )
     except Exception:
         pass

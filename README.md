@@ -60,32 +60,32 @@ pipx install pg-spot-operator
 pipx install --include-deps ansible  # If Ansible not yet installed
 
 # Resolve user requirements to actual EC2 instance types and show the best (cheap and with good eviction rates) instance types.
-# Here we only consider North American regions, assuming were located there and want good latencies as well.
+# Here we only consider North American regions, assuming we're located there and want OK latencies.
 pg_spot_operator --check-price \
   --region='^(us|ca)' --ram-min=128 \
   --storage-min=500 --storage-type=local
 
 Resolving HW requirements to actual instance types / prices using --selection-strategy=balanced ...
 Regions in consideration based on --region='^(us|ca)' input: ['ca-central-1', 'ca-west-1', 'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
-Top 10 cheapest instances found for strategy 'balanced':
-+-----------+--------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
-|   Region  |     SKU      | Arch | vCPU |  RAM   | Instance storage | Spot $ (Mo) | On-Demand $ (Mo) | EC2 discount | Approx. RDS win | Evic. rate (Mo) |
-+-----------+--------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
-| us-east-1 | x2gd.4xlarge | arm  |  16  | 256 GB |   950 GB ssd     |    195.6    |      961.9       |     -80%     |        8x       |      10-15%     |
-| us-east-1 | i4g.4xlarge  | arm  |  16  | 128 GB |   3750 GB ssd    |    218.4    |      889.6       |     -75%     |        7x       |       <5%       |
-| us-west-2 | i4g.4xlarge  | arm  |  16  | 128 GB |   3750 GB ssd    |    245.7    |      889.6       |     -72%     |        6x       |      5-10%      |
-| us-west-2 | x2gd.4xlarge | arm  |  16  | 256 GB |   950 GB ssd     |    259.5    |      961.9       |     -73%     |        6x       |       <5%       |
-| us-east-2 | r5d.4xlarge  | x86  |  16  | 128 GB |   600 GB nvme    |    264.1    |      829.4       |     -68%     |        5x       |      5-10%      |
-| us-east-2 | r5ad.4xlarge | x86  |  16  | 128 GB |   600 GB nvme    |    264.7    |      754.6       |     -65%     |        5x       |      5-10%      |
-| us-west-1 | r6gd.4xlarge | arm  |  16  | 128 GB |   950 GB nvme    |    267.6    |      748.8       |     -64%     |        5x       |      10-15%     |
-| us-east-1 | g6e.4xlarge  | arm  |  16  | 128 GB |   600 GB nvme    |    269.7    |      2163.1      |     -88%     |       13x       |       <5%       |
-| us-east-2 | i4g.4xlarge  | arm  |  16  | 128 GB |   3750 GB ssd    |    295.0    |      889.6       |     -67%     |        5x       |       <5%       |
-| us-west-1 | r7gd.4xlarge | arm  |  16  | 128 GB |   950 GB nvme    |    300.0    |      881.8       |     -66%     |        5x       |       <5%       |
-+-----------+--------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
+Top cheapest instances found for strategy 'balanced' (to list available strategies run --list-strategies / LIST_STRATEGIES=y):
++--------------+--------------+------+------+--------+---------------+--------+-------------+----------+------------+
+|    Region    |     SKU      | Arch | vCPU |  RAM   | Local storage | $ Spot | $ On-Demand | Discount | Evic. rate |
++--------------+--------------+------+------+--------+---------------+--------+-------------+----------+------------+
+| us-east-1    | x2gd.4xlarge | arm  |  16  | 256 GB | 950 GB ssd    |  220   |     962     |   -77%   |   10-15%   |
+| us-west-1    | i3en.6xlarge | x86  |  24  | 192 GB | 15000 GB nvme |  233   |     2160    |   -89%   |   10-15%   |
+| ca-central-1 | r6gd.4xlarge | arm  |  16  | 128 GB | 950 GB nvme   |  269   |     728     |   -63%   |   10-15%   |
+| us-west-2    | x2gd.4xlarge | arm  |  16  | 256 GB | 950 GB ssd    |  269   |     962     |   -72%   |    <5%     |
+| us-east-2    | r5ad.4xlarge | x86  |  16  | 128 GB | 600 GB nvme   |  272   |     755     |   -64%   |    <5%     |
+| us-west-2    | r5ad.4xlarge | x86  |  16  | 128 GB | 600 GB nvme   |  275   |     755     |   -64%   |    <5%     |
+| us-east-1    | i8g.4xlarge  | arm  |  16  | 128 GB | 3750 GB hdd   |  283   |     988     |   -71%   |   5-10%    |
+| us-west-2    | i4g.4xlarge  | arm  |  16  | 128 GB | 3750 GB ssd   |  301   |     890     |   -66%   |    <5%     |
+| us-east-1    | i4g.4xlarge  | arm  |  16  | 128 GB | 3750 GB ssd   |  303   |     890     |   -66%   |    <5%     |
+| us-west-1    | i4i.4xlarge  | x86  |  16  | 128 GB | 3750 GB nvme  |  305   |     1090    |   -72%   |   5-10%    |
++--------------+--------------+------+------+--------+---------------+--------+-------------+----------+------------+
 ```
 
 Ok seems `us-east-1` is best for us currently with some incredible pricing, as hinted in the log output - **a full work
-day on a very powerful instance will cost us a mere $2.2** - less than a cup of coffee!
+day on a very powerful instance (in-memory for our dataset!) will cost us a mere $2.4** - less than a cup of coffee!
 
 
 For actually launching any AWS instances we of course need a working CLI (`~/.aws/credentials`) or have some
@@ -185,13 +185,13 @@ Or add the `--instance-family` flag get some cheap (well, cheapish) Tensor cores
 ```
 pg_spot_operator --region=us-west --check-price --instance-family=^p
 
-+-----------+---------------+------+------+---------+------------------+-------------+------------------+--------------+-----------------+-----------------+
-|   Region  |      SKU      | Arch | vCPU |   RAM   | Instance storage | Spot $ (Mo) | On-Demand $ (Mo) | EC2 discount | Approx. RDS win | Evic. rate (Mo) |
-+-----------+---------------+------+------+---------+------------------+-------------+------------------+--------------+-----------------+-----------------+
-| us-west-2 | p4d.24xlarge  | x86  |  96  | 1152 GB |  8000 GB ssd     |     8387    |      23596       |     -64%     |        5x       |       <5%       |
-| us-west-2 | p5en.48xlarge | x86  | 192  | 2048 GB |  30720 GB nvme   |    13064    |      61056       |     -79%     |        8x       |      15-20%     |
-| us-west-1 | p5.48xlarge   | x86  | 192  | 2048 GB |  30720 GB ssd    |    17360    |      88488       |     -80%     |        8x       |      5-10%      |
-+-----------+---------------+------+------+---------+------------------+-------------+------------------+--------------+-----------------+-----------------+
++-----------+---------------+------+------+---------+---------------+--------+-------------+----------+------------+
+|   Region  |      SKU      | Arch | vCPU |   RAM   | Local storage | $ Spot | $ On-Demand | Discount | Evic. rate |
++-----------+---------------+------+------+---------+---------------+--------+-------------+----------+------------+
+| us-west-2 | p4d.24xlarge  | x86  |  96  | 1152 GB | 8000 GB ssd   |  7049  |    23596    |   -70%   |   15-20%   |
+| us-west-1 | p5.48xlarge   | x86  | 192  | 2048 GB | 30720 GB ssd  | 11175  |    88488    |   -87%   |    <5%     |
+| us-west-2 | p5en.48xlarge | x86  | 192  | 2048 GB | 30720 GB nvme | 15276  |    61056    |   -75%   |    <5%     |
++-----------+---------------+------+------+---------+---------------+--------+-------------+----------+------------+
 ```
 
 ## Persistent VM mode

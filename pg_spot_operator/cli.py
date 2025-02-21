@@ -1,6 +1,5 @@
 import fcntl
 import logging
-import math
 import os.path
 import shutil
 
@@ -695,16 +694,15 @@ def display_selected_skus_for_region(
             "Arch",
             "vCPU",
             "RAM",
-            "Instance storage",
-            "Spot $ (Mo)",
-            "On-Demand $ (Mo)",
-            "EC2 discount",
-            "Approx. RDS win",
-            "Evic. rate (Mo)",
+            "Local storage",
+            "$ Spot",
+            "$ On-Demand",
+            "Discount",
+            "Evic. rate",
         ]
     ]
     ec2_discount_rate = "N/A"
-    approx_rds_x = "N/A"
+
     for i in selected_skus:
         if not i.monthly_ondemand_price:
             i.monthly_ondemand_price = try_get_monthly_ondemand_price_for_sku(
@@ -718,10 +716,6 @@ def display_selected_skus_for_region(
                     / i.monthly_ondemand_price
                 )
             )
-            approx_rds_x_int = math.ceil(
-                (i.monthly_ondemand_price * 1.5) / i.monthly_spot_price
-            )
-            approx_rds_x = f"{approx_rds_x_int}x"
 
         max_reg_len = max([len(x.region) for x in selected_skus])
         max_sku_len = max([len(x.instance_type) for x in selected_skus])
@@ -752,7 +746,6 @@ def display_selected_skus_for_region(
                 f"{i.monthly_ondemand_price}",
                 f"{ec2_discount_rate}"
                 + ("%" if ec2_discount_rate != "N/A" else ""),
-                approx_rds_x,
                 (
                     i.eviction_rate_group_label
                     if i.eviction_rate_group_label
