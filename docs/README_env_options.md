@@ -22,7 +22,7 @@
 * **--region / REGION** Required for modes that actually do something, as we don't assume a persistent config store. Optional if --zone set.
   *PS* Note that it can also be a regex in `--check-price` mode, to select the cheapest region of a continent, e.g. 'eu-'
 * **--zone / ZONE** To fix the placement within the region. Not recommended, as prices differ considerably within regions' zones.
-* **--postgres-version / POSTGRES_VERSION** (Default: 16)
+* **--postgres-version / POSTGRES_VERSION** (Default: 17)
 * **--manifest-path / MANIFEST_PATH** Full user manifest YAML path if not using the CLI / single params
 * **--manifest / MANIFEST** Full manifest input as YAML text
 * **--teardown / TEARDOWN** Delete VM and any other created resources for the give instance

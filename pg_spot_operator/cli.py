@@ -144,7 +144,7 @@ class ArgumentParser(Tap):
     instance_name: str = os.getenv(
         "INSTANCE_NAME", ""
     )  # If set other below params become relevant
-    postgres_version: int = int(os.getenv("POSTGRES_VERSION", "16"))
+    postgres_version: int = int(os.getenv("POSTGRES_VERSION", "17"))
     instance_types: str = os.getenv(
         "INSTANCE_TYPES", ""
     )  # i3.xlarge,i3.2xlarge

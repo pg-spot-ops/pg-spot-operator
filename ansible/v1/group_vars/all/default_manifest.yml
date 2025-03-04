@@ -38,14 +38,14 @@ default_manifest:
     ssh_brute_force_protection: true  # via fail2ban
     extra_packages: []  # Default: []
 #      - pgbadger
-#      - postgresql-16-cron
+#      - postgresql-17-cron
     ssh_pub_keys: []  # Literal extra pubkeys to add (in addition to default ~/.ssh/id_rsa.pub) to created VMs
     ssh_pub_key_paths: []  # Extra pubkey paths accessible on the engine VM
 #  user_tags:  # In addition to user tags the engine will add a pg-spot-operator-tag + pg-spot-operator-expiration-date
 #              # in case expiration_date set
 #    app: backend
   postgres:
-    version: 16                   # Optional. Minimum supported version is v14. Defaults to latest stable
+    version: 17                   # Optional. Minimum supported version is v15. Defaults to latest stable
     admin_is_superuser: false
     admin_user:                   # Set if remote Postgres access needed
     admin_password:          # Needs to be provided if admin_user set
