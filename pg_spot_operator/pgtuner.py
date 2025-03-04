@@ -116,6 +116,9 @@ def apply_throwaway(ti: TuningInput, base: dict[str, Any]) -> dict[str, Any]:
     base = apply_analytics(ti, base)
     base["fsync"] = "off"
     base["full_page_writes"] = "off"
+    base["wal_level"] = "minimal"
+    base["archive_mode"] = "off"
+    base["max_wal_senders"] = 0
     return base
 
 
