@@ -57,7 +57,9 @@ def infer_cpu_arch_from_aws_instance_type_name(instance_type: str) -> str:
     """Defaults to x86"""
     if instance_type:
         splits = instance_type.split(".")
-        if len(splits) == 2 and "g" in splits[0]:
+        if (
+            len(splits) == 2 and "g" in splits[0][1:]
+        ):  # g4dn.xlarge is actually x86_64
             return CPU_ARCH_ARM
     return CPU_ARCH_X86
 
