@@ -63,6 +63,7 @@
 * **--instance-types / INSTANCE_TYPES** To explicitly control the instance type selection. E.g. "i3.xlarge,i3.2xlarge"
 * **--instance-family / INSTANCE_FAMILY** Regex. e.g. 'r(6|7)'
 * **--cpu-arch / CPU_ARCH** arm / intel / amd / x86
+* **--max-price / MAX_PRICE** Maximum hourly price cap to select / launch VMs
 
 # Postgres
 
