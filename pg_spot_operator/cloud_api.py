@@ -149,6 +149,7 @@ def resolve_hardware_requirements_to_instance_types(
                     instance_types_to_avoid=skus_to_avoid,
                     instance_selection_strategy=m.vm.instance_selection_strategy,
                     instance_family=m.vm.instance_family,
+                    max_price=m.vm.max_price,
                 )
             )
         except Exception as e:

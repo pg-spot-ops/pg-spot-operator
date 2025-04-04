@@ -537,6 +537,7 @@ def resolve_hardware_requirements_to_instance_types(
     instance_types_to_avoid: list[str] | None = None,
     instance_selection_strategy: str = "cheapest",
     instance_family: str = "",
+    max_price: float = 0,
 ) -> list[InstanceTypeInfo]:
     """Returns a price-sorted list"""
     if not all_instances:
@@ -668,6 +669,26 @@ def resolve_hardware_requirements_to_instance_types(
         avg_by_sku_az = get_filtered_instances_by_price_no_az(
             qualified_instances_cpu_sorted
         )
+
+    if max_price:
+        skus_before_price_filter = len(qualified_instances_with_price_info)
+        qualified_instances_with_price_info = [
+            x
+            for x in qualified_instances_with_price_info
+            if x.hourly_spot_price <= max_price
+        ]
+        skus_after_price_filter = len(qualified_instances_with_price_info)
+        if skus_before_price_filter - skus_after_price_filter:
+            logger.info(
+                "%s SKUs removed due to max hourly price filter of $%s",
+                skus_before_price_filter - skus_after_price_filter,
+                max_price,
+            )
+        avg_by_sku_az = [
+            (sku, zone, price)
+            for sku, zone, price in avg_by_sku_az
+            if price <= max_price
+        ]
 
     try:
         qualified_instances_with_price_info = (

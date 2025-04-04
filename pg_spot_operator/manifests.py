@@ -76,6 +76,7 @@ class SectionVm(BaseModel):
     )
     persistent_vms: bool = False
     detailed_monitoring: bool = False  # Has extra cost
+    max_price: float = 0  # Hourly
     cpu_min: int = 0
     cpu_max: int = 0
     ram_min: int = 0

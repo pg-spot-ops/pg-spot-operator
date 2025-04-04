@@ -153,6 +153,7 @@ class ArgumentParser(Tap):
         "REGION", ""
     )  # Exact region or also a Regex in price check mode
     zone: str = os.getenv("ZONE", "")
+    max_price: float = float(os.getenv("MAX_PRICE", "0"))  # Max hourly price
     cpu_min: int = int(os.getenv("CPU_MIN", "0"))
     cpu_max: int = int(os.getenv("CPU_MAX", "0"))
     allow_burstable: bool = str_to_bool(
@@ -336,6 +337,7 @@ def compile_manifest_from_cmdline_params(
     m.integrations.connstr_bucket_secret = args.connstr_bucket_access_secret
     m.vm_only = args.vm_only
     m.vm.cpu_arch = args.cpu_arch
+    m.vm.max_price = args.max_price
     m.vm.cpu_min = args.cpu_min
     m.vm.cpu_max = args.cpu_max
     m.vm.allow_burstable = args.allow_burstable
