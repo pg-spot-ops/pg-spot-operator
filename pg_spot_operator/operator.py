@@ -800,6 +800,37 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str, str]:
         m.cloud,
         m.uuid,
     )
+
+    vm = cmdb.get_latest_vm_by_uuid(m.uuid)
+    if (
+        vm and not vm.deleted_on and vm.provider_id
+    ):  # 1st let's try the cheaper SSH check
+        try:
+            ssh_ok = check_ssh_ping_ok(
+                str(vm.login_user),
+                str(vm.ip_public or vm.ip_private),
+                max_wait_seconds=2,
+            )
+            if ssh_ok:
+                logger.info(
+                    "Backing instance %s %s (%s / %s) found",
+                    vm.provider_id,
+                    vm.sku,
+                    vm.ip_public,
+                    vm.ip_private,
+                )
+                return (
+                    False,
+                    str(vm.provider_id),
+                    str(vm.ip_public or vm.ip_private),
+                )
+        except Exception:
+            logger.warning(
+                "Failed to SSH check instance %s, following up with an API check",
+                vm.provider_id,
+            )
+
+    # Check if VM there via AWS API call
     backing_instances = get_backing_vms_for_instances_if_any(
         m.region, m.instance_name
     )
@@ -808,7 +839,6 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str, str]:
             raise Exception(
                 f"A single backing instance expected - got: {backing_instances}"
             )  # TODO take latest by creation date
-        vm = cmdb.get_latest_vm_by_uuid(m.uuid)
         instance_id = backing_instances[0]["InstanceId"]
         ip_priv = backing_instances[0]["PrivateIpAddress"]
         ip_pub = backing_instances[0].get("PublicIpAddress")
