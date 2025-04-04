@@ -671,10 +671,23 @@ def resolve_hardware_requirements_to_instance_types(
         )
 
     if max_price:
+        skus_before_price_filter = len(qualified_instances_with_price_info)
         qualified_instances_with_price_info = [
             x
             for x in qualified_instances_with_price_info
             if x.hourly_spot_price <= max_price
+        ]
+        skus_after_price_filter = len(qualified_instances_with_price_info)
+        if skus_before_price_filter - skus_after_price_filter:
+            logger.info(
+                "%s SKUs removed due to max hourly price filter of $%s",
+                skus_before_price_filter - skus_after_price_filter,
+                max_price,
+            )
+        avg_by_sku_az = [
+            (sku, zone, price)
+            for sku, zone, price in avg_by_sku_az
+            if price <= max_price
         ]
 
     try:
