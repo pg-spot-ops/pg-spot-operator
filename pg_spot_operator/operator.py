@@ -39,6 +39,7 @@ from pg_spot_operator.cloud_impl.aws_vm import (
 )
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
 from pg_spot_operator.cmdb import (
+    Instance,
     get_instance_connect_string,
     get_instance_connect_string_postgres,
     get_latest_vm_by_uuid,
@@ -799,6 +800,37 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str, str]:
         m.cloud,
         m.uuid,
     )
+
+    vm = cmdb.get_latest_vm_by_uuid(m.uuid)
+    if (
+        vm and not vm.deleted_on and vm.provider_id
+    ):  # 1st let's try the cheaper SSH check
+        try:
+            ssh_ok = check_ssh_ping_ok(
+                str(vm.login_user),
+                str(vm.ip_public or vm.ip_private),
+                max_wait_seconds=2,
+            )
+            if ssh_ok:
+                logger.info(
+                    "Backing instance %s %s (%s / %s) found",
+                    vm.provider_id,
+                    vm.sku,
+                    vm.ip_public,
+                    vm.ip_private,
+                )
+                return (
+                    False,
+                    str(vm.provider_id),
+                    str(vm.ip_public or vm.ip_private),
+                )
+        except Exception:
+            logger.warning(
+                "Failed to SSH check instance %s, following up with an API check",
+                vm.provider_id,
+            )
+
+    # Check if VM there via AWS API call
     backing_instances = get_backing_vms_for_instances_if_any(
         m.region, m.instance_name
     )
@@ -807,7 +839,6 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str, str]:
             raise Exception(
                 f"A single backing instance expected - got: {backing_instances}"
             )  # TODO take latest by creation date
-        vm = cmdb.get_latest_vm_by_uuid(m.uuid)
         instance_id = backing_instances[0]["InstanceId"]
         ip_priv = backing_instances[0]["PrivateIpAddress"]
         ip_pub = backing_instances[0].get("PublicIpAddress")
@@ -1143,6 +1174,81 @@ def write_connstr_to_output_path(
         )
 
 
+def get_manifest_from_cli_input(
+    cli_env_manifest, cli_user_manifest_path, first_loop
+) -> InstanceManifest:
+    m: InstanceManifest = None  # type: ignore
+    if cli_env_manifest:
+        (
+            logger.info(
+                "Processing manifest for instance '%s' set via CLI / ENV ...",
+                cli_env_manifest.instance_name,
+            )
+            if first_loop
+            else None
+        )
+        m = cli_env_manifest
+    else:
+        (
+            logger.info(
+                "Processing manifest from path %s...",
+                cli_user_manifest_path,
+            )
+            if first_loop
+            else None
+        )
+        if os.path.exists(os.path.expanduser(cli_user_manifest_path)):
+            with open(os.path.expanduser(cli_user_manifest_path)) as f:
+                m = manifests.try_load_manifest_from_string(f.read())  # type: ignore
+    if not (m and m.instance_name):
+        logger.info("No valid manifest found - nothing to do ...")
+        raise NoOp()
+    if m.is_paused:
+        logger.info("Skipping instance %s as is_paused set", m.instance_name)
+        raise NoOp()
+    return m
+
+
+def register_or_update_manifest_in_cmdb(
+    cli_destroy_file_base_path, m
+) -> Instance | None:
+    instance = cmdb.get_instance_by_name_cloud(m)
+    m.fill_in_defaults()
+    if not instance:
+        m.uuid = cmdb.register_instance_or_get_uuid(m)
+        if not m.is_expired():
+            try_rm_file_if_exists(cli_destroy_file_base_path + m.instance_name)
+        logger.debug(
+            "Instance destroy signal file path: %s",
+            cli_destroy_file_base_path + m.instance_name,
+        )
+    else:
+        m.uuid = instance.uuid  # type: ignore
+    m.session_vars["uuid"] = m.uuid
+    if not m.manifest_snapshot_id:
+        m.manifest_snapshot_id = cmdb.store_manifest_snapshot_if_changed(m)
+
+    if not (m and m.uuid and m.manifest_snapshot_id):
+        logger.error(
+            "Failed to register instance '%s' (%s) to CMDB, skipping ...",
+            m.instance_name,
+            m.cloud,
+        )
+        raise NoOp()
+
+    return instance
+
+
+def decrypt_and_set_aws_secrets_if_any(m):
+    # Set AWS creds
+    m.decrypt_secrets_if_any()
+    set_access_keys(
+        m.aws.access_key_id,
+        m.aws.secret_access_key,
+        m.aws.profile_name,
+    )
+
+
 def do_main_loop(
     cli_dry_run: bool = False,
     cli_debug: bool = False,
@@ -1177,79 +1283,18 @@ def do_main_loop(
 
         try:
             # Step 0 - load manifest from CLI args / full adhoc ENV manifest or manifest file
-            m: InstanceManifest = None  # type: ignore
-            if cli_env_manifest:
-                (
-                    logger.info(
-                        "Processing manifest for instance '%s' set via CLI / ENV ...",
-                        cli_env_manifest.instance_name,
-                    )
-                    if first_loop
-                    else None
-                )
-                m = cli_env_manifest
-            else:
-                (
-                    logger.info(
-                        "Processing manifest from path %s...",
-                        cli_user_manifest_path,
-                    )
-                    if first_loop
-                    else None
-                )
-                if os.path.exists(os.path.expanduser(cli_user_manifest_path)):
-                    with open(os.path.expanduser(cli_user_manifest_path)) as f:
-                        m = manifests.try_load_manifest_from_string(f.read())  # type: ignore
+            m: InstanceManifest = get_manifest_from_cli_input(
+                cli_env_manifest, cli_user_manifest_path, first_loop
+            )
 
-            if not (m and m.instance_name):
-                logger.info("No valid manifest found - nothing to do ...")
-                raise NoOp()
-            if m.is_paused:
-                logger.info(
-                    "Skipping instance %s as is_paused set", m.instance_name
-                )
-                raise NoOp()
-
-            # Step 1 - register or update manifest in CMDB
-
-            instance = cmdb.get_instance_by_name_cloud(m)
-            m.fill_in_defaults()
-            if not instance:
-                m.uuid = cmdb.register_instance_or_get_uuid(m)
-                if not m.is_expired():
-                    try_rm_file_if_exists(
-                        cli_destroy_file_base_path + m.instance_name
-                    )
-                logger.debug(
-                    "Instance destroy signal file path: %s",
-                    cli_destroy_file_base_path + m.instance_name,
-                )
-            else:
-                m.uuid = instance.uuid  # type: ignore
-            m.session_vars["uuid"] = m.uuid
-
-            if not m.manifest_snapshot_id:
-                m.manifest_snapshot_id = (
-                    cmdb.store_manifest_snapshot_if_changed(m)
-                )
-
-            if not (m and m.uuid and m.manifest_snapshot_id):
-                logger.error(
-                    "Failed to register instance '%s' (%s) to CMDB, skipping ...",
-                    m.instance_name,
-                    m.cloud,
-                )
-                raise NoOp()
+            # Step 1 - register or update manifest snapshot in CMDB
+            instance: Instance | None = register_or_update_manifest_in_cmdb(
+                cli_destroy_file_base_path, m
+            )
 
             # Step 2 - detect if something needs to be done based on manifest
 
-            # Set AWS creds
-            m.decrypt_secrets_if_any()
-            set_access_keys(
-                m.aws.access_key_id,
-                m.aws.secret_access_key,
-                m.aws.profile_name,
-            )
+            decrypt_and_set_aws_secrets_if_any(m)
 
             logger.debug(
                 "Processing instance '%s' (%s) ...",
