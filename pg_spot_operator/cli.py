@@ -1114,6 +1114,8 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
                         [
                             x.get("Ebs", {}).get("VolumeId", "")
                             for x in i["BlockDeviceMappings"]
+                            if x["DeviceName"]
+                            != "/dev/xvda"  # Leave auto-the root vol
                         ]
                     )
                     if len(i.get("BlockDeviceMappings", [])) > 1
