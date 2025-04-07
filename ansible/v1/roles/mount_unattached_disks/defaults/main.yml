@@ -3,3 +3,6 @@ mount_point: /var/lib/postgresql
 fs_type: ext4
 fs_mount_opts: "defaults,noatime"
 mount_on_boot: true
+vm:
+  stripes: 0  # >=2 enables striping
+  stripe_size_kb: 64  # 64k is LVM default. Could decrease for fast disks

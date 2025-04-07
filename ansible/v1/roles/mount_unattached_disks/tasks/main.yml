@@ -62,12 +62,22 @@
        vg: pgdata-vg
        pvs: "{{ devices_to_mount|join(',') }}"
 
-  - name: Logical LV with 100%
+  - name: Logical LV linear 100%
     community.general.lvol:
-     vg: pgdata-vg
-     lv: pgdata-lv
-     size: "100%FREE"
-     shrink: false
+      vg: pgdata-vg
+      lv: pgdata-lv
+      size: "100%FREE"
+      shrink: false
+    when: vm.stripes | d(0) == 0
+
+  - name: Logical LV with striping
+    community.general.lvol:
+      vg: pgdata-vg
+      lv: pgdata-lv
+      size: "100%FREE"
+      shrink: false
+      opts: "-i {{ vm.stripes | d( devices_to_mount | length ) }} -I {{ vm.stripe_size_kb | d(64) }}"
+    when: vm.stripes | d(0) > 0
 
   - name: Format the volume
     community.general.filesystem:

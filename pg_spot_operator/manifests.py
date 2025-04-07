@@ -92,10 +92,24 @@ class SectionVm(BaseModel):
     volume_type: str = "gp3"
     volume_iops: int = 0
     volume_throughput: int = 0
+    stripes: int = 0  # >=2 enables striping. Target volume size calculated automatically
+    stripe_size_kb: int = 64  # 64k is LVM default. Could decrease for fast disk key reads
     host: str = ""  # Skip VM creation, use provided host for Postgres setup
     login_user: str = (
         ""  # Skip VM creation, use provided login user for Postgres setup
     )
+
+    @model_validator(mode='after')
+    def check_stripes(self) -> Self:
+        if self.stripes and not (2 <= self.stripes <= 28):
+            raise ValueError('stripe count must be in range of 2-28 if set')
+        return self
+
+    @model_validator(mode='after')
+    def check_stripe_size_kb(self) -> Self:
+        if not (4 <= self.stripe_size_kb <= 4096):
+            raise ValueError('stripe_size_kb must be in range 4-4096')
+        return self
 
 
 class SectionOs(BaseModel):

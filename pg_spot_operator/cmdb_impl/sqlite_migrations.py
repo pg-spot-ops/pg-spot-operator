@@ -58,7 +58,7 @@ CREATE TABLE vm (
   cpu int,
   ram int,
   instance_storage int,  -- local / volatile disks
-  volume_id text,
+  volume_ids text,
   login_user text NOT NULL,
   ip_public text,
   ip_private text NOT NULL,

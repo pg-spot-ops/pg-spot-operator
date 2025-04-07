@@ -38,7 +38,7 @@ class CloudVM:
     ip_public: str = ""
     availability_zone: str = ""
     provider_name: str = ""
-    volume_id: str = ""
+    volume_ids: str = ""
     user_tags: dict = field(default_factory=dict)
     created_on: datetime | None = None
     provider_description: dict | None = None

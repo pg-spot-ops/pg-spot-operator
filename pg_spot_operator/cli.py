@@ -179,6 +179,12 @@ class ArgumentParser(Tap):
     volume_throughput: int = int(
         os.getenv("VOLUME_THROUGHPUT", "0")
     )  # gp3 def=125, max=1000, relevant only for gp3
+    stripes: int = int(
+        os.getenv("STRIPES", "0")
+    )  # 2-28 stripe volumes allowed
+    stripe_size_kb: int = int(
+        os.getenv("STRIPE_SIZE_KB", "64")
+    )  # Stripe size in KB
     expiration_date: str = os.getenv(
         "EXPIRATION_DATE", ""
     )  # ISO 8601 datetime, optionally with time zone
@@ -350,6 +356,8 @@ def compile_manifest_from_cmdline_params(
     m.vm.volume_type = args.volume_type
     m.vm.volume_iops = args.volume_iops
     m.vm.volume_throughput = args.volume_throughput
+    m.vm.stripes = args.stripes
+    m.vm.stripe_size_kb = args.stripe_size_kb
     if args.instance_types:
         for ins_type in args.instance_types.split(","):
             m.vm.instance_types.append(ins_type)

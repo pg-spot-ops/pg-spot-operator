@@ -219,3 +219,9 @@ def try_get_all_enabled_aws_regions() -> list[str]:
     except Exception as e:
         logger.warning("Failed to inquiry enabled AWS regions: %s", e)
         return []
+
+
+def network_volume_nr_to_device_name(volume_nr: int, dev_base_name: str = "/dev/sd") -> str:
+    """Some weird naming restrictions apply: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html"""
+    start_char = "c"
+    return dev_base_name + chr(ord(start_char) - 1 + volume_nr)

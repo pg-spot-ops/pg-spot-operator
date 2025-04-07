@@ -4,7 +4,7 @@ from pg_spot_operator.cloud_impl.cloud_util import (
     extract_instance_storage_size_and_type_from_aws_pricing_storage_string,
     is_explicit_aws_region_code,
     extract_instance_family_from_instance_type_code,
-    infer_cpu_arch_from_aws_instance_type_name,
+    infer_cpu_arch_from_aws_instance_type_name, network_volume_nr_to_device_name,
 )
 from pg_spot_operator.constants import CPU_ARCH_ARM, CPU_ARCH_X86
 
@@ -56,3 +56,7 @@ def test_infer_cpu_arch_from_aws_instance_type_name():
     assert (
         infer_cpu_arch_from_aws_instance_type_name("c6g.large") == CPU_ARCH_ARM
     )
+
+
+def test_network_volume_nr_to_device_name():
+    assert network_volume_nr_to_device_name(2) == "/dev/sdd"
