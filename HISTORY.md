@@ -4,6 +4,49 @@ Changelog
 
 (unreleased)
 ------------
+- Merge pull request #145 from pg-spot-ops/add-striping-support. [Kaarel
+  Moppel]
+
+  Add EBS striping support via --stripes and --stripe-size-kb
+- Update docs with volume striping. [Kaarel Moppel]
+- Leave out the root vol in --list-instances output if using striping.
+  [Kaarel Moppel]
+- Show all VolumeId-s in --list-instances. [Kaarel Moppel]
+- Add EBS striping support via --stripes and --stripe-size-kb. [Kaarel
+  Moppel]
+- Merge pull request #144 from pg-spot-ops/max-price-flag. [Kaarel
+  Moppel]
+
+  Max price flag
+- Log an info message when SKUs are removed due to --max-price. [Kaarel
+  Moppel]
+- Add --max-price flag cap. [Kaarel Moppel]
+- Merge pull request #143 from pg-spot-ops/main-loop-refactor. [Kaarel
+  Moppel]
+
+  Main loop refactor + do a cheaper VM alive check via SSH
+- First check if VM still exists via a cheaper SSH check. [Kaarel
+  Moppel]
+
+  Not to overspam the AWS API when going a lot below default 60s
+  "alive check" via --main-loop-interval-s
+- Refactor the main loop for better readability. [Kaarel Moppel]
+- Fix GPU instances CPU arch inferring from the family name. [Kaarel
+  Moppel]
+
+  g4dn.xlarge is x86 actually although it has a "g" in family
+- Set Postgres 17 as default version. [Kaarel Moppel]
+
+  Can be considered stable now after 17.4 release
+- Minimal WAL logging for the "throwaway" tuning profile. [Kaarel
+  Moppel]
+
+  Reduces WAL writing by some 10-20%
+
+
+0.9.47 (2025-02-21)
+-------------------
+- Release: version 0.9.47 🚀 [Kaarel Moppel]
 - Merge pull request #138 from pg-spot-ops/ami-caching. [Kaarel Moppel]
 
   Ami caching
