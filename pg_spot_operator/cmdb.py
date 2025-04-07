@@ -598,7 +598,7 @@ def finalize_ensure_vm(m: InstanceManifest, vm: CloudVM):
             )
         cmdb_vm.ip_public = vm.ip_public
         cmdb_vm.user_tags = m.user_tags
-        cmdb_vm.volume_id = vm.volume_id  # If using block storage
+        cmdb_vm.volume_id = vm.volume_ids  # If using block storage
         cmdb_vm.last_modified_on = datetime.utcnow()
 
         session.add(cmdb_vm)

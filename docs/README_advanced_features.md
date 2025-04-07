@@ -34,3 +34,15 @@ Also note that not all resources are guaranteed to be auto-expired:
 "ec2:DetachVolume",
 "ec2:DeleteVolume",
 ```
+
+
+# Volume striping
+
+To get a kind of free lunch on provisioned IOPS costs - one can stripe together a bunch of volumes on default IOPS using
+the below flags to get a performance boost, similar to what RDS does under the hood:
+
+  * **--stripes / STRIPES** 2-28 stripe volumes allowed. Default 0
+  * **--stripe-size-kb / STRIPE_SIZE_KB** 4-4096 KB range. Default 64
+
+**PS** Note that for lower CPU instances you can still easily run into instance level max bandwith or IOPS limitations
+for heavier workloads. For example to get past 40K IOPS, one needs 16 vCPUs. AWS docs here: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-optimized.html

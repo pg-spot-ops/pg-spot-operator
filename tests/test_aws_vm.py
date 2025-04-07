@@ -69,7 +69,7 @@ def test_ensure_spot_vm_local_storage():
     print("vm", vm)
     assert created
     assert vm.ip_public
-    assert not vm.volume_id
+    assert not vm.volume_ids
 
 
 def test_compile_cloud_init_user_data_config():

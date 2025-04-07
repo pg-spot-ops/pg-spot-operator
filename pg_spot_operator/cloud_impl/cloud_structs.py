@@ -38,11 +38,11 @@ class CloudVM:
     ip_public: str = ""
     availability_zone: str = ""
     provider_name: str = ""
-    volume_id: str = ""
+    volume_ids: str = ""
     user_tags: dict = field(default_factory=dict)
     created_on: datetime | None = None
     provider_description: dict | None = None
-    volume_description: dict | None = None
+    volume_descriptions: list[dict] | None = None
 
 
 # Wraps "spot_advisor" key from https://spot-bid-advisor.s3.amazonaws.com/spot-advisor-data.json

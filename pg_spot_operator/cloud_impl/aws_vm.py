@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 import time
 from datetime import datetime
@@ -14,6 +15,7 @@ from pg_spot_operator.cloud_impl.aws_client import get_client
 from pg_spot_operator.cloud_impl.cloud_structs import CloudVM, InstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
     extract_instance_family_from_instance_type_code,
+    network_volume_nr_to_device_name,
 )
 from pg_spot_operator.constants import CLOUD_AWS, DEFAULT_VM_LOGIN_USER
 from pg_spot_operator.manifests import InstanceManifest
@@ -150,6 +152,7 @@ def attach_volume_to_instance(
     region: str,
     vol_id: str,
     instance_id: str,
+    volume_nr: int = 1,
     wait_till_attached_max_seconds: int = 30,
 ) -> None:
     client = get_client("ec2", region)
@@ -173,10 +176,10 @@ def attach_volume_to_instance(
 
             if not resp_desc["Volumes"][0]["Attachments"]:
                 logger.debug(
-                    f"Attaching vol {vol_id} to instance {instance_id} ..."
+                    f"Attaching vol {vol_id} to instance {instance_id} as {network_volume_nr_to_device_name(volume_nr)}..."
                 )
                 client.attach_volume(
-                    Device="/dev/xvdb",
+                    Device=network_volume_nr_to_device_name(volume_nr),
                     InstanceId=instance_id,
                     VolumeId=vol_id,
                 )
@@ -347,11 +350,11 @@ def ec2_launch_instance(
         placement["AvailabilityZone"] = availability_zone
     if m.vm.storage_type == STORAGE_TYPE_NETWORK:
         # Need to create replacement VMs in the same AZ as the volume
-        vol_desc = get_existing_data_volume_for_instance_if_any(
+        vol_descs = get_existing_data_volumes_for_instance_if_any(
             region, instance_name
         )
-        if vol_desc:
-            placement["AvailabilityZone"] = vol_desc["AvailabilityZone"]
+        if vol_descs:
+            placement["AvailabilityZone"] = vol_descs[0]["AvailabilityZone"]
     logger.debug("placement %s", placement)
 
     network_interface: dict[str, Any] = {
@@ -645,9 +648,9 @@ def delete_network_interface(region: str, nic_id: str) -> None:
     client.delete_network_interface(NetworkInterfaceId=nic_id)
 
 
-def get_existing_data_volume_for_instance_if_any(
+def get_existing_data_volumes_for_instance_if_any(
     region: str, instance_name: str
-) -> dict:
+) -> list[dict]:
     """https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2/client/describe_volumes.html#describe-volumes
     {
         "Attachments": [
@@ -693,14 +696,10 @@ def get_existing_data_volume_for_instance_if_any(
         ]
         resp = client.describe_volumes(Filters=filters)
         if resp and resp.get("Volumes"):
-            if len(resp.get("Volumes")) > 1:
-                raise Exception(
-                    "Expecting a single volume only currently per instance"
-                )
-            return resp["Volumes"][0]
+            return resp["Volumes"]
     except Exception as e:
         logger.debug(e)
-    return {}
+    return []
 
 
 def wait_until_volume_available(
@@ -731,54 +730,71 @@ def wait_until_volume_available(
     )
 
 
-def ensure_volume_attached(m: InstanceManifest, instance_desc: dict) -> dict:
+def ensure_volumes_attached(
+    m: InstanceManifest, instance_desc: dict
+) -> list[dict]:
     """Returns an EC2 describe_volumes dict"""
     instance_id: str = instance_desc["InstanceId"]
     instance_name: str = m.instance_name
     az = instance_desc["Placement"]["AvailabilityZone"]
     region: str = m.region
-    storage_min: int = m.vm.storage_min
     volume_type: str = m.vm.volume_type
     volume_iops: int = m.vm.volume_iops
     volume_throughput: int = m.vm.volume_throughput
 
     logger.debug(f"Ensuring instance {instance_name} has a data volume ...")
-    vol_desc = get_existing_data_volume_for_instance_if_any(
+    vol_descs = get_existing_data_volumes_for_instance_if_any(
         region, instance_name
     )
 
-    if vol_desc:
-
-        if (
-            vol_desc.get("Attachments")
-            and vol_desc["Attachments"][0]["InstanceId"] == instance_id
-        ):
-            logger.debug(
-                f"Volume {vol_desc['VolumeId']} already attached to instance {instance_id}"
-            )
-            return vol_desc
-
-        if (
-            vol_desc["State"] != "available"
-        ):  # As it can take a bit of time for abrupt terminations
-            wait_until_volume_available(region, vol_desc["VolumeId"], 120)
-
+    if m.vm.stripes == 0:
+        stripe_count = 1
+        vol_size_for_allocation = m.vm.storage_min
     else:
-        vol_desc = create_new_volume_for_instance(
-            region,
-            az,
-            instance_name,
-            storage_min,
-            volume_type,
-            volume_iops,
-            volume_throughput,
+        stripe_count = m.vm.stripes
+        vol_size_for_allocation = math.ceil(m.vm.storage_min / stripe_count)
+
+    for volume_nr in range(1, stripe_count + 1):
+        logger.debug(
+            f"Ensuring volume nr {volume_nr} existing / attached from a total of {stripe_count} volumes"
+        )
+        vol_desc: dict = (
+            vol_descs[volume_nr - 1]
+            if vol_descs and volume_nr <= len(vol_descs)
+            else {}
+        )
+        if vol_desc:
+
+            if (
+                vol_desc.get("Attachments")
+                and vol_desc["Attachments"][0]["InstanceId"] == instance_id
+            ):
+                logger.debug(
+                    f"Volume {vol_desc['VolumeId']} already attached to instance {instance_id}"
+                )
+
+            if (
+                vol_desc["State"] != "available"
+            ):  # As it can take a bit of time for abrupt terminations
+                wait_until_volume_available(region, vol_desc["VolumeId"], 120)
+        else:
+            vol_desc = create_new_volume_for_instance(
+                region,
+                az,
+                instance_name,
+                vol_size_for_allocation,
+                volume_type,
+                volume_iops,
+                volume_throughput,
+            )
+
+            time.sleep(1)
+
+        attach_volume_to_instance(
+            region, vol_desc["VolumeId"], instance_id, volume_nr
         )
 
-        time.sleep(1)
-
-    attach_volume_to_instance(region, vol_desc["VolumeId"], instance_id)
-
-    return get_existing_data_volume_for_instance_if_any(region, instance_name)
+    return get_existing_data_volumes_for_instance_if_any(region, instance_name)
 
 
 def get_subnet_id_for_vpc_az(region: str, vpc_id: str, az: str) -> str:
@@ -852,7 +868,7 @@ def ensure_spot_vm(
     i_desc = get_running_instance_by_tags(
         m.region, {SPOT_OPERATOR_ID_TAG: instance_name}
     )
-    vol_desc = {}
+    vol_descs: list[dict] = []
     new_vm_created = False
 
     if i_desc:
@@ -942,7 +958,7 @@ def ensure_spot_vm(
                 "Skipping data volume create / attach due to special --storage-min=-1"
             )
         else:
-            vol_desc = ensure_volume_attached(m, i_desc)
+            vol_descs = ensure_volumes_attached(m, i_desc)
 
     if not m.private_ip_only and m.static_ip_addresses:
         pip = ensure_public_elastic_ip_attached(
@@ -962,10 +978,10 @@ def ensure_spot_vm(
         ip_private=i_desc["PrivateIpAddress"],
         ip_public=i_desc.get("PublicIpAddress", ""),
         availability_zone=i_desc["Placement"]["AvailabilityZone"],
-        volume_id=vol_desc.get("VolumeId", ""),
+        volume_ids=",".join([vd.get("VolumeId", "") for vd in vol_descs]),
         created_on=i_desc["LaunchTime"],
         provider_description=i_desc,
-        volume_description=vol_desc,
+        volume_descriptions=vol_descs,
         user_tags=m.user_tags,
     )
 
