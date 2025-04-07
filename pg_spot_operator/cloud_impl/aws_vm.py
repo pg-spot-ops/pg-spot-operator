@@ -1,9 +1,10 @@
 import logging
+import math
 import os
 import time
 from datetime import datetime
 from typing import Any
-import math
+
 import botocore
 
 from pg_spot_operator.cloud_impl.aws_cache import (
@@ -13,7 +14,8 @@ from pg_spot_operator.cloud_impl.aws_cache import (
 from pg_spot_operator.cloud_impl.aws_client import get_client
 from pg_spot_operator.cloud_impl.cloud_structs import CloudVM, InstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
-    extract_instance_family_from_instance_type_code, network_volume_nr_to_device_name,
+    extract_instance_family_from_instance_type_code,
+    network_volume_nr_to_device_name,
 )
 from pg_spot_operator.constants import CLOUD_AWS, DEFAULT_VM_LOGIN_USER
 from pg_spot_operator.manifests import InstanceManifest
@@ -728,13 +730,14 @@ def wait_until_volume_available(
     )
 
 
-def ensure_volumes_attached(m: InstanceManifest, instance_desc: dict) -> list[dict]:
+def ensure_volumes_attached(
+    m: InstanceManifest, instance_desc: dict
+) -> list[dict]:
     """Returns an EC2 describe_volumes dict"""
     instance_id: str = instance_desc["InstanceId"]
     instance_name: str = m.instance_name
     az = instance_desc["Placement"]["AvailabilityZone"]
     region: str = m.region
-    storage_min: int = m.vm.storage_min
     volume_type: str = m.vm.volume_type
     volume_iops: int = m.vm.volume_iops
     volume_throughput: int = m.vm.volume_throughput
@@ -749,13 +752,17 @@ def ensure_volumes_attached(m: InstanceManifest, instance_desc: dict) -> list[di
         vol_size_for_allocation = m.vm.storage_min
     else:
         stripe_count = m.vm.stripes
-        vol_size_for_allocation = math.ceil ( m.vm.storage_min / stripe_count )
+        vol_size_for_allocation = math.ceil(m.vm.storage_min / stripe_count)
 
     for volume_nr in range(1, stripe_count + 1):
         logger.debug(
             f"Ensuring volume nr {volume_nr} existing / attached from a total of {stripe_count} volumes"
         )
-        vol_desc: dict = vol_descs[volume_nr-1] if vol_descs and volume_nr <= len(vol_descs) else {}
+        vol_desc: dict = (
+            vol_descs[volume_nr - 1]
+            if vol_descs and volume_nr <= len(vol_descs)
+            else {}
+        )
         if vol_desc:
 
             if (
@@ -783,7 +790,9 @@ def ensure_volumes_attached(m: InstanceManifest, instance_desc: dict) -> list[di
 
             time.sleep(1)
 
-        attach_volume_to_instance(region, vol_desc["VolumeId"], instance_id, volume_nr)
+        attach_volume_to_instance(
+            region, vol_desc["VolumeId"], instance_id, volume_nr
+        )
 
     return get_existing_data_volumes_for_instance_if_any(region, instance_name)
 
@@ -972,7 +981,7 @@ def ensure_spot_vm(
         volume_ids=",".join([vd.get("VolumeId", "") for vd in vol_descs]),
         created_on=i_desc["LaunchTime"],
         provider_description=i_desc,
-        volume_description=vol_descs,
+        volume_descriptions=vol_descs,
         user_tags=m.user_tags,
     )
 

@@ -1074,7 +1074,7 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
         "Market type",
         "vCPU",
         "$ (Mon.)",
-        "VolumeId",
+        "VolumeId(s)",
         "Uptime",
         "PrivateIpAddress",
         "PublicIpAddress",
@@ -1110,7 +1110,12 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
                     )
                 ),
                 (
-                    i["BlockDeviceMappings"][1].get("Ebs", {}).get("VolumeId")
+                    ",".join(
+                        [
+                            x.get("Ebs", {}).get("VolumeId", "")
+                            for x in i["BlockDeviceMappings"]
+                        ]
+                    )
                     if len(i.get("BlockDeviceMappings", [])) > 1
                     else None
                 ),
