@@ -64,6 +64,8 @@
 * **--instance-family / INSTANCE_FAMILY** Regex. e.g. 'r(6|7)'
 * **--cpu-arch / CPU_ARCH** arm / intel / amd / x86
 * **--max-price / MAX_PRICE** Maximum hourly price cap to select / launch VMs
+* **--stripes / STRIPES** 2-28 stripe volumes allowed. Default 0
+* **--stripe-size-kb / STRIPE_SIZE_KB** 4-4096 KB range. Default 64
 
 # Postgres
 
