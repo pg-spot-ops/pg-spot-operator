@@ -14,6 +14,7 @@ from pg_spot_operator.cloud_impl.aws_cache import (
 from pg_spot_operator.cloud_impl.aws_client import get_client
 from pg_spot_operator.cloud_impl.cloud_structs import CloudVM, InstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
+    aws_list_tags_to_dict,
     extract_instance_family_from_instance_type_code,
     network_volume_nr_to_device_name,
 )
@@ -22,6 +23,7 @@ from pg_spot_operator.manifests import InstanceManifest
 
 # Attached to all created cloud resources
 SPOT_OPERATOR_ID_TAG = "pg-spot-operator-instance"
+SPOT_OPERATOR_VOLUME_ID_TAG = "pg-spot-operator-volume-id"
 STORAGE_TYPE_NETWORK = "network"
 MAX_WAIT_SECONDS: int = 300
 OS_IMAGE_FAMILY = "debian-12"
@@ -113,6 +115,7 @@ def create_new_volume_for_instance(
     region: str,
     availability_zone: str,
     instance_id: str,
+    volume_nr: int,
     volume_size_min: int,
     volume_type: str = "gp3",
     volume_iops: int = 0,
@@ -125,7 +128,10 @@ def create_new_volume_for_instance(
         f"Creating a new {volume_size_min} GB EBS volume for instance {instance_id} in AZ {availability_zone} ... "
     )
 
-    tags = [{"Key": SPOT_OPERATOR_ID_TAG, "Value": instance_id}]
+    tags = [
+        {"Key": SPOT_OPERATOR_ID_TAG, "Value": instance_id},
+        {"Key": SPOT_OPERATOR_VOLUME_ID_TAG, "Value": str(volume_nr)},
+    ]
 
     kwargs = {}
     if volume_iops:
@@ -651,7 +657,10 @@ def delete_network_interface(region: str, nic_id: str) -> None:
 def get_existing_data_volumes_for_instance_if_any(
     region: str, instance_name: str
 ) -> list[dict]:
-    """https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2/client/describe_volumes.html#describe-volumes
+    """
+    Returns sorted (by pg-spot-operator-volume-id tag, if present) describe-volumes data
+
+    https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2/client/describe_volumes.html#describe-volumes
     {
         "Attachments": [
             {
@@ -676,7 +685,11 @@ def get_existing_data_volumes_for_instance_if_any(
             {
                 "Key": "pg-spot-operator-instance",
                 "Value": "spot1"
-            }
+            },
+            {
+                "Key": "pg-spot-operator-volume-id",
+                "Value": "1"
+            },
         ],
         "VolumeType": "gp3",
         "MultiAttachEnabled": false,
@@ -694,11 +707,28 @@ def get_existing_data_volumes_for_instance_if_any(
                 ],
             },
         ]
+        logger.debug(
+            "Calling describe_volumes for instance %s ...", instance_name
+        )
         resp = client.describe_volumes(Filters=filters)
         if resp and resp.get("Volumes"):
-            return resp["Volumes"]
+            resp = aws_list_tags_to_dict(resp["Volumes"])
+            stripe_sorted_vols = sorted(
+                resp,
+                key=lambda x: int(
+                    x.get("Tags", {}).get(SPOT_OPERATOR_VOLUME_ID_TAG, "1")
+                ),
+            )
+            logger.debug(
+                "Volumes found for instance %s: %s",
+                instance_name,
+                stripe_sorted_vols,
+            )
+            return stripe_sorted_vols
     except Exception as e:
-        logger.debug(e)
+        logger.error(e)
+        raise
+    logger.debug("No volumes found for instance %s", instance_name)
     return []
 
 
@@ -742,7 +772,7 @@ def ensure_volumes_attached(
     volume_iops: int = m.vm.volume_iops
     volume_throughput: int = m.vm.volume_throughput
 
-    logger.debug(f"Ensuring instance {instance_name} has a data volume ...")
+    logger.debug(f"Ensuring instance {instance_name} has a data volume(s) ...")
     vol_descs = get_existing_data_volumes_for_instance_if_any(
         region, instance_name
     )
@@ -782,6 +812,7 @@ def ensure_volumes_attached(
                 region,
                 az,
                 instance_name,
+                volume_nr,
                 vol_size_for_allocation,
                 volume_type,
                 volume_iops,

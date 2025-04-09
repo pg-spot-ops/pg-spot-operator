@@ -227,3 +227,11 @@ def network_volume_nr_to_device_name(
     """Some weird naming restrictions apply: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html"""
     start_char = "c"
     return dev_base_name + chr(ord(start_char) - 1 + volume_nr)
+
+
+def aws_list_tags_to_dict(inlist: list[dict]) -> list[dict]:
+    """[{'Tags': [{'Key': 'pg-spot-operator-instance', 'Value': 'remount3'}]} -> [{'Tags': {'pg-spot-operator-instance': 'remount3'}}]"""
+    for x in inlist:
+        if x.get("Tags"):
+            x["Tags"] = {kv["Key"]: kv["Value"] for kv in x["Tags"]}
+    return inlist
