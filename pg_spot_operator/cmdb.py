@@ -65,6 +65,7 @@ class Instance(Base):
     )
     last_modified_on: Mapped[Optional[datetime]]
     deleted_on: Mapped[Optional[datetime]]
+    stopped_on: Mapped[Optional[datetime]]
 
     def __str__(self) -> str:
         return f"Instance(name={self.instance_name}, cloud={self.cloud}, uuid={self.uuid}, created_on={self.created_on})"
@@ -213,7 +214,11 @@ def get_instance_by_name(instance_name: str) -> Instance | None:
     """Returns the Instance if manifest already registered"""
     with Session(engine) as session:
         # Check if exists
-        stmt = select(Instance).where(Instance.instance_name == instance_name)
+        stmt = (
+            select(Instance)
+            .where(Instance.instance_name == instance_name)
+            .where(Instance.deleted_on.is_(None))
+        )
         row = session.scalars(stmt).first()
         if row:
             return row
@@ -406,6 +411,19 @@ def mark_any_active_vms_as_deleted(
             .where(Vm.instance_uuid == m.uuid)
             .where(Vm.deleted_on.is_(None))
             .values(deleted_on=datetime.utcnow())
+        )
+        session.execute(stmt)
+        session.commit()
+    return
+
+
+def mark_instance_as_stopped_by_name(instance_name: str) -> None:
+    with Session(engine) as session:
+        stmt = (
+            update(Instance)
+            .where(Instance.instance_name == instance_name)
+            .where(Instance.deleted_on.is_(None))
+            .values(stopped_on=datetime.utcnow())
         )
         session.execute(stmt)
         session.commit()

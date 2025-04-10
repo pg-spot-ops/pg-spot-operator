@@ -1281,6 +1281,7 @@ def stop_running_vms_if_any(
             )
             terminate_instances_in_region(region, backing_ins_ids)
             logger.info("OK - instances terminated")
+            cmdb.mark_instance_as_stopped_by_name(instance_name)
 
 
 def do_main_loop(
