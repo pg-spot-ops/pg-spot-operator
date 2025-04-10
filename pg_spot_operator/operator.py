@@ -1224,6 +1224,8 @@ def register_or_update_manifest_in_cmdb(
         )
     else:
         m.uuid = instance.uuid  # type: ignore
+        cmdb.update_instance_if_main_data_changed(m)
+
     m.session_vars["uuid"] = m.uuid
     if not m.manifest_snapshot_id:
         m.manifest_snapshot_id = cmdb.store_manifest_snapshot_if_changed(m)

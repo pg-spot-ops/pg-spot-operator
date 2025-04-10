@@ -258,6 +258,7 @@ def register_instance_or_get_uuid(
         i.instance_name = m.instance_name
         i.postgres_version = m.postgres.version
         i.cpu_min = m.vm.cpu_min
+        i.ram_min = m.vm.ram_min
         i.storage_min = m.vm.storage_min
         i.storage_type = m.vm.storage_type
         i.storage_speed_class = m.vm.storage_speed_class
@@ -274,6 +275,52 @@ def register_instance_or_get_uuid(
             i.uuid,
         )
         return i.uuid
+
+
+def update_instance_if_main_data_changed(m: InstanceManifest) -> None:
+    """Update main parameters"""
+    with Session(engine) as session:
+        # Check if exists
+        stmt = (
+            select(Instance)
+            .where(Instance.instance_name == m.instance_name)
+            .where(Instance.cloud == m.cloud)
+            .where(Instance.deleted_on.is_(None))
+        )
+        row = session.scalars(stmt).first()
+        if not row:
+            logger.warning(
+                "Instance '%s' (%s) not found from CMDB for update",
+                m.instance_name,
+                m.uuid,
+            )
+            return
+        if (
+            row.cpu_min != m.vm.cpu_min
+            or row.ram_min != m.vm.ram_min
+            or row.storage_min != m.vm.storage_min
+            or row.tuning_profile != m.postgres.tuning_profile
+            or row.user_tags != m.user_tags
+            or row.admin_user != m.postgres.admin_user
+            or row.admin_is_real_superuser != m.postgres.admin_is_superuser
+        ):
+            row.cpu_min = m.vm.cpu_min
+            row.ram_min = m.vm.ram_min
+            row.storage_min = m.vm.storage_min
+            row.tuning_profile = m.postgres.tuning_profile
+            row.user_tags = m.user_tags
+            row.admin_user = m.postgres.admin_user
+            row.admin_is_real_superuser = m.postgres.admin_is_superuser
+            row.last_modified_on = datetime.utcnow()
+
+            logger.debug(
+                "Updating instance %s (%s) main data in CMDB ...",
+                m.instance_name,
+                m.cloud,
+            )
+
+            session.commit()
+            logger.debug("OK, instance '%s' updated", m.instance_name)
 
 
 def store_manifest_snapshot_if_changed(m: InstanceManifest) -> int:
