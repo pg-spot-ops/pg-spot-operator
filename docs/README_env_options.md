@@ -25,6 +25,8 @@
 * **--postgres-version / POSTGRES_VERSION** (Default: 17)
 * **--manifest-path / MANIFEST_PATH** Full user manifest YAML path if not using the CLI / single params
 * **--manifest / MANIFEST** Full manifest input as YAML text
+* **--stop / STOP** Stop the VM but leave disks around for a later resume / teardown
+* **--resume / RESUME** Resurrect the input --instance-name using last known settings
 * **--teardown / TEARDOWN** Delete VM and any other created resources for the give instance
 * **--teardown-region / TEARDOWN_REGION** Delete all operator tagged resources in the whole region. Not safe if there are multiple Spot Operator users under the account!
 * **--expiration-date / EXPIRATION_DATE** ISO 8601 datetime. E.g.: "2025-02-01 00:00+02"

@@ -1249,6 +1249,40 @@ def decrypt_and_set_aws_secrets_if_any(m):
     )
 
 
+def stop_running_vms_if_any(
+    instance_name: str, region: str = "", dry_run: bool = False
+) -> None:
+    if not region or region == "auto":
+        ins = cmdb.get_instance_by_name(instance_name)
+        if not ins:
+            logger.error(
+                "Instance %s not found from CMDB, can't determine the region for VM deletion",
+                instance_name,
+            )
+            return
+        region = str(ins.region)
+
+    backing_instances = get_backing_vms_for_instances_if_any(
+        region, instance_name
+    )
+    backing_ins_ids = [x["InstanceId"] for x in backing_instances]
+    if backing_ins_ids:
+        if dry_run:
+            logger.warning(
+                "Would terminate current VMs in region %s: %s",
+                region,
+                backing_ins_ids,
+            )
+        else:
+            logger.warning(
+                "Terminating current VMs in region %s: %s ...",
+                region,
+                backing_ins_ids,
+            )
+            terminate_instances_in_region(region, backing_ins_ids)
+            logger.info("OK - instances terminated")
+
+
 def do_main_loop(
     cli_dry_run: bool = False,
     cli_debug: bool = False,
@@ -1257,6 +1291,7 @@ def do_main_loop(
     cli_vault_password_file: str = "",
     cli_main_loop_interval_s: int = 60,
     cli_destroy_file_base_path: str = "",
+    cli_resume: bool = False,
     cli_teardown: bool = False,
     cli_connstr_only: bool = False,
     cli_connstr_format: str = "ssh",

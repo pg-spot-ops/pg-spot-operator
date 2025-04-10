@@ -209,6 +209,17 @@ def get_instance_by_name_cloud(m: InstanceManifest) -> Instance | None:
         return None
 
 
+def get_instance_by_name(instance_name: str) -> Instance | None:
+    """Returns the Instance if manifest already registered"""
+    with Session(engine) as session:
+        # Check if exists
+        stmt = select(Instance).where(Instance.instance_name == instance_name)
+        row = session.scalars(stmt).first()
+        if row:
+            return row
+        return None
+
+
 def register_instance_or_get_uuid(
     m: InstanceManifest,
 ) -> str | None:

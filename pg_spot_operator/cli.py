@@ -135,6 +135,12 @@ class ArgumentParser(Tap):
         "CONNSTR_FORMAT", CONNSTR_FORMAT_AUTO
     )  # auto = "postgres" if admin user / password set, otherwise "ssh". [auto | ssh | ansible | postgres]
     manifest: str = os.getenv("MANIFEST", "")  # Manifest to process
+    stop: bool = str_to_bool(
+        os.getenv("STOP", "false")
+    )  # Stop the VM but leave disks around for a later resume / teardown
+    resume: bool = str_to_bool(
+        os.getenv("RESUME", "false")
+    )  # Resurrect the input --instance-name using last known settings
     teardown: bool = str_to_bool(
         os.getenv("TEARDOWN", "false")
     )  # Delete VM and other created resources
@@ -490,7 +496,7 @@ def check_cli_args_valid(args: ArgumentParser):
 
     if not fixed_vm:
         if not (args.region or args.zone) and not (
-            args.check_price or args.list_instances
+            args.check_price or args.list_instances or args.stop
         ):
             logger.error("--region input expected")
             exit(1)
@@ -517,7 +523,7 @@ def check_cli_args_valid(args: ArgumentParser):
                 )
             )
             and not args.storage_min
-            and not (args.teardown or args.teardown_region)
+            and not (args.teardown or args.teardown_region or args.stop)
         ):
             logger.error("--storage-min input expected")
             exit(1)
@@ -630,7 +636,7 @@ def check_cli_args_valid(args: ArgumentParser):
         )
         exit(1)
     if not (
-        args.check_price or args.list_instances or args.vm_host
+        args.check_price or args.list_instances or args.vm_host or args.stop
     ) and not is_explicit_aws_region_code(args.region):
         logger.error(
             "Fuzzy or regex --region input only allowed in --check-price mode",
@@ -645,6 +651,8 @@ def check_cli_args_valid(args: ArgumentParser):
         )
         list_strategies_and_exit()
         exit(1)
+    if args.stop and not args.region:
+        args.region = "auto"
 
 
 def try_load_manifest(manifest_str: str) -> InstanceManifest | None:
@@ -1210,6 +1218,8 @@ def any_action_flags_set(a: ArgumentParser) -> bool:
         or a.check_manifest
         or a.manifest
         or a.manifest_path
+        or a.stop
+        or a.resume
     )
 
 
@@ -1306,6 +1316,14 @@ def main():  # pragma: no cover
 
     init_cmdb_and_apply_schema_migrations_if_needed(args)
 
+    if args.stop:
+        operator.stop_running_vms_if_any(
+            args.instance_name or env_manifest.instance_name,
+            args.region or env_manifest.region,
+            args.dry_run,
+        )
+        exit(0)
+
     if not (
         args.dry_run
         or args.check_price
@@ -1330,6 +1348,7 @@ def main():  # pragma: no cover
         cli_user_manifest_path=args.manifest_path,
         cli_main_loop_interval_s=args.main_loop_interval_s,
         cli_destroy_file_base_path=args.destroy_file_base_path,
+        cli_resume=args.resume,
         cli_teardown=args.teardown,
         cli_connstr_only=args.connstr_only,
         cli_connstr_format=args.connstr_format,
