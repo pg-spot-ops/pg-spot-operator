@@ -46,7 +46,7 @@ class Instance(Base):
         String, primary_key=True, nullable=False, default=str(uuid4())
     )
     cloud: Mapped[str] = mapped_column(String, nullable=False)
-    region: Mapped[Optional[str]] = mapped_column(String, nullable=False)
+    region: Mapped[str] = mapped_column(String, nullable=False)
     instance_name: Mapped[str] = mapped_column(String, nullable=False)
     postgres_version: Mapped[Optional[int]] = mapped_column(
         Integer, nullable=False
@@ -364,14 +364,23 @@ def get_last_successful_manifest_if_any(
         return m
 
 
-def get_latest_vm_by_uuid(instance_uuid: str | None) -> Vm | None:
+def get_latest_vm_by_uuid(
+    instance_uuid: str | None, alive_only: bool = True
+) -> Vm | None:
     with Session(engine) as session:
-        stmt = (
-            select(Vm)
-            .where(Vm.instance_uuid == instance_uuid)
-            .where(Vm.deleted_on.is_(None))
-            .order_by(Vm.created_on.desc())
-        )
+        if alive_only:
+            stmt = (
+                select(Vm)
+                .where(Vm.instance_uuid == instance_uuid)
+                .where(Vm.deleted_on.is_(None))
+                .order_by(Vm.created_on.desc())
+            )
+        else:
+            stmt = (
+                select(Vm)
+                .where(Vm.instance_uuid == instance_uuid)
+                .order_by(Vm.created_on.desc())
+            )
         row = session.scalars(stmt).first()
         if row:
             return row
@@ -408,14 +417,11 @@ def get_all_launched_active_vms(
     return ret
 
 
-def mark_any_active_vms_as_deleted(
-    m: InstanceManifest,
-) -> None:
+def mark_any_active_vms_as_deleted(instance_uuid: str) -> None:
     with Session(engine) as session:
         stmt = (
             update(Vm)
-            .where(Vm.cloud == m.cloud)
-            .where(Vm.instance_uuid == m.uuid)
+            .where(Vm.instance_uuid == instance_uuid)
             .where(Vm.deleted_on.is_(None))
             .values(deleted_on=datetime.utcnow())
         )
@@ -639,6 +645,16 @@ def finalize_ensure_vm(m: InstanceManifest, vm: CloudVM):
 
         session.add(cmdb_vm)
 
+        # Clear instance stopped if set
+        stmt_instance = (
+            update(Instance)
+            .where(Instance.uuid == m.uuid)
+            .where(Instance.stopped_on.is_not(None))
+            .values(stopped_on=None)
+            .values(deleted_on=None)
+        )
+        session.execute(stmt_instance)
+
         session.commit()
         logger.info(
             "OK - %s VM %s registered for instance '%s' (ip_public = %s , ip_private = %s)",
@@ -750,3 +766,10 @@ def get_short_lifetime_instance_types_with_zone_if_any(
                 )
             return ret
     return []
+
+
+def get_all_non_deleted_instances() -> list[Instance]:
+    with Session(engine) as session:
+        # Check if exists
+        stmt = select(Instance).where(Instance.deleted_on.is_(None))
+        return session.scalars(stmt).all()  # type: ignore

@@ -1099,11 +1099,14 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
         "Expiration Date",
     ]
     tab = PrettyTable(cols)
+
+    active_instance_names = []
     for i in instances:
         tags_as_dict = {tag["Key"]: tag["Value"] for tag in i.get("Tags", [])}
         region = extract_region_from_az(
             i.get("Placement", {}).get("AvailabilityZone", "")
         )
+        active_instance_names.append(tags_as_dict.get(SPOT_OPERATOR_ID_TAG))
         tab.add_row(
             [
                 tags_as_dict.get(SPOT_OPERATOR_ID_TAG),
@@ -1146,7 +1149,41 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
             ]
         )
 
+    print("Running instances:")
     print(tab)
+
+    resumable_cols = [
+        "Instance name",
+        "Region",
+        "Min. CPU",
+        "Min. RAM",
+        "Storage type",
+        "Min. Storage",
+        "Last provisioned",
+        "Stopped on",
+    ]
+    tab2 = PrettyTable(resumable_cols)
+
+    for nd_ins in cmdb.get_all_non_deleted_instances():
+        if nd_ins.instance_name not in active_instance_names:
+            vm = cmdb.get_latest_vm_by_uuid(nd_ins.uuid, alive_only=False)
+            if not vm:
+                continue
+            tab2.add_row(
+                [
+                    nd_ins.instance_name,
+                    nd_ins.region,
+                    nd_ins.cpu_min,
+                    nd_ins.ram_min,
+                    nd_ins.storage_type,
+                    nd_ins.storage_min,
+                    vm.created_on,
+                    nd_ins.stopped_on,
+                ]
+            )
+
+    print("Resumable instances:")
+    print(tab2)
 
     exit(errors)
 
@@ -1270,6 +1307,7 @@ def main():  # pragma: no cover
         check_cli_args_valid(args)
 
     if args.list_instances:
+        init_cmdb_and_apply_schema_migrations_if_needed(args)
         list_instances_and_exit(args)
 
     logger.debug("Args: %s", args.as_dict()) if args.debug else None
@@ -1328,7 +1366,6 @@ def main():  # pragma: no cover
     if args.stop:
         operator.stop_running_vms_if_any(
             args.instance_name or env_manifest.instance_name,
-            args.region or env_manifest.region,
             args.dry_run,
         )
         exit(0)

@@ -862,7 +862,7 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str, str]:
             m.instance_name,
             m.region,
         )
-        cmdb.mark_any_active_vms_as_deleted(m)
+        cmdb.mark_any_active_vms_as_deleted(str(m.uuid))
 
     resolved_instance_types = preprocess_ensure_vm_action(
         m, backing_instances[0] if backing_instances else None
@@ -1249,39 +1249,37 @@ def decrypt_and_set_aws_secrets_if_any(m):
     )
 
 
-def stop_running_vms_if_any(
-    instance_name: str, region: str = "", dry_run: bool = False
-) -> None:
-    if not region or region == "auto":
-        ins = cmdb.get_instance_by_name(instance_name)
-        if not ins:
-            logger.error(
-                "Instance %s not found from CMDB, can't determine the region for VM deletion",
-                instance_name,
-            )
-            return
-        region = str(ins.region)
+def stop_running_vms_if_any(instance_name: str, dry_run: bool = False) -> None:
+    ins = cmdb.get_instance_by_name(instance_name)
+    if not ins:
+        logger.error(
+            "Instance %s not found from CMDB, can't determine the region for VM deletion",
+            instance_name,
+        )
+        return
 
     backing_instances = get_backing_vms_for_instances_if_any(
-        region, instance_name
+        ins.region, instance_name
     )
     backing_ins_ids = [x["InstanceId"] for x in backing_instances]
     if backing_ins_ids:
         if dry_run:
             logger.warning(
                 "Would terminate current VMs in region %s: %s",
-                region,
+                ins.region,
                 backing_ins_ids,
             )
         else:
             logger.warning(
                 "Terminating current VMs in region %s: %s ...",
-                region,
+                ins.region,
                 backing_ins_ids,
             )
-            terminate_instances_in_region(region, backing_ins_ids)
+            terminate_instances_in_region(ins.region, backing_ins_ids)
             logger.info("OK - instances terminated")
             cmdb.mark_instance_as_stopped_by_name(instance_name)
+            cmdb.mark_any_active_vms_as_deleted(str(ins.uuid))
+            logger.debug("CMDB status updated")
 
 
 def do_main_loop(
