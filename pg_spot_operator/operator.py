@@ -1322,6 +1322,32 @@ def do_main_loop(
             m: InstanceManifest = get_manifest_from_cli_input(
                 cli_env_manifest, cli_user_manifest_path, first_loop
             )
+            if cli_resume:
+                ins = cmdb.get_instance_by_name(m.instance_name)
+                if not ins:
+                    logger.error(
+                        "Instance %s not found from CMDB, can't resume instance. Remove the --resume flag and retry",
+                        m.instance_name,
+                    )
+                    exit(1)
+                m = cmdb.get_last_successful_manifest_if_any(  # type: ignore
+                    ins.uuid, use_last_manifest=True
+                )
+                if not m:
+                    logger.error(
+                        "No previous manifest found to --resume instance %s, can't proceed",
+                        m.instance_name,
+                    )
+                    exit(1)
+                (
+                    logger.info(
+                        "Resuming instance %s in region %s...",
+                        m.instance_name,
+                        m.region,
+                    )
+                    if cli_resume and first_loop
+                    else None
+                )
 
             # Step 1 - register or update manifest snapshot in CMDB
             instance: Instance | None = register_or_update_manifest_in_cmdb(

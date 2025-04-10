@@ -496,7 +496,7 @@ def check_cli_args_valid(args: ArgumentParser):
 
     if not fixed_vm:
         if not (args.region or args.zone) and not (
-            args.check_price or args.list_instances or args.stop
+            args.check_price or args.list_instances or args.stop or args.resume
         ):
             logger.error("--region input expected")
             exit(1)
@@ -508,7 +508,7 @@ def check_cli_args_valid(args: ArgumentParser):
         if (
             args.storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
             and not args.storage_min
-            and not (args.teardown or args.teardown_region)
+            and not (args.teardown or args.teardown_region or args.resume)
         ):
             logger.error(
                 "--storage-min input expected for --storage-type=local"
@@ -523,7 +523,12 @@ def check_cli_args_valid(args: ArgumentParser):
                 )
             )
             and not args.storage_min
-            and not (args.teardown or args.teardown_region or args.stop)
+            and not (
+                args.teardown
+                or args.teardown_region
+                or args.stop
+                or args.resume
+            )
         ):
             logger.error("--storage-min input expected")
             exit(1)
@@ -636,7 +641,11 @@ def check_cli_args_valid(args: ArgumentParser):
         )
         exit(1)
     if not (
-        args.check_price or args.list_instances or args.vm_host or args.stop
+        args.check_price
+        or args.list_instances
+        or args.vm_host
+        or args.stop
+        or args.resume
     ) and not is_explicit_aws_region_code(args.region):
         logger.error(
             "Fuzzy or regex --region input only allowed in --check-price mode",
@@ -651,7 +660,7 @@ def check_cli_args_valid(args: ArgumentParser):
         )
         list_strategies_and_exit()
         exit(1)
-    if args.stop and not args.region:
+    if (args.stop or args.resume) and not args.region:
         args.region = "auto"
 
 

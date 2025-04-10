@@ -86,7 +86,7 @@ class VmDTO:
     cpu: int | None = None
     ram: int | None = None
     instance_storage: int | None = None
-    volume_id: str | None = None
+    volume_ids: str | None = None
     instance_type: str | None = None
     login_user: str | None = None
     ip_public: str | None = None
@@ -119,7 +119,7 @@ class Vm(Base):
     cpu: Mapped[Optional[int]]
     ram: Mapped[Optional[int]]
     instance_storage: Mapped[Optional[int]]
-    volume_id: Mapped[Optional[str]]
+    volume_ids: Mapped[Optional[str]]
     login_user: Mapped[str] = mapped_column(String, nullable=False)
     ip_public: Mapped[Optional[str]]
     ip_private: Mapped[str] = mapped_column(String, nullable=False)
@@ -318,7 +318,7 @@ def store_manifest_snapshot_if_changed(m: InstanceManifest) -> int:
 
 
 def get_last_successful_manifest_if_any(
-    uuid: str | None,
+    uuid: str | None, instance_name: str = "", use_last_manifest: bool = False
 ) -> InstanceManifest | None:
     """Returns (manifest, already_processed)"""
 
@@ -333,6 +333,13 @@ def get_last_successful_manifest_if_any(
             .order_by(ManifestSnapshot.created_on.desc())
             .limit(1)
         )
+        if use_last_manifest:
+            stmt = (
+                select(ManifestSnapshot)
+                .where(ManifestSnapshot.instance_uuid == uuid)
+                .order_by(ManifestSnapshot.created_on.desc())
+                .limit(1)
+            )
         row = session.scalars(stmt).first()
         if not row:
             logger.debug(
@@ -627,7 +634,7 @@ def finalize_ensure_vm(m: InstanceManifest, vm: CloudVM):
             )
         cmdb_vm.ip_public = vm.ip_public
         cmdb_vm.user_tags = m.user_tags
-        cmdb_vm.volume_id = vm.volume_ids  # If using block storage
+        cmdb_vm.volume_ids = vm.volume_ids  # If using block storage
         cmdb_vm.last_modified_on = datetime.utcnow()
 
         session.add(cmdb_vm)
