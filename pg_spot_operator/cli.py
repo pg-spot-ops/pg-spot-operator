@@ -27,6 +27,7 @@ from pg_spot_operator.cloud_impl.cloud_util import (
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.constants import (
     ALL_ENABLED_REGIONS,
+    BACKUP_TYPE_NONE,
     CONNSTR_FORMAT_AUTO,
     DEFAULT_SSH_PUBKEY_PATH,
     DEFAULT_VM_LOGIN_USER,
@@ -1169,6 +1170,16 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
             vm = cmdb.get_latest_vm_by_uuid(nd_ins.uuid, alive_only=False)
             if not vm:
                 continue
+            m = cmdb.get_last_successful_manifest_if_any(
+                nd_ins.uuid, use_last_manifest=True
+            )
+            if not m:
+                continue
+            if (
+                m.vm.storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
+                and m.backup.type == BACKUP_TYPE_NONE
+            ):
+                continue  # Can't resume if not using EBS or S3 backups
             tab2.add_row(
                 [
                     nd_ins.instance_name,

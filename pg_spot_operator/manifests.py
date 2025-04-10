@@ -13,6 +13,7 @@ from pydantic import BaseModel, ValidationError, model_validator
 from typing_extensions import Self
 
 from pg_spot_operator.constants import (
+    BACKUP_TYPE_NONE,
     BACKUP_TYPE_PGBACKREST,
     CLOUD_AWS,
     DEFAULT_POSTGRES_MAJOR_VER,
@@ -137,7 +138,7 @@ class SubSectionPgbackrest(BaseModel):
 
 
 class SectionBackup(BaseModel):
-    type: str = "none"
+    type: str = BACKUP_TYPE_NONE
     destroy_backups: bool = True
     wal_archiving_max_interval: str = ""
     retention_days: int = 1
