@@ -46,7 +46,7 @@ class Instance(Base):
         String, primary_key=True, nullable=False, default=str(uuid4())
     )
     cloud: Mapped[str] = mapped_column(String, nullable=False)
-    region: Mapped[Optional[str]] = mapped_column(String, nullable=False)
+    region: Mapped[str] = mapped_column(String, nullable=False)
     instance_name: Mapped[str] = mapped_column(String, nullable=False)
     postgres_version: Mapped[Optional[int]] = mapped_column(
         Integer, nullable=False
@@ -65,6 +65,7 @@ class Instance(Base):
     )
     last_modified_on: Mapped[Optional[datetime]]
     deleted_on: Mapped[Optional[datetime]]
+    stopped_on: Mapped[Optional[datetime]]
 
     def __str__(self) -> str:
         return f"Instance(name={self.instance_name}, cloud={self.cloud}, uuid={self.uuid}, created_on={self.created_on})"
@@ -85,7 +86,7 @@ class VmDTO:
     cpu: int | None = None
     ram: int | None = None
     instance_storage: int | None = None
-    volume_id: str | None = None
+    volume_ids: str | None = None
     instance_type: str | None = None
     login_user: str | None = None
     ip_public: str | None = None
@@ -118,7 +119,7 @@ class Vm(Base):
     cpu: Mapped[Optional[int]]
     ram: Mapped[Optional[int]]
     instance_storage: Mapped[Optional[int]]
-    volume_id: Mapped[Optional[str]]
+    volume_ids: Mapped[Optional[str]]
     login_user: Mapped[str] = mapped_column(String, nullable=False)
     ip_public: Mapped[Optional[str]]
     ip_private: Mapped[str] = mapped_column(String, nullable=False)
@@ -202,6 +203,21 @@ def get_instance_by_name_cloud(m: InstanceManifest) -> Instance | None:
             select(Instance)
             .where(Instance.instance_name == m.instance_name)
             .where(Instance.cloud == m.cloud)
+        )
+        row = session.scalars(stmt).first()
+        if row:
+            return row
+        return None
+
+
+def get_instance_by_name(instance_name: str) -> Instance | None:
+    """Returns the Instance if manifest already registered"""
+    with Session(engine) as session:
+        # Check if exists
+        stmt = (
+            select(Instance)
+            .where(Instance.instance_name == instance_name)
+            .where(Instance.deleted_on.is_(None))
         )
         row = session.scalars(stmt).first()
         if row:
@@ -302,7 +318,7 @@ def store_manifest_snapshot_if_changed(m: InstanceManifest) -> int:
 
 
 def get_last_successful_manifest_if_any(
-    uuid: str | None,
+    uuid: str | None, instance_name: str = "", use_last_manifest: bool = False
 ) -> InstanceManifest | None:
     """Returns (manifest, already_processed)"""
 
@@ -317,6 +333,13 @@ def get_last_successful_manifest_if_any(
             .order_by(ManifestSnapshot.created_on.desc())
             .limit(1)
         )
+        if use_last_manifest:
+            stmt = (
+                select(ManifestSnapshot)
+                .where(ManifestSnapshot.instance_uuid == uuid)
+                .order_by(ManifestSnapshot.created_on.desc())
+                .limit(1)
+            )
         row = session.scalars(stmt).first()
         if not row:
             logger.debug(
@@ -341,14 +364,23 @@ def get_last_successful_manifest_if_any(
         return m
 
 
-def get_latest_vm_by_uuid(instance_uuid: str | None) -> Vm | None:
+def get_latest_vm_by_uuid(
+    instance_uuid: str | None, alive_only: bool = True
+) -> Vm | None:
     with Session(engine) as session:
-        stmt = (
-            select(Vm)
-            .where(Vm.instance_uuid == instance_uuid)
-            .where(Vm.deleted_on.is_(None))
-            .order_by(Vm.created_on.desc())
-        )
+        if alive_only:
+            stmt = (
+                select(Vm)
+                .where(Vm.instance_uuid == instance_uuid)
+                .where(Vm.deleted_on.is_(None))
+                .order_by(Vm.created_on.desc())
+            )
+        else:
+            stmt = (
+                select(Vm)
+                .where(Vm.instance_uuid == instance_uuid)
+                .order_by(Vm.created_on.desc())
+            )
         row = session.scalars(stmt).first()
         if row:
             return row
@@ -385,16 +417,26 @@ def get_all_launched_active_vms(
     return ret
 
 
-def mark_any_active_vms_as_deleted(
-    m: InstanceManifest,
-) -> None:
+def mark_any_active_vms_as_deleted(instance_uuid: str) -> None:
     with Session(engine) as session:
         stmt = (
             update(Vm)
-            .where(Vm.cloud == m.cloud)
-            .where(Vm.instance_uuid == m.uuid)
+            .where(Vm.instance_uuid == instance_uuid)
             .where(Vm.deleted_on.is_(None))
             .values(deleted_on=datetime.utcnow())
+        )
+        session.execute(stmt)
+        session.commit()
+    return
+
+
+def mark_instance_as_stopped_by_name(instance_name: str) -> None:
+    with Session(engine) as session:
+        stmt = (
+            update(Instance)
+            .where(Instance.instance_name == instance_name)
+            .where(Instance.deleted_on.is_(None))
+            .values(stopped_on=datetime.utcnow())
         )
         session.execute(stmt)
         session.commit()
@@ -598,10 +640,20 @@ def finalize_ensure_vm(m: InstanceManifest, vm: CloudVM):
             )
         cmdb_vm.ip_public = vm.ip_public
         cmdb_vm.user_tags = m.user_tags
-        cmdb_vm.volume_id = vm.volume_ids  # If using block storage
+        cmdb_vm.volume_ids = vm.volume_ids  # If using block storage
         cmdb_vm.last_modified_on = datetime.utcnow()
 
         session.add(cmdb_vm)
+
+        # Clear instance stopped if set
+        stmt_instance = (
+            update(Instance)
+            .where(Instance.uuid == m.uuid)
+            .where(Instance.stopped_on.is_not(None))
+            .values(stopped_on=None)
+            .values(deleted_on=None)
+        )
+        session.execute(stmt_instance)
 
         session.commit()
         logger.info(
@@ -714,3 +766,10 @@ def get_short_lifetime_instance_types_with_zone_if_any(
                 )
             return ret
     return []
+
+
+def get_all_non_deleted_instances() -> list[Instance]:
+    with Session(engine) as session:
+        # Check if exists
+        stmt = select(Instance).where(Instance.deleted_on.is_(None))
+        return session.scalars(stmt).all()  # type: ignore

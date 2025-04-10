@@ -98,3 +98,5 @@ CREATE TABLE ignored_instance (
 );
 """
 )
+
+DDL_MIGRATIONS.append("""ALTER TABLE instance ADD stopped_on datetime;""")

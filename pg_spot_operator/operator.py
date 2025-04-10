@@ -862,7 +862,7 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str, str]:
             m.instance_name,
             m.region,
         )
-        cmdb.mark_any_active_vms_as_deleted(m)
+        cmdb.mark_any_active_vms_as_deleted(str(m.uuid))
 
     resolved_instance_types = preprocess_ensure_vm_action(
         m, backing_instances[0] if backing_instances else None
@@ -1249,6 +1249,39 @@ def decrypt_and_set_aws_secrets_if_any(m):
     )
 
 
+def stop_running_vms_if_any(instance_name: str, dry_run: bool = False) -> None:
+    ins = cmdb.get_instance_by_name(instance_name)
+    if not ins:
+        logger.error(
+            "Instance %s not found from CMDB, can't determine the region for VM deletion",
+            instance_name,
+        )
+        return
+
+    backing_instances = get_backing_vms_for_instances_if_any(
+        ins.region, instance_name
+    )
+    backing_ins_ids = [x["InstanceId"] for x in backing_instances]
+    if backing_ins_ids:
+        if dry_run:
+            logger.warning(
+                "Would terminate current VMs in region %s: %s",
+                ins.region,
+                backing_ins_ids,
+            )
+        else:
+            logger.warning(
+                "Terminating current VMs in region %s: %s ...",
+                ins.region,
+                backing_ins_ids,
+            )
+            terminate_instances_in_region(ins.region, backing_ins_ids)
+            logger.info("OK - instances terminated")
+            cmdb.mark_instance_as_stopped_by_name(instance_name)
+            cmdb.mark_any_active_vms_as_deleted(str(ins.uuid))
+            logger.debug("CMDB status updated")
+
+
 def do_main_loop(
     cli_dry_run: bool = False,
     cli_debug: bool = False,
@@ -1257,6 +1290,7 @@ def do_main_loop(
     cli_vault_password_file: str = "",
     cli_main_loop_interval_s: int = 60,
     cli_destroy_file_base_path: str = "",
+    cli_resume: bool = False,
     cli_teardown: bool = False,
     cli_connstr_only: bool = False,
     cli_connstr_format: str = "ssh",
@@ -1286,6 +1320,32 @@ def do_main_loop(
             m: InstanceManifest = get_manifest_from_cli_input(
                 cli_env_manifest, cli_user_manifest_path, first_loop
             )
+            if cli_resume:
+                ins = cmdb.get_instance_by_name(m.instance_name)
+                if not ins:
+                    logger.error(
+                        "Instance %s not found from CMDB, can't resume instance. Remove the --resume flag and retry",
+                        m.instance_name,
+                    )
+                    exit(1)
+                m = cmdb.get_last_successful_manifest_if_any(  # type: ignore
+                    ins.uuid, use_last_manifest=True
+                )
+                if not m:
+                    logger.error(
+                        "No previous manifest found to --resume instance %s, can't proceed",
+                        m.instance_name,
+                    )
+                    exit(1)
+                (
+                    logger.info(
+                        "Resuming instance %s in region %s...",
+                        m.instance_name,
+                        m.region,
+                    )
+                    if cli_resume and first_loop
+                    else None
+                )
 
             # Step 1 - register or update manifest snapshot in CMDB
             instance: Instance | None = register_or_update_manifest_in_cmdb(

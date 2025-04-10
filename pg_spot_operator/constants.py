@@ -26,7 +26,7 @@ CPU_ARCH_X86 = "x86"
 CPU_ARCH_ARM = "arm"
 
 BACKUP_TYPE_PGBACKREST = "pgbackrest"
-
+BACKUP_TYPE_NONE = "none"
 
 DEFAULT_CONFIG_DIR = "~/.pg-spot-operator"
 

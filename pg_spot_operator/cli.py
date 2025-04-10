@@ -27,6 +27,7 @@ from pg_spot_operator.cloud_impl.cloud_util import (
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.constants import (
     ALL_ENABLED_REGIONS,
+    BACKUP_TYPE_NONE,
     CONNSTR_FORMAT_AUTO,
     DEFAULT_SSH_PUBKEY_PATH,
     DEFAULT_VM_LOGIN_USER,
@@ -135,6 +136,12 @@ class ArgumentParser(Tap):
         "CONNSTR_FORMAT", CONNSTR_FORMAT_AUTO
     )  # auto = "postgres" if admin user / password set, otherwise "ssh". [auto | ssh | ansible | postgres]
     manifest: str = os.getenv("MANIFEST", "")  # Manifest to process
+    stop: bool = str_to_bool(
+        os.getenv("STOP", "false")
+    )  # Stop the VM but leave disks around for a later resume / teardown
+    resume: bool = str_to_bool(
+        os.getenv("RESUME", "false")
+    )  # Resurrect the input --instance-name using last known settings
     teardown: bool = str_to_bool(
         os.getenv("TEARDOWN", "false")
     )  # Delete VM and other created resources
@@ -490,7 +497,7 @@ def check_cli_args_valid(args: ArgumentParser):
 
     if not fixed_vm:
         if not (args.region or args.zone) and not (
-            args.check_price or args.list_instances
+            args.check_price or args.list_instances or args.stop or args.resume
         ):
             logger.error("--region input expected")
             exit(1)
@@ -502,7 +509,7 @@ def check_cli_args_valid(args: ArgumentParser):
         if (
             args.storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
             and not args.storage_min
-            and not (args.teardown or args.teardown_region)
+            and not (args.teardown or args.teardown_region or args.resume)
         ):
             logger.error(
                 "--storage-min input expected for --storage-type=local"
@@ -517,7 +524,12 @@ def check_cli_args_valid(args: ArgumentParser):
                 )
             )
             and not args.storage_min
-            and not (args.teardown or args.teardown_region)
+            and not (
+                args.teardown
+                or args.teardown_region
+                or args.stop
+                or args.resume
+            )
         ):
             logger.error("--storage-min input expected")
             exit(1)
@@ -630,7 +642,11 @@ def check_cli_args_valid(args: ArgumentParser):
         )
         exit(1)
     if not (
-        args.check_price or args.list_instances or args.vm_host
+        args.check_price
+        or args.list_instances
+        or args.vm_host
+        or args.stop
+        or args.resume
     ) and not is_explicit_aws_region_code(args.region):
         logger.error(
             "Fuzzy or regex --region input only allowed in --check-price mode",
@@ -645,6 +661,8 @@ def check_cli_args_valid(args: ArgumentParser):
         )
         list_strategies_and_exit()
         exit(1)
+    if (args.stop or args.resume) and not args.region:
+        args.region = "auto"
 
 
 def try_load_manifest(manifest_str: str) -> InstanceManifest | None:
@@ -1082,11 +1100,14 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
         "Expiration Date",
     ]
     tab = PrettyTable(cols)
+
+    active_instance_names = []
     for i in instances:
         tags_as_dict = {tag["Key"]: tag["Value"] for tag in i.get("Tags", [])}
         region = extract_region_from_az(
             i.get("Placement", {}).get("AvailabilityZone", "")
         )
+        active_instance_names.append(tags_as_dict.get(SPOT_OPERATOR_ID_TAG))
         tab.add_row(
             [
                 tags_as_dict.get(SPOT_OPERATOR_ID_TAG),
@@ -1129,7 +1150,51 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
             ]
         )
 
+    print("Running instances:")
     print(tab)
+
+    resumable_cols = [
+        "Instance name",
+        "Region",
+        "Min. CPU",
+        "Min. RAM",
+        "Storage type",
+        "Min. Storage",
+        "Last provisioned",
+        "Stopped on",
+    ]
+    tab2 = PrettyTable(resumable_cols)
+
+    for nd_ins in cmdb.get_all_non_deleted_instances():
+        if nd_ins.instance_name not in active_instance_names:
+            vm = cmdb.get_latest_vm_by_uuid(nd_ins.uuid, alive_only=False)
+            if not vm:
+                continue
+            m = cmdb.get_last_successful_manifest_if_any(
+                nd_ins.uuid, use_last_manifest=True
+            )
+            if not m:
+                continue
+            if (
+                m.vm.storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
+                and m.backup.type == BACKUP_TYPE_NONE
+            ):
+                continue  # Can't resume if not using EBS or S3 backups
+            tab2.add_row(
+                [
+                    nd_ins.instance_name,
+                    nd_ins.region,
+                    nd_ins.cpu_min,
+                    nd_ins.ram_min,
+                    nd_ins.storage_type,
+                    nd_ins.storage_min,
+                    vm.created_on,
+                    nd_ins.stopped_on,
+                ]
+            )
+
+    print("Resumable instances:")
+    print(tab2)
 
     exit(errors)
 
@@ -1210,6 +1275,8 @@ def any_action_flags_set(a: ArgumentParser) -> bool:
         or a.check_manifest
         or a.manifest
         or a.manifest_path
+        or a.stop
+        or a.resume
     )
 
 
@@ -1251,6 +1318,7 @@ def main():  # pragma: no cover
         check_cli_args_valid(args)
 
     if args.list_instances:
+        init_cmdb_and_apply_schema_migrations_if_needed(args)
         list_instances_and_exit(args)
 
     logger.debug("Args: %s", args.as_dict()) if args.debug else None
@@ -1306,6 +1374,13 @@ def main():  # pragma: no cover
 
     init_cmdb_and_apply_schema_migrations_if_needed(args)
 
+    if args.stop:
+        operator.stop_running_vms_if_any(
+            args.instance_name or env_manifest.instance_name,
+            args.dry_run,
+        )
+        exit(0)
+
     if not (
         args.dry_run
         or args.check_price
@@ -1330,6 +1405,7 @@ def main():  # pragma: no cover
         cli_user_manifest_path=args.manifest_path,
         cli_main_loop_interval_s=args.main_loop_interval_s,
         cli_destroy_file_base_path=args.destroy_file_base_path,
+        cli_resume=args.resume,
         cli_teardown=args.teardown,
         cli_connstr_only=args.connstr_only,
         cli_connstr_format=args.connstr_format,
