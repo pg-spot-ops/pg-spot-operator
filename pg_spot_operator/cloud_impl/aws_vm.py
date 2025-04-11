@@ -901,6 +901,7 @@ def ensure_spot_vm(
     )
     vol_descs: list[dict] = []
     new_vm_created = False
+    actually_created_instance_type: InstanceTypeInfo | None = None
 
     if i_desc:
         logger.debug(
@@ -931,9 +932,7 @@ def ensure_spot_vm(
                 i_desc = ec2_launch_instance(
                     m, rit, dry_run=dry_run, user_data=user_data
                 )
-                if not dry_run:
-                    new_vm_created = True
-                    logger.debug("VM %s created", i_desc["InstanceId"])
+                actually_created_instance_type = rit
 
                 if dry_run:
                     logger.info("Dry-run launch OK")
@@ -953,9 +952,13 @@ def ensure_spot_vm(
                             ),
                             login_user=DEFAULT_VM_LOGIN_USER,
                             ip_private="dummy",
+                            instance_type_info=actually_created_instance_type,
                         ),
                         False,
                     )
+
+                new_vm_created = True
+                logger.debug("VM %s created", i_desc["InstanceId"])
                 break
             except Exception as e:
                 if "MaxSpotInstanceCountExceeded" in str(e):
@@ -1014,6 +1017,7 @@ def ensure_spot_vm(
         provider_description=i_desc,
         volume_descriptions=vol_descs,
         user_tags=m.user_tags,
+        instance_type_info=actually_created_instance_type,
     )
 
     return ret, new_vm_created

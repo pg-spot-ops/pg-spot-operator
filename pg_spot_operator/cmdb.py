@@ -679,7 +679,7 @@ def finalize_ensure_vm(m: InstanceManifest, vm: CloudVM):
         cmdb_vm.availability_zone = vm.availability_zone
         if vm.instance_type_info:
             cmdb_vm.cpu = vm.instance_type_info.cpu
-            cmdb_vm.ram = vm.instance_type_info.ram_mb
+            cmdb_vm.ram = int(vm.instance_type_info.ram_mb / 1000)
             cmdb_vm.instance_storage = vm.instance_type_info.instance_storage
             cmdb_vm.price_spot = vm.instance_type_info.monthly_spot_price
             cmdb_vm.price_ondemand = (
