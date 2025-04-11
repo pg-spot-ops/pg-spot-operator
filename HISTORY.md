@@ -4,6 +4,34 @@ Changelog
 
 (unreleased)
 ------------
+- CMDB instance.ram_min was not set. [Kaarel Moppel]
+
+  Also sync main HW specs changes from manifest to CMDB instance tbl
+- Merge pull request #146 from pg-spot-ops/stop-resume-functionality.
+  [Kaarel Moppel]
+
+  Add stop / resume functionality via `--stop` and `--resume`. Adds CLI convenience as don't need to look up the launch config, just need the instance name. `--list-instances` now also lists active and resumable instances separately
+- Don't list instances not on EBS or backed up as resumable. [Kaarel
+  Moppel]
+- Make --list-instances aware of resumable instances. [Kaarel Moppel]
+- Implement --resume. [Kaarel Moppel]
+
+  Works based on --instance-name only. Also fix a CMDB striping leftover
+  bug
+- Set instance.stopped_on in CMDB on --stop. [Kaarel Moppel]
+- Implement --stop / STOP. [Kaarel Moppel]
+
+  Also don't require the region to be set - look it up from CMDB based on
+  --instance-name
+- Make striping volume order deterministic. [Kaarel Moppel]
+
+  Previosly could happen that the postgres volume was effectively
+  reinitialized
+
+
+0.9.48 (2025-04-07)
+-------------------
+- Release: version 0.9.48 🚀 [Kaarel Moppel]
 - Merge pull request #145 from pg-spot-ops/add-striping-support. [Kaarel
   Moppel]
 
