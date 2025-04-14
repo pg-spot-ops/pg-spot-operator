@@ -497,7 +497,11 @@ def check_cli_args_valid(args: ArgumentParser):
 
     if not fixed_vm:
         if not (args.region or args.zone) and not (
-            args.check_price or args.list_instances or args.stop or args.resume
+            args.check_price
+            or args.list_instances
+            or args.stop
+            or args.resume
+            or args.teardown
         ):
             logger.error("--region input expected")
             exit(1)
@@ -647,6 +651,7 @@ def check_cli_args_valid(args: ArgumentParser):
         or args.vm_host
         or args.stop
         or args.resume
+        or args.teardown
     ) and not is_explicit_aws_region_code(args.region):
         logger.error(
             "Fuzzy or regex --region input only allowed in --check-price mode",
@@ -661,7 +666,7 @@ def check_cli_args_valid(args: ArgumentParser):
         )
         list_strategies_and_exit()
         exit(1)
-    if (args.stop or args.resume) and not args.region:
+    if (args.stop or args.resume or args.teardown) and not args.region:
         args.region = "auto"
 
 

@@ -907,6 +907,16 @@ def destroy_backups_if_any(m: InstanceManifest):
 def destroy_instance(
     m: InstanceManifest,
 ) -> bool:  # TODO some duplication with --teardown-region
+    if m.region == "auto":
+        ins = cmdb.get_instance_by_name(m.instance_name)
+        if not ins:
+            logger.error(
+                "Instance %s not found from CMDB, can't determine the region for VM deletion. Specify via --region",
+                m.instance_name,
+            )
+            return False
+        m.region = ins.region
+
     logger.info(
         "Destroying cloud resources if any for instance %s ...",
         m.instance_name,
