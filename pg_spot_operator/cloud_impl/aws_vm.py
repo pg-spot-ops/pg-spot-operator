@@ -116,7 +116,7 @@ def create_new_volume_for_instance(
     availability_zone: str,
     instance_id: str,
     volume_nr: int,
-    volume_size_min: int,
+    volume_size: int,
     volume_type: str = "gp3",
     volume_iops: int = 0,
     volume_throughput: int = 0,
@@ -125,7 +125,7 @@ def create_new_volume_for_instance(
     client = get_client("ec2", region)
 
     logger.debug(
-        f"Creating a new {volume_size_min} GB EBS volume for instance {instance_id} in AZ {availability_zone} ... "
+        f"Creating a new {volume_size} GB EBS volume for instance {instance_id} in AZ {availability_zone} ... "
     )
 
     tags = [
@@ -142,7 +142,7 @@ def create_new_volume_for_instance(
     resp = client.create_volume(
         AvailabilityZone=availability_zone,
         Encrypted=True,
-        Size=int(volume_size_min),
+        Size=int(volume_size),
         VolumeType=volume_type,
         TagSpecifications=[
             {"ResourceType": "volume", "Tags": tags},
@@ -150,7 +150,12 @@ def create_new_volume_for_instance(
         **kwargs,
     )
 
-    logger.debug("OK. New volume ID: %s", resp["VolumeId"])
+    logger.info(
+        "New %s GB volume with ID %s created in AZ %s",
+        volume_size,
+        resp["VolumeId"],
+        availability_zone,
+    )
     return resp
 
 
@@ -777,16 +782,11 @@ def ensure_volumes_attached(
         region, instance_name
     )
 
-    if m.vm.stripes == 0:
-        stripe_count = 1
-        vol_size_for_allocation = m.vm.storage_min
-    else:
-        stripe_count = m.vm.stripes
-        vol_size_for_allocation = math.ceil(m.vm.storage_min / stripe_count)
+    vol_size_for_allocation = int(math.ceil(m.vm.storage_min / m.vm.stripes))
 
-    for volume_nr in range(1, stripe_count + 1):
+    for volume_nr in range(1, m.vm.stripes + 1):
         logger.debug(
-            f"Ensuring volume nr {volume_nr} existing / attached from a total of {stripe_count} volumes"
+            f"Ensuring volume nr {volume_nr} existing / attached from a total of {m.vm.stripes} volumes"
         )
         vol_desc: dict = (
             vol_descs[volume_nr - 1]
@@ -799,7 +799,7 @@ def ensure_volumes_attached(
                 vol_desc.get("Attachments")
                 and vol_desc["Attachments"][0]["InstanceId"] == instance_id
             ):
-                logger.debug(
+                logger.info(
                     f"Volume {vol_desc['VolumeId']} already attached to instance {instance_id}"
                 )
 

@@ -1278,7 +1278,7 @@ def stop_running_vms_if_any(instance_name: str, dry_run: bool = False) -> None:
                 backing_ins_ids,
             )
             terminate_instances_in_region(ins.region, backing_ins_ids)
-            logger.info("OK - instances terminated")
+            logger.info("OK - instances terminated due to --stop command")
             cmdb.mark_instance_as_stopped_by_name(instance_name)
             cmdb.mark_any_active_vms_as_deleted(str(ins.uuid))
             logger.debug("CMDB status updated")
