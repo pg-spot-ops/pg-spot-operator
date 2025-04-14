@@ -1175,6 +1175,7 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
 def list_instances_from_cmdb_and_exit() -> None:
     resumable_cols = [
         "Instance name",
+        "Running",
         "Created on",
         "Region",
         "AZ",
@@ -1183,6 +1184,7 @@ def list_instances_from_cmdb_and_exit() -> None:
         "Storage type",
         "Min. Storage",
         "Last provisioned",
+        "Last VM",
         "Stopped on",
         "Resumable",
     ]
@@ -1190,6 +1192,7 @@ def list_instances_from_cmdb_and_exit() -> None:
 
     non_deleted_instances = cmdb.get_all_non_deleted_instances()
     non_deleted_instances.sort(key=lambda x: x.created_on)
+
     for nd_ins in non_deleted_instances:
         vm = cmdb.get_latest_vm_by_uuid(nd_ins.uuid, alive_only=False)
         if not vm:
@@ -1200,9 +1203,28 @@ def list_instances_from_cmdb_and_exit() -> None:
         if not m:
             continue
 
+        # Try to determine if VM online
+        is_running = "False"
+        try:
+            running_instances_descs = (
+                get_all_active_operator_instances_from_region(nd_ins.region)
+            )
+            for i in running_instances_descs:
+                if i.get("InstanceId") == vm.provider_id:
+                    is_running = "True"
+                    break
+        except Exception:
+            logger.warning(
+                "Failed to inquiry running state of VM %s in region %s",
+                vm.provider_id,
+                vm.region,
+            )
+            is_running = "?"
+
         tab.add_row(
             [
                 nd_ins.instance_name,
+                is_running,
                 nd_ins.created_on,
                 nd_ins.region,
                 vm.availability_zone,
@@ -1211,6 +1233,7 @@ def list_instances_from_cmdb_and_exit() -> None:
                 nd_ins.storage_type,
                 nd_ins.storage_min,
                 vm.created_on,
+                vm.provider_id,
                 nd_ins.stopped_on,
                 not (
                     m.vm.storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
