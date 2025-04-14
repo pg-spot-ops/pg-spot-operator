@@ -126,6 +126,9 @@ class ArgumentParser(Tap):
     vm_only: bool = str_to_bool(
         os.getenv("VM_ONLY", "false")
     )  # No Ansible / Postgres setup
+    no_mount_disks: bool = str_to_bool(
+        os.getenv("NO_MOUNT_DISKS", "false")
+    )  # Skip data disks mounting via Ansible. Relevant only is --vm-only set
     persistent_vms: bool = str_to_bool(
         os.getenv("PERSISTENT_VMS", "false")
     )  # Use persistent VMs instead of Spot
@@ -349,6 +352,7 @@ def compile_manifest_from_cmdline_params(
     m.integrations.connstr_bucket_key = args.connstr_bucket_access_key
     m.integrations.connstr_bucket_secret = args.connstr_bucket_access_secret
     m.vm_only = args.vm_only
+    m.no_mount_disks = args.no_mount_disks
     m.vm.cpu_arch = args.cpu_arch
     m.vm.max_price = args.max_price
     m.vm.cpu_min = args.cpu_min

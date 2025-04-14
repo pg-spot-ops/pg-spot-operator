@@ -1524,7 +1524,9 @@ def do_main_loop(
                     )
 
                 if m.vm_only:
-                    if m.vm.storage_min != -1:  # -1 denotes EBS OS disk only
+                    if (
+                        m.vm.storage_min != -1 and not m.no_mount_disks
+                    ):  # -1 denotes EBS OS disk only
                         run_action(constants.ACTION_MOUNT_DISKS, m)
                     logger.info("Skipping Postgres setup as vm_only set")
                     logger.info(
