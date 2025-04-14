@@ -46,6 +46,7 @@ from pg_spot_operator.cmdb import (
     get_ssh_connstr,
 )
 from pg_spot_operator.constants import (
+    ACTION_INSTANCE_SETUP,
     BACKUP_TYPE_PGBACKREST,
     DEFAULT_CONFIG_DIR,
     DEFAULT_INSTANCE_SELECTION_STRATEGY,
@@ -326,8 +327,6 @@ def collect_output_params_from_handler_temp_dir(
 
 
 def display_connect_strings(m: InstanceManifest):
-    logger.info("Instance %s setup completed", m.instance_name)
-
     m.decrypt_secrets_if_any()
 
     connstr_private, connstr_public = cmdb.get_instance_connect_strings(m)
@@ -711,15 +710,16 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
         m.instance_name,
         os.path.join(temp_workdir, "ansible.log"),
     )
-    logger.info("SSH connect string: %s", get_ssh_connstr(m))
+    logger.debug("SSH connect string: %s", get_ssh_connstr(m))
 
     rc, outputs = run_ansible_handler(
         action, temp_workdir, executable_full_path, m
     )
 
     if rc == 0:
-
-        display_connect_strings(m)
+        logger.info("OK action %s completed", action)
+        if action == ACTION_INSTANCE_SETUP:
+            display_connect_strings(m)
 
         if not debug:
             clean_up_old_logs_if_any(
@@ -1524,6 +1524,8 @@ def do_main_loop(
                     )
 
                 if m.vm_only:
+                    if m.vm.storage_min != -1:  # -1 denotes EBS OS disk only
+                        run_action(constants.ACTION_MOUNT_DISKS, m)
                     logger.info("Skipping Postgres setup as vm_only set")
                     logger.info(
                         "*** SSH connect string *** - '%s'", get_ssh_connstr(m)
