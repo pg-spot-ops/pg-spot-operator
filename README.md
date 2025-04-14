@@ -284,13 +284,13 @@ PS The SSH key is optional, to be able to access the cloud VM directly from your
 ```bash
 # Install the pg-spot-operator package via pip/pipx, with pipx recommended nowadays:
 pipx install pg-spot-operator
-# When actually launching Postgres instaces a local Ansible installation is also assumed!
-# (not needed for price checking or creating vanilla VMs with the --vm-only flag)
+# When actually launching Postgres instances a local Ansible installation is also assumed!
+# (not needed for price checking or creating vanilla VMs with the --vm-only + --no-mount-disks flags)
 pipx install --include-deps ansible
-# Or follow the offical Ansible docs at:
+# Or follow the official Ansible docs at:
 # https://docs.ansible.com/ansible/2.9/installation_guide/intro_installation.html#installing-ansible
 
-# Let's check prices for some in-memory analytics on our 200GB dataset in all North American regions to get some great $$ value
+# Let's check prices for some in-memory analytics on our 200 GB dataset in all North American regions to get some great $$ value
 # PS in default persistent storage mode (--storage-type=network) we though still pay list price for the EBS volumes (~$0.09/GB)
 pg_spot_operator --check-price --ram-min=256 --region='^(us|ca)'
 

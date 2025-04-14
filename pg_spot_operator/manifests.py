@@ -239,6 +239,7 @@ class InstanceManifest(BaseModel):
     expiration_date: str = ""  # now | '2024-06-11 10:40'
     self_termination: bool = False
     vm_only: bool = False  # No Postgres setup
+    no_mount_disks: bool = False  # No data disk mounting if vm_only set
     is_paused: bool = False
     # *Sections*
     postgres: SectionPostgres = field(default_factory=SectionPostgres)

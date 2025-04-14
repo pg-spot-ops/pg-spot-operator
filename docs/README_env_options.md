@@ -11,6 +11,7 @@
 * **--dry-run / DRY_RUN** Perform a dry-run VM create + create the Ansible skeleton. For example to check if cloud credentials allow Spot VM creation.
 * **--debug / DEBUG** Don't clean up Ansible run files plus extra developer outputs.
 * **--vm-only / VM_ONLY** Skip Ansible / Postgres setup
+* **--no-mount-disks / NO_MOUNT_DISKS** Skip data disks mounting via Ansible. Relevant only is --vm-only set.
 * **--persistent-vms / PERSISTENT_VMS** Run on normal / on-demand VMs instead of Spot. Default: false
 * **--config-dir / CONFIG_DIR** (Default: ~/.pg-spot-operator) Where the engine keeps its internal state / configuration
 * **--main-loop-interval-s / MAIN_LOOP_INTERVAL_S** (Default: 60)  Main loop sleep time. Reduce a bit to detect failures earlier / improve uptime
