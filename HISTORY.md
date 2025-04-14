@@ -4,6 +4,36 @@ Changelog
 
 (unreleased)
 ------------
+- Add a "Running" and "Last VM" columns to --list-instance-cmdb output.
+  [Kaarel Moppel]
+
+  Via a live describe_instances call
+- Add --list-instances-cmdb cmdline flag. [Kaarel Moppel]
+
+  To list all instances offline based on CMDB information
+- Merge pull request #147 from pg-spot-ops/vm-only-mount-disks. [Kaarel
+  Moppel]
+
+  By default mount data disks also in `--vm-only` mode
+- Add --no-mount-disks flag. [Kaarel Moppel]
+
+  To make it possible to get the old --vm-only behaviour where data
+  volumes are not automatically mounted to /var/lib/postgresql
+- Mount data disks in --vm-only mode. [Kaarel Moppel]
+- Don't require explicit --region input for --teardown. [Kaarel Moppel]
+
+  Using CMDB same as for --stop / --resume
+- A bit more INFO lvl logging around volume creation. [Kaarel Moppel]
+- Set --stripes default value to 1. [Kaarel Moppel]
+
+  Still means no striping. Allows for more convenient scripting
+- Fix VM details like CPU, RAM not being stored to CMDB "vm" table.
+  [Kaarel Moppel]
+
+
+0.9.49 (2025-04-11)
+-------------------
+- Release: version 0.9.49 🚀 [Kaarel Moppel]
 - CMDB instance.ram_min was not set. [Kaarel Moppel]
 
   Also sync main HW specs changes from manifest to CMDB instance tbl
