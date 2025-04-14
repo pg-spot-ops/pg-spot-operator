@@ -187,11 +187,11 @@ class ArgumentParser(Tap):
         os.getenv("VOLUME_THROUGHPUT", "0")
     )  # gp3 def=125, max=1000, relevant only for gp3
     stripes: int = int(
-        os.getenv("STRIPES", "0")
-    )  # 2-28 stripe volumes allowed
+        os.getenv("STRIPES", "1")
+    )  # 1-28 stripe volumes allowed. Default is 1, i.e. no striping
     stripe_size_kb: int = int(
         os.getenv("STRIPE_SIZE_KB", "64")
-    )  # Stripe size in KB
+    )  # Stripe size in KB. 64kB is LVM2 default
     expiration_date: str = os.getenv(
         "EXPIRATION_DATE", ""
     )  # ISO 8601 datetime, optionally with time zone

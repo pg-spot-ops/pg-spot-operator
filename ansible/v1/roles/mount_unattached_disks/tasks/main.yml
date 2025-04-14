@@ -68,7 +68,7 @@
       lv: pgdata-lv
       size: "100%FREE"
       shrink: false
-    when: vm.stripes | d(0) == 0
+    when: vm.stripes | d(0) <= 1
 
   - name: Logical LV with striping
     community.general.lvol:
@@ -77,7 +77,7 @@
       size: "100%FREE"
       shrink: false
       opts: "-i {{ vm.stripes | d( devices_to_mount | length ) }} -I {{ vm.stripe_size_kb | d(64) }}"
-    when: vm.stripes | d(0) > 0
+    when: vm.stripes | d(0) > 1
 
   - name: Format the volume
     community.general.filesystem:

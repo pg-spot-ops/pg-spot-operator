@@ -94,7 +94,7 @@ class SectionVm(BaseModel):
     volume_iops: int = 0
     volume_throughput: int = 0
     stripes: int = (
-        0  # >=2 enables striping. Target volume size calculated automatically
+        1  # 2+ enables striping. Target volume size calculated automatically
     )
     stripe_size_kb: int = (
         64  # 64k is LVM default. Could decrease for fast disk key reads
@@ -106,8 +106,8 @@ class SectionVm(BaseModel):
 
     @model_validator(mode="after")
     def check_stripes(self) -> Self:
-        if self.stripes and not (2 <= self.stripes <= 28):
-            raise ValueError("stripe count must be in range of 2-28 if set")
+        if self.stripes and not (1 <= self.stripes <= 28):
+            raise ValueError("stripe count must be in range of 1-28")
         return self
 
     @model_validator(mode="after")
