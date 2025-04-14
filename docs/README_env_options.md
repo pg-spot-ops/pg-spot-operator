@@ -3,6 +3,7 @@
 ## General
 
 * **--list-instances / LIST_INSTANCES** List all running operator managed VMs in specified region(s) and exit
+* **--list-instances-cmdb / LIST_INSTANCES_CMDB** # List non-deleted instances from CMDB for all regions
 * **--list-regions / LIST_REGIONS** List AWS datacenter locations and exit
 * **--list-strategies / LIST_STRATEGIES** Display available instance selection strategies and exit
 * **--list-avg-spot-savings / LIST_AVG_SPOT_SAVINGS** Display avg. regional Spot savings and eviction rates to choose the best region. Can apply the --region filter.

@@ -926,9 +926,17 @@ def destroy_instance(
         m.region, m.instance_name
     )
     backing_ins_ids = [x["InstanceId"] for x in backing_instances]
-    logger.info("Instances found for destroying: %s", backing_ins_ids)
+    logger.info(
+        "Instances found for destroying in region %s: %s",
+        m.region,
+        backing_ins_ids,
+    )
     if backing_ins_ids and not dry_run:
-        logger.info("Terminating instances %s ...", backing_ins_ids)
+        logger.info(
+            "Terminating instances %s in region %s ...",
+            backing_ins_ids,
+            m.region,
+        )
         terminate_instances_in_region(m.region, backing_ins_ids)
 
     vol_ids_and_sizes = get_operator_volumes_in_region(

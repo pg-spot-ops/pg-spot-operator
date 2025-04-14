@@ -111,6 +111,9 @@ class ArgumentParser(Tap):
     list_instances: bool = str_to_bool(
         os.getenv("LIST_INSTANCES", "false")
     )  # List running VMs for given region / region wildcards
+    list_instances_cmdb: bool = str_to_bool(
+        os.getenv("LIST_INSTANCES_CMDB", "false")
+    )  # List non-deleted instances from CMDB for all regions
     list_strategies: bool = str_to_bool(
         os.getenv("LIST_STRATEGIES", "false")
     )  # Display available instance selection strategies and exit
@@ -311,6 +314,7 @@ def running_in_check_or_list_mode(args: ArgumentParser) -> bool:
     return (
         args.check_price
         or args.list_instances
+        or args.list_instances_cmdb
         or args.list_regions
         or args.list_strategies
         or args.list_avg_spot_savings
@@ -467,6 +471,7 @@ def need_ssh_access(a: ArgumentParser) -> bool:
         a.check_price
         or a.check_manifest
         or a.list_instances
+        or a.list_instances_cmdb
         or a.list_regions
         or a.list_strategies
         or a.list_avg_spot_savings
@@ -503,6 +508,7 @@ def check_cli_args_valid(args: ArgumentParser):
         if not (args.region or args.zone) and not (
             args.check_price
             or args.list_instances
+            or args.list_instances_cmdb
             or args.stop
             or args.resume
             or args.teardown
@@ -543,7 +549,11 @@ def check_cli_args_valid(args: ArgumentParser):
             exit(1)
         if (
             args.region
-            and not (args.check_price or args.list_instances)
+            and not (
+                args.check_price
+                or args.list_instances
+                or args.list_instances_cmdb
+            )
             and len(args.region.split("-")) != 3
         ):
             logger.error(
@@ -652,6 +662,7 @@ def check_cli_args_valid(args: ArgumentParser):
     if not (
         args.check_price
         or args.list_instances
+        or args.list_instances_cmdb
         or args.vm_host
         or args.stop
         or args.resume
@@ -1110,13 +1121,11 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
     ]
     tab = PrettyTable(cols)
 
-    active_instance_names = []
     for i in instances:
         tags_as_dict = {tag["Key"]: tag["Value"] for tag in i.get("Tags", [])}
         region = extract_region_from_az(
             i.get("Placement", {}).get("AvailabilityZone", "")
         )
-        active_instance_names.append(tags_as_dict.get(SPOT_OPERATOR_ID_TAG))
         tab.add_row(
             [
                 tags_as_dict.get(SPOT_OPERATOR_ID_TAG),
@@ -1159,53 +1168,60 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
             ]
         )
 
-    print("Running instances:")
     print(tab)
+    exit(errors)
 
+
+def list_instances_from_cmdb_and_exit() -> None:
     resumable_cols = [
         "Instance name",
+        "Created on",
         "Region",
+        "AZ",
         "Min. CPU",
         "Min. RAM",
         "Storage type",
         "Min. Storage",
         "Last provisioned",
         "Stopped on",
+        "Resumable",
     ]
-    tab2 = PrettyTable(resumable_cols)
+    tab = PrettyTable(resumable_cols)
 
-    for nd_ins in cmdb.get_all_non_deleted_instances():
-        if nd_ins.instance_name not in active_instance_names:
-            vm = cmdb.get_latest_vm_by_uuid(nd_ins.uuid, alive_only=False)
-            if not vm:
-                continue
-            m = cmdb.get_last_successful_manifest_if_any(
-                nd_ins.uuid, use_last_manifest=True
-            )
-            if not m:
-                continue
-            if (
-                m.vm.storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
-                and m.backup.type == BACKUP_TYPE_NONE
-            ):
-                continue  # Can't resume if not using EBS or S3 backups
-            tab2.add_row(
-                [
-                    nd_ins.instance_name,
-                    nd_ins.region,
-                    nd_ins.cpu_min,
-                    nd_ins.ram_min,
-                    nd_ins.storage_type,
-                    nd_ins.storage_min,
-                    vm.created_on,
-                    nd_ins.stopped_on,
-                ]
-            )
+    non_deleted_instances = cmdb.get_all_non_deleted_instances()
+    non_deleted_instances.sort(key=lambda x: x.created_on)
+    for nd_ins in non_deleted_instances:
+        vm = cmdb.get_latest_vm_by_uuid(nd_ins.uuid, alive_only=False)
+        if not vm:
+            continue
+        m = cmdb.get_last_successful_manifest_if_any(
+            nd_ins.uuid, use_last_manifest=True
+        )
+        if not m:
+            continue
 
-    print("Resumable instances:")
-    print(tab2)
+        tab.add_row(
+            [
+                nd_ins.instance_name,
+                nd_ins.created_on,
+                nd_ins.region,
+                vm.availability_zone,
+                nd_ins.cpu_min,
+                nd_ins.ram_min,
+                nd_ins.storage_type,
+                nd_ins.storage_min,
+                vm.created_on,
+                nd_ins.stopped_on,
+                not (
+                    m.vm.storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
+                    and m.backup.type == BACKUP_TYPE_NONE
+                ),
+            ]
+        )
 
-    exit(errors)
+    print(tab)
+
+    exit()
 
 
 def show_regional_spot_pricing_and_eviction_summary_and_exit(
@@ -1279,6 +1295,7 @@ def any_action_flags_set(a: ArgumentParser) -> bool:
         or a.list_regions
         or a.list_strategies
         or a.list_instances
+        or a.list_instances_cmdb
         or a.list_avg_spot_savings
         or a.check_price
         or a.check_manifest
@@ -1297,7 +1314,11 @@ def main():  # pragma: no cover
     logging.basicConfig(
         format=(
             "%(message)s"
-            if (args.check_price or args.list_instances)
+            if (
+                args.check_price
+                or args.list_instances
+                or args.list_instances_cmdb
+            )
             else (
                 "%(asctime)s %(levelname)s %(threadName)s %(filename)s:%(lineno)d %(message)s"
                 if args.verbose
@@ -1327,8 +1348,10 @@ def main():  # pragma: no cover
         check_cli_args_valid(args)
 
     if args.list_instances:
-        init_cmdb_and_apply_schema_migrations_if_needed(args)
         list_instances_and_exit(args)
+    if args.list_instances_cmdb:
+        init_cmdb_and_apply_schema_migrations_if_needed(args)
+        list_instances_from_cmdb_and_exit()
 
     logger.debug("Args: %s", args.as_dict()) if args.debug else None
 
