@@ -909,12 +909,11 @@ def destroy_instance(
 ) -> bool:  # TODO some duplication with --teardown-region
     if m.region == "auto":
         ins = cmdb.get_instance_by_name(m.instance_name)
-        if not ins:
+        if not ins or ins.region == "auto":
             logger.error(
-                "Instance %s not found from CMDB, can't determine the region for VM deletion. Specify via --region",
-                m.instance_name,
+                "Can't determine instance region for teardown. Specify via --region"
             )
-            return False
+            exit(1)
         m.region = ins.region
 
     logger.info(
