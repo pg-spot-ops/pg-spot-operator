@@ -4,6 +4,13 @@ Changelog
 
 (unreleased)
 ------------
+- Fail early on --teardown if can't determine region. [Kaarel Moppel]
+- Fix an unnecessary volume remounting error. [Kaarel Moppel]
+
+
+0.9.50 (2025-04-14)
+-------------------
+- Release: version 0.9.50 🚀 [Kaarel Moppel]
 - Add a "Running" and "Last VM" columns to --list-instance-cmdb output.
   [Kaarel Moppel]
 
