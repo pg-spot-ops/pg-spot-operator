@@ -777,7 +777,7 @@ def ensure_volumes_attached(
     volume_iops: int = m.vm.volume_iops
     volume_throughput: int = m.vm.volume_throughput
 
-    logger.debug(f"Ensuring instance {instance_name} has a data volume(s) ...")
+    logger.debug(f"Ensuring instance {instance_name} has data volume(s) ...")
     vol_descs = get_existing_data_volumes_for_instance_if_any(
         region, instance_name
     )
@@ -802,7 +802,7 @@ def ensure_volumes_attached(
                 logger.info(
                     f"Volume {vol_desc['VolumeId']} already attached to instance {instance_id}"
                 )
-
+                continue
             if (
                 vol_desc["State"] != "available"
             ):  # As it can take a bit of time for abrupt terminations
