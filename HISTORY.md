@@ -4,6 +4,34 @@ Changelog
 
 (unreleased)
 ------------
+- Time-box --connstr-only mode to 30min. [Kaarel Moppel]
+
+  Something must be terminally wrong - signal test scripts etc with exit
+  code 2
+- Assign a new UUID to instance with same name after delete. [Kaarel
+  Moppel]
+
+  To not possibly overwrite backups
+- Fix case when decreasing min_ram still recycled the existing instance.
+  [Kaarel Moppel]
+
+  with enough RAM
+- Fail with exit code 0 after teardown. [Kaarel Moppel]
+
+  Instead of 1
+- README remove trailing whitespace from "docker run" example. [Kaarel
+  Moppel]
+- README - update the --check-price table output. [Kaarel Moppel]
+
+  Columns had changed
+- Re-licence to Apache 2.0. [Kaarel Moppel]
+
+  And add support / sponsoring options
+
+
+0.9.51 (2025-04-15)
+-------------------
+- Release: version 0.9.51 🚀 [Kaarel Moppel]
 - Fail early on --teardown if can't determine region. [Kaarel Moppel]
 - Fix an unnecessary volume remounting error. [Kaarel Moppel]
 
