@@ -259,11 +259,13 @@ docker run --rm -e CHECK_PRICE=y \
   -e RAM_MIN=128 -e REGION=us-east-1 \
   pgspotops/pg-spot-operator:latest
 ...
-+-----------+---------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
-|   Region  |      SKU      | Arch | vCPU |  RAM   | Instance storage | Spot $ (Mo) | On-Demand $ (Mo) | EC2 discount | Approx. RDS win | Evic. rate (Mo) |
-+-----------+---------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
-| us-east-1 | x2iedn.xlarge | x86  |  4   | 128 GB |   118 GB nvme    |     85.5    |      600.2       |     -86%     |       11x       |      5-10%      |
-+-----------+---------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
++-----------+---------------+------+------+--------+---------------+--------+-------------+----------+------------+
+|   Region  |      SKU      | Arch | vCPU |  RAM   | Local storage | $ Spot | $ On-Demand | Discount | Evic. rate |
++-----------+---------------+------+------+--------+---------------+--------+-------------+----------+------------+
+| us-east-1 | x2gd.2xlarge  | arm  |  8   | 128 GB |  474 GB ssd   |  48.1  |     481     |   -90%   |    <5%     |
+| us-east-1 | x2iedn.xlarge | x86  |  4   | 128 GB |  118 GB nvme  |  151   |     600     |   -75%   |    <5%     |
+| us-east-1 | x8g.2xlarge   | arm  |  8   | 128 GB |  EBS only     |  163   |     563     |   -71%   |    <5%     |
++-----------+---------------+------+------+--------+---------------+--------+-------------+----------+------------+
 ...
 
 # Actually create the instance for private direct SQL access from our IP address
@@ -298,18 +300,21 @@ pg_spot_operator --check-price --ram-min=256 --region='^(us|ca)'
 
 Resolving HW requirements to actual instance types / prices using --selection-strategy=balanced ...
 Regions in consideration based on --region='^(us|ca)' input: ['ca-central-1', 'ca-west-1', 'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
-Resolving HW requirements in region '^(us|ca)' using --selection-strategy=balanced ...
 Top cheapest instances found for strategy 'balanced' (to list available strategies run --list-strategies / LIST_STRATEGIES=y):
-+--------------+----------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
-|    Region    |      SKU       | Arch | vCPU |  RAM   | Instance storage | Spot $ (Mo) | On-Demand $ (Mo) | EC2 discount | Approx. RDS win | Evic. rate (Mo) |
-+--------------+----------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
-| us-west-2    | x8g.4xlarge    | arm  |  16  | 256 GB |   EBS only       |    170.7    |      1125.5      |     -85%     |       10x       |       <5%       |
-| us-east-1    | x2gd.4xlarge   | arm  |  16  | 256 GB |   950 GB ssd     |    214.2    |      961.9       |     -78%     |        7x       |      10-15%     |
-| us-west-2    | x2iezn.2xlarge | x86  |  8   | 256 GB |   EBS only       |    226.7    |      1201.0      |     -81%     |        8x       |       <5%       |
-| us-west-2    | x2iedn.2xlarge | x86  |  8   | 256 GB |   237 GB nvme    |    230.5    |      1200.4      |     -81%     |        8x       |       <5%       |
-| us-east-1    | x8g.4xlarge    | arm  |  16  | 256 GB |   EBS only       |    237.0    |      1125.5      |     -79%     |        8x       |       <5%       |
-| us-east-1    | i4g.8xlarge    | arm  |  32  | 256 GB |   7500 GB ssd    |    261.8    |      1779.1      |     -85%     |       11x       |       <5%       |
-+--------------+----------------+------+------+--------+------------------+-------------+------------------+--------------+-----------------+-----------------+
++-----------+----------------+------+------+--------+---------------+--------+-------------+----------+------------+
+|   Region  |      SKU       | Arch | vCPU |  RAM   | Local storage | $ Spot | $ On-Demand | Discount | Evic. rate |
++-----------+----------------+------+------+--------+---------------+--------+-------------+----------+------------+
+| us-east-1 | x2gd.4xlarge   | arm  |  16  | 256 GB |  950 GB ssd   |  133   |     962     |   -86%   |   5-10%    |
+| us-east-2 | r7iz.8xlarge   | x86  |  32  | 256 GB |  EBS only     |  234   |     2143    |   -89%   |   10-15%   |
+| us-east-1 | x2iedn.2xlarge | x86  |  8   | 256 GB |  237 GB nvme  |  263   |     1200    |   -78%   |   5-10%    |
+| us-east-2 | x2iedn.2xlarge | x86  |  8   | 256 GB |  237 GB nvme  |  266   |     1200    |   -78%   |    <5%     |
+| us-east-1 | x2iezn.2xlarge | x86  |  8   | 256 GB |  EBS only     |  286   |     1201    |   -76%   |    <5%     |
+| us-west-2 | x2gd.4xlarge   | arm  |  16  | 256 GB |  950 GB ssd   |  324   |     962     |   -66%   |    <5%     |
+| us-east-2 | x2iedn.4xlarge | x86  |  16  | 512 GB |  475 GB nvme  |  330   |     2401    |   -86%   |    <5%     |
+| us-west-2 | x2iedn.2xlarge | x86  |  8   | 256 GB |  237 GB nvme  |  332   |     1200    |   -72%   |   5-10%    |
+| us-west-2 | x8g.4xlarge    | arm  |  16  | 256 GB |  EBS only     |  343   |     1126    |   -70%   |    <5%     |
+| us-west-1 | r6g.8xlarge    | arm  |  32  | 256 GB |  EBS only     |  345   |     1290    |   -73%   |   15-20%   |
++-----------+----------------+------+------+--------+---------------+--------+-------------+----------+------------+
 
 # Now to actually create the instance two mandatory flags `--region` and `--instance-name` are required. Plus all other
 # optional ones like passwords, pg_hba.conf rules, etc. Run `--help` for all flags or look at README_env_options.md.
