@@ -180,36 +180,6 @@ def init_engine_and_check_connection(sqlite_connstr: str):
     logger.debug("OK - engine initialized")
 
 
-def get_instance_by_name_if_alive(m: InstanceManifest) -> Instance | None:
-    """Returns the Instance if manifest already registered"""
-    with Session(engine) as session:
-        # Check if exists
-        stmt = (
-            select(Instance)
-            .where(Instance.instance_name == m.instance_name)
-            .where(Instance.deleted_on.is_(None))
-        )
-        row = session.scalars(stmt).first()
-        if row:
-            return row
-        return None
-
-
-def get_instance_by_name_cloud(m: InstanceManifest) -> Instance | None:
-    """Returns the Instance if manifest already registered"""
-    with Session(engine) as session:
-        # Check if exists
-        stmt = (
-            select(Instance)
-            .where(Instance.instance_name == m.instance_name)
-            .where(Instance.cloud == m.cloud)
-        )
-        row = session.scalars(stmt).first()
-        if row:
-            return row
-        return None
-
-
 def get_instance_by_name(instance_name: str) -> Instance | None:
     """Returns the Instance if manifest already registered"""
     with Session(engine) as session:
@@ -234,7 +204,6 @@ def register_instance_or_get_uuid(
         stmt = (
             select(Instance)
             .where(Instance.instance_name == m.instance_name)
-            .where(Instance.cloud == m.cloud)
             .where(Instance.deleted_on.is_(None))
         )
         row = session.scalars(stmt).first()
@@ -284,7 +253,6 @@ def update_instance_if_main_data_changed(m: InstanceManifest) -> None:
         stmt = (
             select(Instance)
             .where(Instance.instance_name == m.instance_name)
-            .where(Instance.cloud == m.cloud)
             .where(Instance.deleted_on.is_(None))
         )
         row = session.scalars(stmt).first()
@@ -434,36 +402,6 @@ def get_latest_vm_by_uuid(
     return None
 
 
-def get_all_launched_active_vms(
-    instance_uuid: str | None = None,
-    active_cloud: str = "",
-) -> list[VmDTO]:
-    ret = []
-    with Session(engine) as session:
-        if instance_uuid:
-            stmt = (
-                select(Vm)
-                .where(Vm.deleted_on.is_(None))
-                .where(Vm.instance_uuid == instance_uuid)
-                .join(Instance, Vm.instance_uuid == Instance.uuid)
-                .where(Instance.deleted_on.is_(None))
-            )
-        else:
-            stmt = (
-                select(Vm)
-                .where(Vm.deleted_on.is_(None))
-                .join(Instance, Vm.instance_uuid == Instance.uuid)
-                .where(Instance.deleted_on.is_(None))
-            )
-            if active_cloud:
-                stmt = stmt.where(Instance.cloud == active_cloud)
-        rows = session.scalars(stmt).all()
-        if rows:
-            for r in rows:
-                ret.append(r.to_dto())
-    return ret
-
-
 def mark_any_active_vms_as_deleted(instance_uuid: str) -> None:
     with Session(engine) as session:
         stmt = (
@@ -522,7 +460,7 @@ def load_manifest_by_snapshot_id(
         row = session.scalars(stmt).first()
         if row:
             m = manifests.load_manifest_from_string(row.manifest)
-            ins = get_instance_by_name_if_alive(m)
+            ins = get_instance_by_name(m.instance_name)
             if not ins:
                 raise Exception(
                     f"Instance {m.instance_name} not found / destroyed already, can't load snapshot"

@@ -410,7 +410,8 @@ def ec2_launch_instance(
     if not m.vm.persistent_vms:
         instance_market_options = {"MarketType": "spot"}
     logger.info(
-        "Launching a new %s instance of type %s ($%s a month) in region %s%s ...",
+        "%saunching a new %s instance of type %s ($%s a month) in region %s%s ...",
+        "Dry-run l" if dry_run else "L",
         "ondemand" if m.vm.persistent_vms else "spot",
         instance_type,
         (

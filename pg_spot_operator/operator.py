@@ -1238,8 +1238,8 @@ def get_manifest_from_cli_input(
 def register_or_update_manifest_in_cmdb(
     cli_destroy_file_base_path, m
 ) -> Instance | None:
-    instance = cmdb.get_instance_by_name_cloud(m)
-    m.fill_in_defaults()
+    instance = cmdb.get_instance_by_name(m.instance_name)
+
     if not instance:
         m.uuid = cmdb.register_instance_or_get_uuid(m)
         if not m.is_expired():
@@ -1310,6 +1310,43 @@ def stop_running_vms_if_any(instance_name: str, dry_run: bool = False) -> None:
             logger.debug("CMDB status updated")
 
 
+def drop_old_instance_if_main_hw_reqs_changed(
+    m: InstanceManifest,
+    dry_run: bool = False,
+) -> bool:
+    """Returns true if upscale needed / done"""
+    backing_instances = get_backing_vms_for_instances_if_any(
+        m.region, m.instance_name
+    )
+    if not backing_instances:
+        return False
+
+    backing_ins_id = backing_instances[0]["InstanceId"]
+    iti = resolve_instance_type_info(
+        backing_instances[0]["InstanceType"], m.region
+    )
+
+    hw_change_needed = does_instance_type_fit_manifest_hw_reqs(m, iti)
+    if hw_change_needed:
+        return False
+
+    if dry_run:
+        logger.warning(
+            "Would terminate current VMs %s as HW reqs have changed!",
+            backing_ins_id,
+        )
+    else:
+        logger.warning(
+            "Terminating current VM %s as HW reqs have changed ...",
+            backing_ins_id,
+        )
+        terminate_instances_in_region(m.region, [backing_ins_id])
+        logger.info("OK - terminated. Sleeping 5s ...")
+        time.sleep(5)  # As get_backing_vms_for_instances_if_any cached for 5s
+
+    return True
+
+
 def do_main_loop(
     cli_dry_run: bool = False,
     cli_debug: bool = False,
@@ -1376,6 +1413,7 @@ def do_main_loop(
                 )
 
             # Step 1 - register or update manifest snapshot in CMDB
+            m.fill_in_defaults()
             instance: Instance | None = register_or_update_manifest_in_cmdb(
                 cli_destroy_file_base_path, m
             )
@@ -1598,40 +1636,3 @@ def do_main_loop(
             cli_main_loop_interval_s,
         )
         time.sleep(cli_main_loop_interval_s)
-
-
-def drop_old_instance_if_main_hw_reqs_changed(
-    m: InstanceManifest,
-    dry_run: bool = False,
-) -> bool:
-    """Returns true if upscale needed / done"""
-    backing_instances = get_backing_vms_for_instances_if_any(
-        m.region, m.instance_name
-    )
-    if not backing_instances:
-        return False
-
-    backing_ins_id = backing_instances[0]["InstanceId"]
-    iti = resolve_instance_type_info(
-        backing_instances[0]["InstanceType"], m.region
-    )
-
-    hw_change_needed = does_instance_type_fit_manifest_hw_reqs(m, iti)
-    if hw_change_needed:
-        return False
-
-    if dry_run:
-        logger.warning(
-            "Would terminate current VMs %s as HW reqs have changed!",
-            backing_ins_id,
-        )
-    else:
-        logger.warning(
-            "Terminating current VM %s as HW reqs have changed ...",
-            backing_ins_id,
-        )
-        terminate_instances_in_region(m.region, [backing_ins_id])
-        logger.info("OK - terminated. Sleeping 5s ...")
-        time.sleep(5)  # As get_backing_vms_for_instances_if_any cached for 5s
-
-    return True

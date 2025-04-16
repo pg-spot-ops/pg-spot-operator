@@ -30,8 +30,7 @@ CREATE TABLE instance (
   admin_is_real_superuser boolean NOT NULL DEFAULT true,
   created_on datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_modified_on datetime,
-  deleted_on datetime,
-  UNIQUE (cloud, "instance_name")
+  deleted_on datetime
 );
 """
 )
