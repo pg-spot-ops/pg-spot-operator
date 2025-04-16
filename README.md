@@ -3,7 +3,8 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/pgspotops/pg-spot-operator)](https://hub.docker.com/r/pgspotops/pg-spot-operator)
 [![Tests passing](https://github.com/pg-spot-ops/pg-spot-operator/actions/workflows/main.yml/badge.svg)](https://github.com/pg-spot-ops/pg-spot-operator/actions)
 [![Status](https://img.shields.io/badge/status-beta-orange)](https://img.shields.io/badge/status-beta-orange)
-[![codecov](https://codecov.io/gh/pg-spot-ops/pg-spot-operator/graph/badge.svg?token=DVAAIQXKFO)](https://codecov.io/gh/pg-spot-ops/pg-spot-operator)
+[![Codecov](https://codecov.io/gh/pg-spot-ops/pg-spot-operator/graph/badge.svg?token=DVAAIQXKFO)](https://codecov.io/gh/pg-spot-ops/pg-spot-operator)
+[![Licence](https://img.shields.io/badge/license-Apache_2.0-green)](https://img.shields.io/badge/license-Apache_2.0-green)
 
 # PG Spot Operator
 
@@ -42,6 +43,7 @@ extensions, admin user password etc) and there's a reconciliation loop of sorts.
 * [AWS CLI basics](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_aws_cli_basics.md)
 * [Running on K8s](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/k8s/README_k8s.md)
 * [Common issues](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_common_issues.md)
+* [Sustainable Open Source / Sponsoring](#sustainable-open-source)
 
 
 # Quickstart (Python)
@@ -335,9 +337,28 @@ by either:
 PS Real usage assumes that the engine is kept running on a single node only by the user, as there's by design no global
 synchronization / consensus store to keep things simple.
 
-# Enterprise Edition
+# Sustainable Open Source
 
-Although the Community Edition works and is free to use also for all non-compete business purposes, it's taking the simplest
+Every project requires time and care, which eventually translates into money in the end. To keep the utility up-to-date
+and operational the project plans to rely on community support dollars. Consider using the below links to become a sponsor
+and get personalized support, request improvements, or just advance a project that allows cheap experimenting.
+
+## Sponsor the project
+
+Help us keep the project alive!
+
+3 support packages available on [GitHub Sponsors](https://github.com/sponsors/kmoppel) starting at $20 a month. Remember -
+one can save thousands by going from a 99.95% SLA to 99.9%!
+
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/kmoppel?style=for-the-badge)](https://github.com/sponsors/kmoppel)
+
+
+## Roadmap
+
+Below a list of cool features that could be added:
+
+Use the sponsoring program to get personalized support, or just to contribute to this project.
+avai Although the Community Edition works and is free to use also for all non-compete business purposes, it's taking the simplest
 approach to persistent Spot instances really, so that some aspects of the solution are "best-efforty" and one could do
 much more to ensure better uptimes and usability.
 
@@ -348,18 +369,13 @@ Most import features of the Enterprise Edition:
 
   * Hybrid-provisioning - fall back to regular non-spot VMs once downtime budget burned
   * HA / multi-node setups
-  * GCP and Azure Spot instances support
-  * Volume auto-growth
+  * GCP and Azure support
+  * Volume extensions
   * Stop / sleep schedules for even more savings
   * More security, e.g. certificate access
-  * A CLI for ad-hoc DBA operations
-  * Native K8s integration
-
-## Sustainable Open Source / VC info
-
-As crazy as it might sound, we believe that such a solution in a more polished, Enterprise-friendly form would be a great
-addition to the Postgres ecosystem and make Postgres even more accessible. To speed up the development we'd be interested
-in VC dollars - thus feel free to reach out to info@pgspotops.com if you happen to possess some and find the niche interesting.
+  * Native K8s integration / a builtin IP redirection service
+  * Dedicated transaction log volumes
+  * Filesystem compression (ZFS)
 
 # Project status
 
