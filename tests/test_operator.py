@@ -1,9 +1,13 @@
 import pytest
 
+from pg_spot_operator import manifests
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
 from pg_spot_operator.operator import (
     apply_short_life_time_instances_reordering,
+    does_instance_type_fit_manifest_hw_reqs,
+    dry_run,
 )
+from tests.test_manifests import TEST_MANIFEST
 
 
 @pytest.fixture(autouse=True)
@@ -78,3 +82,30 @@ def test_exclude_prev_short_life_time_instances_leaving_at_least_one():
         "i1",
         "az2",
     )
+
+
+def test_does_instance_type_info_fits_manifest_hw_reqs():
+    iti1 = InstanceTypeInfo(
+        instance_type="i1",
+        region="r1",
+        arch="x86",
+        cpu=1,
+    )
+    iti2 = InstanceTypeInfo(
+        instance_type="i2",
+        region="r1",
+        arch="x86",
+        cpu=4,
+        ram_mb=9000,
+        instance_storage=1000,
+    )
+    m: manifests.InstanceManifest = manifests.load_manifest_from_string(
+        TEST_MANIFEST
+    )
+    # vm:
+    #  cpu_min: 2
+    #  ram_min: 8
+    # storage_min: 100
+    # storage_type: local
+    assert not does_instance_type_fit_manifest_hw_reqs(m, iti1)
+    assert does_instance_type_fit_manifest_hw_reqs(m, iti2)

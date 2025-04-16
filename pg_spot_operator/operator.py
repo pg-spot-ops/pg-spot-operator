@@ -1068,19 +1068,28 @@ def teardown_region(
             time.sleep(60)
 
 
-def have_main_hw_reqs_changed(
-    m: InstanceManifest, prev_m: InstanceManifest
+def does_instance_type_fit_manifest_hw_reqs(
+    m: InstanceManifest, iti: InstanceTypeInfo
 ) -> bool:
+    if m.vm.cpu_min and iti.cpu < m.vm.cpu_min:
+        logger.debug("instance cpu_min not fitting hw reqs")
+        return False
+    if m.vm.cpu_max and iti.cpu > m.vm.cpu_max:
+        logger.debug("instance cpu_max not fitting hw reqs")
+        return False
+    if m.vm.ram_min and (iti.ram_mb / 1000) < m.vm.ram_min:
+        logger.debug("instance ram_min not fitting hw reqs")
+        return False
+    if m.vm.ram_max and (iti.ram_mb / 1000) > m.vm.ram_max:
+        logger.debug("instance ram_max not fitting hw reqs")
+        return False
     if (
-        m.vm.cpu_min != prev_m.vm.cpu_min
-        or m.vm.ram_min != prev_m.vm.ram_min
-        or (
-            m.vm.storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
-            and m.vm.storage_min > prev_m.vm.storage_min
-        )
+        m.vm.storage_type == MF_SEC_VM_STORAGE_TYPE_LOCAL
+        and m.vm.storage_min > iti.instance_storage
     ):
-        return True
-    return False
+        logger.debug("instance instance_storage not fitting hw reqs")
+        return False
+    return True
 
 
 def check_for_explicit_tag_signalled_expiration_date(m) -> str:
@@ -1442,39 +1451,10 @@ def do_main_loop(
                 )
                 raise UserExit()
 
-            if prev_success_manifest:
-                main_hw_reqs_changed = have_main_hw_reqs_changed(
-                    m, prev_success_manifest
-                )
-                if main_hw_reqs_changed:
-                    backing_instances = get_backing_vms_for_instances_if_any(
-                        m.region, m.instance_name
-                    )
-                    backing_ins_ids = [
-                        x["InstanceId"] for x in backing_instances
-                    ]
-                    if backing_ins_ids:
-                        if dry_run:
-                            logger.warning(
-                                "Would terminate current VMs %s as HW reqs have changed!",
-                                backing_ins_ids,
-                            )
-                        else:
-                            logger.warning(
-                                "Terminating current VMs (%s) as HW reqs have changed ...",
-                                backing_ins_ids,
-                            )
-                            terminate_instances_in_region(
-                                m.region, backing_ins_ids
-                            )
-                            logger.info("OK - terminated. Sleeping 5s ...")
-                            time.sleep(
-                                5
-                            )  # As get_backing_vms_for_instances_if_any cached for 5s
-                    else:
-                        logger.debug(
-                            "HW reqs change detected but no backing VM found"
-                        )
+            if (
+                prev_success_manifest
+            ):  # HW reqs might have changed so that need to
+                drop_old_instance_if_main_hw_reqs_changed(m, dry_run)
 
             if m.is_expired() or cmdb.is_instance_ignore_listed(
                 m.instance_name
@@ -1618,3 +1598,40 @@ def do_main_loop(
             cli_main_loop_interval_s,
         )
         time.sleep(cli_main_loop_interval_s)
+
+
+def drop_old_instance_if_main_hw_reqs_changed(
+    m: InstanceManifest,
+    dry_run: bool = False,
+) -> bool:
+    """Returns true if upscale needed / done"""
+    backing_instances = get_backing_vms_for_instances_if_any(
+        m.region, m.instance_name
+    )
+    if not backing_instances:
+        return False
+
+    backing_ins_id = backing_instances[0]["InstanceId"]
+    iti = resolve_instance_type_info(
+        backing_instances[0]["InstanceType"], m.region
+    )
+
+    hw_change_needed = does_instance_type_fit_manifest_hw_reqs(m, iti)
+    if hw_change_needed:
+        return False
+
+    if dry_run:
+        logger.warning(
+            "Would terminate current VMs %s as HW reqs have changed!",
+            backing_ins_id,
+        )
+    else:
+        logger.warning(
+            "Terminating current VM %s as HW reqs have changed ...",
+            backing_ins_id,
+        )
+        terminate_instances_in_region(m.region, [backing_ins_id])
+        logger.info("OK - terminated. Sleeping 5s ...")
+        time.sleep(5)  # As get_backing_vms_for_instances_if_any cached for 5s
+
+    return True
