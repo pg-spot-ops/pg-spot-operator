@@ -1374,11 +1374,16 @@ def do_main_loop(
 
     first_loop = True
     loops = 0
+    start_time = time.time()
 
     while True:
         loops += 1
         logger.debug("Starting main loop iteration %s ...", loops)
         loop_errors = False
+
+        if cli_connstr_only and time.time() - start_time > 1800:
+            logger.error("Failed to provision a VM in 30min, aborting")
+            exit(2)
 
         try:
             # Step 0 - load manifest from CLI args / full adhoc ENV manifest or manifest file
