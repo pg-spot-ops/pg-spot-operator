@@ -1406,7 +1406,7 @@ def main():  # pragma: no cover
             args.aws_secret_access_key,
             args.dry_run,
         )
-        logger.info("Teardown complete")
+        logger.info("Teardown complete for region %s", args.region)
         exit(0)
 
     env_manifest: InstanceManifest | None = None

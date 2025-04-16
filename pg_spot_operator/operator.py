@@ -1440,7 +1440,7 @@ def do_main_loop(
                 try_rm_file_if_exists(
                     cli_destroy_file_base_path + m.instance_name
                 )
-                exit(0)
+                raise UserExit()
 
             if prev_success_manifest:
                 main_hw_reqs_changed = have_main_hw_reqs_changed(
