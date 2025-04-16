@@ -277,7 +277,7 @@ docker run --name pg1 -e INSTANCE_NAME=pg1 -e REGION=us-east-1 \
   -e EXPIRATION_DATE=$(date --utc --date="+5 day" +%Y-%m-%d) \
   -e AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
   -e AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
-  -e ADMIN_USER=mypostgres -e ADMIN_PASSWORD=supersecret123 \  
+  -e ADMIN_USER=mypostgres -e ADMIN_PASSWORD=supersecret123 \
   pgspotops/pg-spot-operator:latest
 ```
 
