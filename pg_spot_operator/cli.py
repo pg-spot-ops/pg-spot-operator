@@ -3,6 +3,7 @@ import logging
 import os.path
 import shutil
 
+import humanize
 import requests
 import yaml
 from prettytable import PrettyTable
@@ -16,11 +17,15 @@ from pg_spot_operator.cloud_impl.aws_spot import (
     get_current_hourly_spot_price_static,
     try_get_monthly_ondemand_price_for_sku,
 )
+from pg_spot_operator.cloud_impl.aws_vm import (
+    get_operator_volumes_in_region_full,
+)
 from pg_spot_operator.cloud_impl.cloud_structs import (
     InstanceTypeInfo,
     RegionalSpotPricingStats,
 )
 from pg_spot_operator.cloud_impl.cloud_util import (
+    aws_list_tags_to_dict,
     is_explicit_aws_region_code,
     resolve_regions_from_fuzzy_input,
 )
@@ -1088,20 +1093,53 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
 
     errors = 0
     instances: list[dict] = []
+    resumable_or_abandoned_volumes: list[dict] = []
 
     for reg in regions:
         logger.debug(
             "Fetching non-terminated pg-spot-operator instances for region '%s' ...",
             reg,
         )
+        region_active_instance_names: set[str] = set()
         try:
             instance_descriptions = (
                 get_all_active_operator_instances_from_region(reg)
             )
             if instance_descriptions:
                 instances.extend(instance_descriptions)
+                tags = aws_list_tags_to_dict(instance_descriptions)
+                for t in tags:
+                    if t.get(SPOT_OPERATOR_ID_TAG):
+                        region_active_instance_names.add(
+                            t[SPOT_OPERATOR_ID_TAG]
+                        )
         except Exception:
             logger.error("Failed to complete scan for region %s", reg)
+            errors += 1
+
+        logger.debug(
+            "Checking for abandoned pg-spot-operator volumes in region '%s' ...",
+            reg,
+        )
+        try:
+            operator_vols = get_operator_volumes_in_region_full(reg)
+            if operator_vols:
+                for vol in operator_vols:
+                    vol["Tags"] = {
+                        tag["Key"]: tag["Value"] for tag in vol.get("Tags", [])
+                    }
+                    if (
+                        vol["Tags"].get(SPOT_OPERATOR_ID_TAG)
+                        and not vol["Tags"].get(SPOT_OPERATOR_ID_TAG)
+                        in region_active_instance_names
+                    ):
+                        resumable_or_abandoned_volumes.append(vol)
+        except Exception as e:
+            logger.error(
+                "Failed to describe volumes in region %s - might have abandoned volumes! Error: %s",
+                reg,
+                e,
+            )
             errors += 1
 
     cols = [
@@ -1122,13 +1160,13 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
     tab = PrettyTable(cols)
 
     for i in instances:
-        tags_as_dict = {tag["Key"]: tag["Value"] for tag in i.get("Tags", [])}
+        vol_tags = {tag["Key"]: tag["Value"] for tag in i.get("Tags", [])}
         region = extract_region_from_az(
             i.get("Placement", {}).get("AvailabilityZone", "")
         )
         tab.add_row(
             [
-                tags_as_dict.get(SPOT_OPERATOR_ID_TAG),
+                vol_tags.get(SPOT_OPERATOR_ID_TAG),
                 i.get("Placement", {}).get("AvailabilityZone"),
                 i.get("InstanceId"),
                 i.get("InstanceType"),
@@ -1164,11 +1202,39 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
                 i.get("PrivateIpAddress"),
                 i.get("PublicIpAddress"),
                 i.get("VpcId"),
-                tags_as_dict.get(SPOT_OPERATOR_EXPIRES_TAG),
+                vol_tags.get(SPOT_OPERATOR_EXPIRES_TAG),
             ]
         )
 
     print(tab)
+
+    if resumable_or_abandoned_volumes:
+        resumable_or_abandoned_volumes.sort(
+            key=lambda x: x["AvailabilityZone"]
+        )
+        print("\nResumable / abandoned operator volumes:")
+        cols_vols = [
+            "Availability zone",
+            "Instance name",
+            "Volume create time",
+            "Volume Id",
+            "Size (GB)",
+            "Volume type",
+        ]
+        tab_vols = PrettyTable(cols_vols)
+        for v in resumable_or_abandoned_volumes:
+            tab_vols.add_row(
+                [
+                    v.get("AvailabilityZone"),
+                    v.get("Tags", {}).get(SPOT_OPERATOR_ID_TAG),
+                    humanize.naturaltime(v.get("CreateTime")),  # type: ignore
+                    v.get("VolumeId"),
+                    v.get("Size"),
+                    v.get("VolumeType"),
+                ]
+            )
+        print(tab_vols)
+
     exit(errors)
 
 

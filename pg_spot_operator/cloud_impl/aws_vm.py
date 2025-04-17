@@ -595,6 +595,49 @@ def get_operator_volumes_in_region(
     return []
 
 
+def get_operator_volumes_in_region_full(region: str) -> list[dict]:
+    """[
+        {
+            "Iops": 3000,
+            "Tags": [
+                {
+                    "Key": "pg-spot-operator-volume-id",
+                    "Value": "1"
+                },
+                {
+                    "Key": "pg-spot-operator-instance",
+                    "Value": "x1"
+                }
+            ],
+            "VolumeType": "gp3",
+            "MultiAttachEnabled": false,
+            "Throughput": 125,
+            "Operator": {
+                "Managed": false
+            },
+            "VolumeId": "vol-0c9843429b1cedb56",
+            "Size": 10,
+            "SnapshotId": "",
+            "AvailabilityZone": "eu-south-2a",
+            "State": "available",
+            "CreateTime": "2025-04-10T13:38:38.499000+00:00",
+            "Attachments": [],
+            "Encrypted": true,
+            "KmsKeyId": "arn:aws:kms:eu-south-2:0000:key/799a85ad"
+        }
+    ]
+    """
+    client = get_client("ec2", region)
+
+    filters = [
+        {"Name": "tag-key", "Values": [SPOT_OPERATOR_ID_TAG]},
+    ]
+    resp = client.describe_volumes(Filters=filters)
+    if resp and resp.get("Volumes"):
+        return resp["Volumes"]
+    return []
+
+
 def get_addresses(region: str, instance_name: str = "") -> list[str]:
     """Returns a list of AllocationId-s"""
     client = get_client("ec2", region)
