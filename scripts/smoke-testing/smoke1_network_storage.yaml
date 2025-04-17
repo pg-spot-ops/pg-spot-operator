@@ -1,0 +1,109 @@
+---
+api_version: v1  # Required
+kind: pg_spot_operator_instance  # Required
+cloud: aws  # Required
+region: eu-north-1  # Optional if availability_zone or vm.host set
+#availability_zone: eu-south-2b  # Optional
+instance_name: smoke-test-1-network-storage  # Required
+private_ip_only: false  # Default: false. True = internal / VPC access only. PS Public IPs cost ~$4 per month.
+static_ip_addresses: false  # Default: false. By default we get a new IP after eviction i.e. don't reserve / manage a NIC.
+                    # If true and private_ip_only=false an Elastic IPs will be used (given available, limited per account)
+#expiration_date: "2024-12-22 00:00+03"  # Optional. Instance will be deleted after that (if engine running)
+self_termination: false  # Optional. Instance will auto-destroy itself (needs according separate AWS keys set)
+is_paused: false  # No engine actions on the instance
+vault_password_file: ~/.pg-spot-operator-vault-password-file  # If Ansible encrypted strings are used. Can also be set globally via --vault-password-file
+#vm_only: true
+vm:
+#  host: 192.168.121.178  # Target VM override (local testing)
+#  login_user: vagrant  # Target VM override (local testing)
+#  cpu_arch: arm  # [ arm | amd | x86 | intel ]  # amd | x86 | intel all resolve to same -> non-arm
+#  cpu_min: 2  # Optional
+#  cpu_max: 8  # Optional
+#  ram_min: 4  # Optional
+  allow_burstable: false
+#  instance_types: [m6gd.xlarge]  # cpu_min etc will be ignored then and cheapest of listed used
+#  instance_family: r(6|7)  # Regex to filter on the first part of instance type names, i.e. "r6g" part of "r6g.medium"
+  instance_selection_strategy: balanced  # [ balanced | cheapest | eviction-rate ]
+  storage_min: 10  # Required, as no auto-growth for now
+  storage_type: network  # local | network. PS Using network volumes pins you to a specific AZ
+#  storage_speed_class: ssd  # hdd | ssd | nvme. For instance storage (storage_type=local)
+#  volume_type: gp3  # gp2, gp3, io1, io2 Details: https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html
+#  volume_iops:  # For provisioned / paid IOPS, EBS gp3 default is 3000
+                # gp2 / gp3 max 16K, io1 64K, io2 256K
+#  volume_throughput:  # MBs. For provisioned / paid throughput for gp3. Default is 125, max 1000.
+  detailed_monitoring: false  # As incurs extra costs
+os:
+  unattended_security_upgrades: true  # Might result in nightly restarts
+  kernel_tuning: true  # Basic memory over-commit tuning for databases
+  extra_packages:  # Default: []
+    - pgbadger
+    - postgresql-17-cron
+  ssh_pub_keys: []  # Literal extra pubkeys to add (in addition to default ~/.ssh/id_rsa.pub) to created VMs
+  ssh_pub_key_paths: []  # Extra pubkey paths accessible on the engine VM
+user_tags:  # In addition to user tags the engine will add: pg-spot-operator-instance=$instance_name
+            # And a pg-spot-operator-expiration-date=$somedate, in case expiration_date set
+  app: smoke-test-1
+postgres:
+  version: 16  # Optional. Minimum supported version is v14. Defaults to latest stable
+  admin_is_superuser: false
+  admin_user: smoke_test_1
+#  admin_password: kah8aiThuXegh1neingee5go  # Needs to be provided if admin_user set
+  admin_password: !vault |
+    $ANSIBLE_VAULT;1.1;AES256
+    30643364356334303739626534623937613733386535346661363166323138636537353666653262
+    3462353138393366393537643733666337353762363763620a333436343730373936343830646431
+    37363766353163666666613863363461656131646662653035336139383261643966323966633333
+    3532653838393935650a643666333361383465623463643563626337386235336166393966663733
+    3839
+  app_db_name: smoke_test_1  # App / user DB to be created if set
+#  initdb_opts:  # Defaults
+#    - --data-checksums
+#    - --locale-provider=icu
+#    - --icu-locale=en
+#    - --locale=en_US.utf8
+  tuning_profile: default  # none | default | oltp | analytics | web | throwaway. Set to 'none' for Postgres defaults.
+  config_lines:  # postgresql.conf settings for custom overrides / tuning. Takes precedence over tuning_profile outputs.
+    log_connections: 'on'
+    shared_preload_libraries: 'pg_stat_statements,auth_delay,pg_prewarm'
+    log_autovacuum_min_duration: '0'
+    statement_timeout: '5min'
+#  pg_hba_lines:  # Defaults allow non-postgres world access
+#    - "host all postgres 0.0.0.0/0 reject"
+#    - "hostssl all all 0.0.0.0/0 scram-sha-256"
+#backup:  # Only supported backup tool is pgBackRest currently
+#  type: none  # none | pgbackrest
+#  destroy_backups: true  # Default: true. Destroy any S3 backups when instance dropped
+#  wal_archiving_max_interval: 2min  # Postgres archive_timeout value. Small values (<60s, minimum is 1s) can cause storage accumulation and delayed restores
+#  retention_days: 2
+#  schedule_full: "0 3 * * 1,3,5"
+#  schedule_diff: "0 3 * * 0,2,4,6"
+#  encryption: false
+#  cipher_password:  # Supports Ansible vault encrypted strings
+#  cipher_password_file:  # Plain text file accessible on the engine if don't want to use vault
+#  s3_key:
+#  s3_key_file:
+#  s3_key_secret:
+#  s3_key_secret_file:
+#  s3_bucket: pg-spot-operator  # Engine will try to create the bucket if not existing
+#  pgbackrest:  # Overrides needed only for performance tuning, multi-repo support, or non-AWS S3 storage
+    # Map directly to pgBackRest config keys https://pgbackrest.org/configuration.html
+    # PS following keys should not be specified:
+    # process-max - set automatically based on vCPUs
+    # repo1-cipher-type - set automatically to aes-256-cbc (current only pgBackrest impl.) when "encryption" set
+    # repo1-cipher-pass - from backup.cipher_password/cipher_password_file
+    # repo1-s3-key - from backup.s3_key/s3_key_file
+    # repo1-s3-key-secret - from backup.s3_key_secret/s3_key_secret_file
+#    global_settings:
+#    archive_push_overrides:
+#    backup_overrides:
+#    restore_overrides:
+#aws:
+#  ## By default transparent auth via local CLI credentials or AWS IAM Roles Anywhere etc assumed
+#  access_key_id:
+#  secret_access_key:
+#  security_group_ids: []  # By default VPC "default" used
+#  subnet_id:
+#  profile_name:
+#  key_pair_name:
+#  self_termination_access_key_id:
+#  self_termination_secret_access_key:
