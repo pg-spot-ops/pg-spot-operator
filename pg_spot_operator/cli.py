@@ -1220,6 +1220,8 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
             "Volume Id",
             "Size (GB)",
             "Volume type",
+            "Throughput",
+            "Iops",
         ]
         tab_vols = PrettyTable(cols_vols)
         for v in resumable_or_abandoned_volumes:
@@ -1231,6 +1233,8 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
                     v.get("VolumeId"),
                     v.get("Size"),
                     v.get("VolumeType"),
+                    v.get("Throughput"),
+                    v.get("Iops"),
                 ]
             )
         print(tab_vols)
