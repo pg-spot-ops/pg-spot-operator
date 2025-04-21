@@ -4,6 +4,13 @@ Changelog
 
 (unreleased)
 ------------
+- Fix leftover debug from last, breaking --connstr-only mode. [Kaarel
+  Moppel]
+
+
+0.9.53 (2025-04-21)
+-------------------
+- Release: version 0.9.53 🚀 [Kaarel Moppel]
 - No retry on marker read as SSH connection validated in prev step.
   [Kaarel Moppel]
 
