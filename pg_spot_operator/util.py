@@ -25,7 +25,10 @@ logger = logging.getLogger(__name__)
 def run_process_with_output(
     runnable_path: str, input_params: list[str]
 ) -> tuple[int, str]:
-    # logger.debug("Running subprocess.Popen for: %s", [runnable_path] + input_params)
+    logger.debug(
+        "Running subprocess.Popen for: %s", [runnable_path] + input_params
+    )
+    print(" ".join([runnable_path] + input_params))
     p = subprocess.Popen(
         [runnable_path] + input_params,
         stdout=subprocess.PIPE,
@@ -480,62 +483,38 @@ def check_setup_completed_marker_file_exists(
     host: str,
     login: str,
     private_key_file: str = "",
-    max_wait_seconds: int = 5,
 ) -> bool:
+    """Assume False on errors"""
     logger.info(
         "Checking if 'setup completed' marker file %s exists on %s  ...",
         ACTION_COMPLETED_MARKER_FILE,
         host,
     )
-    try:
-        ssh_args = [
-            "-o",
-            "StrictHostKeyChecking=no",
-            "-o",
-            "UserKnownHostsFile=/dev/null",
-            "-o",
-            "ConnectTimeout=2",
-            "-l",
-            login,
-        ]
-        cmd_args = [
-            "test",
-            "-f",
-            ACTION_COMPLETED_MARKER_FILE,
-        ]
-        if private_key_file:
-            ssh_args += ["-i", private_key_file]
-        rc: int = 0
-        start_time: float = time.time()
-        try_count: int = 0
-        loop_sleep_seconds: int = 2
 
-        while time.time() < start_time + max_wait_seconds:
-            try:
-                try_count += 1
-                rc, _ = run_process_with_output(
-                    "ssh", ssh_args + [host] + cmd_args
-                )
-                logger.debug(
-                    "Setup marker read try %s retcode: %s", try_count, rc
-                )
-                if rc == 0:
-                    return True
-                elif rc == 1:
-                    return False
-                else:
-                    logger.debug(
-                        "Sleeping %ss before retry...", loop_sleep_seconds
-                    )
-                    time.sleep(loop_sleep_seconds)
-            except Exception:
-                logger.debug(
-                    "Setup marker read try %s NOK with retcode: %s. Sleeping %ss",
-                    try_count,
-                    rc,
-                    loop_sleep_seconds,
-                )
-                time.sleep(loop_sleep_seconds)
+    ssh_args = [
+        "-o",
+        "StrictHostKeyChecking=no",
+        "-o",
+        "UserKnownHostsFile=/dev/null",
+        "-o",
+        "ConnectTimeout=2",
+        "-l",
+        login,
+    ]
+    cmd_args = [
+        "sudo",
+        "test",
+        "-f",
+        ACTION_COMPLETED_MARKER_FILE,
+    ]
+    if private_key_file:
+        ssh_args += ["-i", private_key_file]
+
+    try:
+        rc, _ = run_process_with_output("ssh", ssh_args + [host] + cmd_args)
+        logger.debug("Setup marker read retcode: %s", rc)
+        if rc == 0:
+            return True
 
     except Exception as e:
         logger.error(

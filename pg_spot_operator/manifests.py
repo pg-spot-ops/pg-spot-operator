@@ -17,6 +17,7 @@ from pg_spot_operator.constants import (
     BACKUP_TYPE_PGBACKREST,
     CLOUD_AWS,
     DEFAULT_POSTGRES_MAJOR_VER,
+    DEFAULT_VM_LOGIN_USER,
     SPOT_OPERATOR_EXPIRES_TAG,
     SPOT_OPERATOR_ID_TAG,
 )
@@ -282,6 +283,8 @@ class InstanceManifest(BaseModel):
         return False
 
     def fill_in_defaults(self):
+        if not self.vm.login_user:
+            self.vm.login_user = DEFAULT_VM_LOGIN_USER
         self.user_tags[SPOT_OPERATOR_ID_TAG] = self.instance_name
         if (
             self.expiration_date
