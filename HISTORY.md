@@ -4,6 +4,39 @@ Changelog
 
 (unreleased)
 ------------
+- No retry on marker read as SSH connection validated in prev step.
+  [Kaarel Moppel]
+
+  Assume marker not there in case of errors
+- Write the "setup completed" marker in Ansible instead of Py. [Kaarel
+  Moppel]
+
+  More logical / clean
+- Write a "setup completed" marker file at
+  /var/lib/postgresql/operator_setup_completed_marker. [Kaarel Moppel]
+
+  To signal that Ansible run completed. Can be removed on the VM to
+  re-configure postgres after some manual meddling
+- Merge pull request #148 from pg-spot-ops/add-smoke-testing-script.
+  [Kaarel Moppel]
+
+  Add a script that maintains an instance and calls a webhook from URL read from ~/.pg-spot-operator-smoke-test-notify-url to notify of errors
+- Ignore the "scripts" folder from CI. [Kaarel Moppel]
+- Fail smoke_test.sh if yq not installed. [Kaarel Moppel]
+- Daily logs, read instance name from YAML manifest. [Kaarel Moppel]
+- Don't use "trap", better messages. [Kaarel Moppel]
+- Add a simple smoke testing loop. [Kaarel Moppel]
+
+  Creates an instance and keeps doing some SQL, call a webhook on failures
+- Add throughput / iops to --list-instance abandoned volumes output.
+  [Kaarel Moppel]
+- Make --list-instances show resumable / abandoned volumes. [Kaarel
+  Moppel]
+
+
+0.9.52 (2025-04-16)
+-------------------
+- Release: version 0.9.52 🚀 [Kaarel Moppel]
 - Time-box --connstr-only mode to 30min. [Kaarel Moppel]
 
   Something must be terminally wrong - signal test scripts etc with exit
