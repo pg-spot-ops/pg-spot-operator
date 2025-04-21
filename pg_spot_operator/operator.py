@@ -57,11 +57,13 @@ from pg_spot_operator.instance_type_selection import InstanceTypeSelection
 from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.pgtuner import TuningInput, apply_postgres_tuning
 from pg_spot_operator.util import (
+    check_setup_completed_marker_file_exists,
     check_ssh_ping_ok,
     merge_action_output_params,
     merge_user_and_tuned_non_conflicting_config_params,
     space_pad_manifest,
     try_rm_file_if_exists,
+    write_action_completed_marker_file,
 )
 
 MAX_PARALLEL_ACTIONS = 2
@@ -669,6 +671,21 @@ def clean_up_old_logs_if_any(
                 shutil.rmtree(expired_path, ignore_errors=True)
 
 
+def try_write_setup_completed_marker_file_on_vm(m: InstanceManifest) -> None:
+    """Not critical if fails, just causes an Ansible re-run on next loop"""
+    try:
+        vm = cmdb.get_latest_vm_by_uuid(m.uuid)
+        if not vm:
+            return
+        write_action_completed_marker_file(
+            str(vm.ip_public or vm.ip_private),
+            str(vm.login_user),
+            m.ansible.private_key,
+        )
+    except Exception as e:
+        logger.error("Failed to write an action completed marker file: %s", e)
+
+
 def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
     """Returns: (OK, action outputs)
     Steps:
@@ -717,6 +734,8 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
     )
 
     if rc == 0:
+        try_write_setup_completed_marker_file_on_vm(m)
+
         logger.info("OK action %s completed", action)
         if action == ACTION_INSTANCE_SETUP:
             display_connect_strings(m)
@@ -1509,6 +1528,7 @@ def do_main_loop(
                 ensure_s3_backup_bucket(m)
 
             vm_created_recreated = False
+            vm_ip: str = ""
             if m.vm.host and m.vm.login_user:
                 logger.info(
                     "Using user provided VM address / user for Ansible setup: %s@%s",
@@ -1532,6 +1552,12 @@ def do_main_loop(
                         m.ansible.private_key,
                         max_wait_seconds=30,
                     )
+            if not check_setup_completed_marker_file_exists(
+                vm_ip or m.vm.host, m.vm.login_user, m.ansible.private_key
+            ):
+                vm_created_recreated = (
+                    True  # Re-run setup if marker file not there / deleted
+                )
 
             diff = m.diff_manifests(
                 prev_success_manifest, original_manifests_only=True

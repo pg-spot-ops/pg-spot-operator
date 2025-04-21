@@ -19,6 +19,11 @@ ACTION_DESTROY_INSTANCE = "destroy_instance"
 ACTION_DESTROY_BACKUPS = "destroy_backups"
 ACTION_TERMINATE_VM = "terminate_vm"
 
+# So that can easily understand on the VM if and when setup was completed, plus can trigger a re-run by removing the marker
+ACTION_COMPLETED_MARKER_FILE = (
+    "/var/lib/postgresql/operator_setup_completed_marker"
+)
+
 # "API" YAML sections constants
 MF_SEC_VM_STORAGE_TYPE_LOCAL = "local"
 MF_SEC_VM_STORAGE_TYPE_NETWORK = "network"
