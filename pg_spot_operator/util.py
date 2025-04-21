@@ -28,7 +28,6 @@ def run_process_with_output(
     logger.debug(
         "Running subprocess.Popen for: %s", [runnable_path] + input_params
     )
-    print(" ".join([runnable_path] + input_params))
     p = subprocess.Popen(
         [runnable_path] + input_params,
         stdout=subprocess.PIPE,
