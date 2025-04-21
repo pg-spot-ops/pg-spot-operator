@@ -8,3 +8,4 @@
 
   roles:
     - role: mount_unattached_disks
+    - role: setup_completed_marker_file

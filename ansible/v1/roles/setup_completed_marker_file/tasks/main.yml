@@ -1,0 +1,6 @@
+- name: Write a "setup completed" marker file for FYI and for manual re-configure signaling
+  become: true
+  become_user: postgres
+  copy:
+    content: "{{ now(utc=true) }}"
+    dest: "{{ operator_setup_completed_marker_file_path }}"
