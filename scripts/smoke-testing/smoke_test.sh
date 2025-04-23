@@ -21,7 +21,8 @@ USE_LATEST_PRIVATE_PIPX=f  # 'y' to update
 CHECK_PRICE_ONLY=
 LOOP_SLEEP=60
 MAX_RUNTIME_SECONDS=604800  # 1w
-NOTIFY_URL_FILE=~/.pg-spot-operator-smoke-test-notify-url  # If found a curl request is sent
+NOTIFY_URL_FILE_FAILURE=~/.pg-spot-operator-smoke-test-notify-url-failure  # If found a curl request is sent when Postgres goes down
+NOTIFY_URL_FILE_SUCCESS=~/.pg-spot-operator-smoke-test-notify-url-success  # If found a curl request is sent if Postgres comes up
 
 # Operator params
 REGION=eu-north-1
@@ -33,21 +34,30 @@ if [ -z "$INSTANCE_NAME" ]; then
   exit 1
 fi
 
-function notify_failure() {
-  if [ -f $NOTIFY_URL_FILE ]; then
-    NOTIFY_URL=$(cat $NOTIFY_URL_FILE)
-    if [ -n "$NOTIFY_URL" ]; then
-      echo "Sending a notify_failure to $NOTIFY_URL_FILE"
-      if curl -skL --retry 5 $NOTIFY_URL ; then
-        echo "Notify OK"
-      else
-        echo "ERROR failed to notify"
-      fi
-    else
-      echo "Can't notify_failure - no NOTIFY_URL_FILE at $NOTIFY_URL_FILE found"
-    fi
+function notify_url() {
+  # 0 = OK, 1 = ERR
+  NOTIFY_URL_FILE=$NOTIFY_URL_FILE_FAILURE
+  if [ "$1" -eq 0 ]; then
+    NOTIFY_URL_FILE=$NOTIFY_URL_FILE_SUCCESS
+  fi
+
+  if [ ! -f $NOTIFY_URL_FILE ]; then
+    echo "Warning: NOTIFY_URL_FILE at $NOTIFY_URL_FILE not found"
+    return 1
+  fi
+
+  NOTIFY_URL=$(cat $NOTIFY_URL_FILE)
+  if [ -z "$NOTIFY_URL" ]; then
+    echo "Warning: empty NOTIFY_URL"
+    return 1
+  fi
+  echo "Sending a notify to $NOTIFY_URL"
+  if curl -skL --retry 5 "$NOTIFY_URL" ; then
+    echo "Notify OK"
+    return 0
   else
-    echo "Can't notify_failure - no NOTIFY_URL_FILE at $NOTIFY_URL_FILE found"
+    echo "ERROR failed to notify"
+    return 1
   fi
 }
 
@@ -72,12 +82,14 @@ if [ -n "$CHECK_PRICE_ONLY" ]; then
 fi
 
 
-# Main loop
+FAILING=0
 
+
+# Main loop
 while true ; do
-  BREAK_LOOP=0
-  while [ "$BREAK_LOOP" -eq 0 ]; do
-    BREAK_LOOP=1
+
+  while true ; do
+
     echo "Loop start at $(date --rfc-3339=s) ..."
 
     # Create the instance and store the connect string
@@ -88,7 +100,8 @@ while true ; do
     # Test Postgres connectivity
     ROWCOUNT=$(psql $CONNSTR -XAtc "select count(*) from pg_stat_user_tables where relname = 'pgbench_accounts'")
     if [ "$?" -ne 0 ]; then
-      notify_failure
+      FAILING=1
+      notify_url $FAILING
       break
     fi
 
@@ -96,7 +109,8 @@ while true ; do
       echo "Init pgbench schema ..."
       pgbench -iq "$CONNSTR" >/dev/null
       if [ "$?" -ne 0 ]; then
-        notify_failure
+        FAILING=1
+        notify_url $FAILING
         break
       fi
     fi
@@ -104,10 +118,17 @@ while true ; do
     echo "Doing 1 pgbench TX ..."
     pgbench -n -t 1 "$CONNSTR" >/dev/null
     if [ "$?" -ne 0 ]; then
-      notify_failure
+      echo "pgbench TX fail"
+      FAILING=1
+      notify_url $FAILING
       break
     fi
-    echo "OK"
+
+    echo "pgbench TX OK"
+    FAILING=0
+    notify_url $FAILING
+    break
+
   done
 
   echo "Loop done"
