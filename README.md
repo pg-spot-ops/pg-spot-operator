@@ -57,9 +57,8 @@ as-low-as-it-gets cost!
 
 Just in case let's check the pricing beforehand, though - in most cases it will be much better than 3 year Reserved Instances!
 ```
-# Step 0 - ensure Python CLI prerequsites (not needed for Docker)
+# Step 0 - install the CLI (not needed for Docker)
 pipx install pg-spot-operator
-pipx install --include-deps ansible  # If Ansible not yet installed
 
 # Resolve user requirements to actual EC2 instance types and show the best (cheap and with good eviction rates) instance types.
 # Here we only consider North American regions, assuming we're located there and want OK latencies.
@@ -78,11 +77,6 @@ Top cheapest instances found for strategy 'balanced' (to list available strategi
 | ca-central-1 | r6gd.4xlarge | arm  |  16  | 128 GB | 950 GB nvme   |  269   |     728     |   -63%   |   10-15%   |
 | us-west-2    | x2gd.4xlarge | arm  |  16  | 256 GB | 950 GB ssd    |  269   |     962     |   -72%   |    <5%     |
 | us-east-2    | r5ad.4xlarge | x86  |  16  | 128 GB | 600 GB nvme   |  272   |     755     |   -64%   |    <5%     |
-| us-west-2    | r5ad.4xlarge | x86  |  16  | 128 GB | 600 GB nvme   |  275   |     755     |   -64%   |    <5%     |
-| us-east-1    | i8g.4xlarge  | arm  |  16  | 128 GB | 3750 GB hdd   |  283   |     988     |   -71%   |   5-10%    |
-| us-west-2    | i4g.4xlarge  | arm  |  16  | 128 GB | 3750 GB ssd   |  301   |     890     |   -66%   |    <5%     |
-| us-east-1    | i4g.4xlarge  | arm  |  16  | 128 GB | 3750 GB ssd   |  303   |     890     |   -66%   |    <5%     |
-| us-west-1    | i4i.4xlarge  | x86  |  16  | 128 GB | 3750 GB nvme  |  305   |     1090    |   -72%   |   5-10%    |
 +--------------+--------------+------+------+--------+---------------+--------+-------------+----------+------------+
 ```
 
@@ -103,6 +97,9 @@ Also note that in case of launching high vCPU (>16) Spot for the first time, you
 see the [Common issues](https://github.com/pg-spot-ops/pg-spot-operator/blob/main/docs/README_common_issues.md) section for details.
 
 ```
+# Step 0 - for provisioning VMs Ansible is required
+pipx install --include-deps ansible  # If Ansible not yet installed
+
 # In --connstr-only mode we can land right into `psql`!
 psql $(pg_spot_operator --region=us-east-1 --ram-min=128 \
   --storage-min=500 --storage-type=local \
@@ -169,8 +166,9 @@ For example to run your custom Ansible scripted verification of some large multi
 peanuts, one could go:
 
 ```
-pg_spot_operator --vm-only=y --connstr-only=y --connstr-output-path=inventory.ini --connstr-format=ansible \
-  --region=us-east-1 --cpu-min=8 --ram-min=32 --storage-min=5000 --storage-type=local --instance-name=custom
+pg_spot_operator --vm-only --connstr-only --connstr-output-path=inventory.ini --connstr-format=ansible \
+  --region=us-east-1 --cpu-min=8 --ram-min=32 --storage-min=5000 --storage-type=local \
+  --instance-name=custom --selection-strategy=eviction-rate
 ...
 INFO SKU i7ie.2xlarge main specs - vCPU: 8, RAM: 64 GB, instance storage: 5000 GB ssd
 INFO Current Spot vs Ondemand discount rate: -88.4% ($86.7 vs $748.5), approx. 13x to non-HA RDS
@@ -360,17 +358,7 @@ one can save thousands by going from a 99.95% SLA to 99.9%!
 
 ## Roadmap
 
-Below a list of cool features that could be added:
-
-Use the sponsoring program to get personalized support, or just to contribute to this project.
-avai Although the Community Edition works and is free to use also for all non-compete business purposes, it's taking the simplest
-approach to persistent Spot instances really, so that some aspects of the solution are "best-efforty" and one could do
-much more to ensure better uptimes and usability.
-
-If you'd be interested in massive cost saving also for more critical Postgres databases, please register your email address
-via this form [https://tinyurl.com/pgspotops](https://tinyurl.com/pgspotops) to get notified once the upcoming Enterprise Edition is released.
-
-Most import features of the Enterprise Edition:
+Below a list of cool features that could be added. Sponsoring the project is a good way to see some of them get done.
 
   * Hybrid-provisioning - fall back to regular non-spot VMs once downtime budget burned
   * HA / multi-node setups
