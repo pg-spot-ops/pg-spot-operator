@@ -90,6 +90,10 @@ class UserExit(Exception):
     pass
 
 
+class NoMatchingSkusFound(Exception):
+    pass
+
+
 def preprocess_ensure_vm_action(
     m: InstanceManifest,
     existing_instance_info: dict | None = None,
@@ -117,7 +121,7 @@ def preprocess_ensure_vm_action(
         )
 
     if not cheapest_skus:
-        raise Exception(
+        raise NoMatchingSkusFound(
             f"No SKUs matching HW requirements found for instance {m.instance_name} in {m.cloud} region {m.region}"
         )
 
@@ -1613,6 +1617,11 @@ def do_main_loop(
             exit(1)
         except NoOp:
             logger.debug("NoOp")
+        except NoMatchingSkusFound as e:
+            logger.error(str(e))
+            if cli_connstr_only:
+                exit(1)
+            loop_errors = True
         except UserExit:
             logger.info("User exit")
             exit(0)

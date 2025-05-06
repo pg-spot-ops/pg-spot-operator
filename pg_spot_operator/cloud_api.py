@@ -163,10 +163,7 @@ def resolve_hardware_requirements_to_instance_types(
         logger.warning(
             "WARNING - failed to inquiry regions: %s", noinfo_regions
         )
-    if not ret:
-        logger.warning(
-            f"No SKUs matching HW requirements found for instance {m.instance_name} in {m.cloud} region {m.region}"
-        )
+
     return ret
 
 

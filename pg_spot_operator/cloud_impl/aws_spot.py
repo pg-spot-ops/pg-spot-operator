@@ -670,7 +670,7 @@ def resolve_hardware_requirements_to_instance_types(
             qualified_instances_cpu_sorted
         )
 
-    if max_price:
+    if max_price and qualified_instances_with_price_info:
         skus_before_price_filter = len(qualified_instances_with_price_info)
         qualified_instances_with_price_info = [
             x
@@ -707,6 +707,9 @@ def resolve_hardware_requirements_to_instance_types(
         )
 
     logger.debug("Instances / prices in selection: %s", avg_by_sku_az)
+
+    if not qualified_instances_with_price_info:
+        return []
 
     instance_selection_strategy_cls = (
         InstanceTypeSelection.get_selection_strategy(
