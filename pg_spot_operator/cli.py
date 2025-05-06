@@ -1087,9 +1087,30 @@ def list_strategies_and_exit() -> None:
 
 
 def list_instances_and_exit(args: ArgumentParser) -> None:
+    regions: list[str] = []
+
     if not args.region:
-        args.region = ALL_ENABLED_REGIONS
-    regions = resolve_regions_from_fuzzy_input(args.region)
+        try:
+            regions = cmdb.get_all_distinct_instance_regions()  # type: ignore
+            if regions:
+                regions.sort()
+                logger.warning(
+                    "WARN: No explicit --region input provided, scanning regions found from CMDB only: %s",
+                    regions,
+                )
+        except Exception:
+            logger.info("INFO: No regions found from CMDB")
+
+    if args.region:
+        regions = resolve_regions_from_fuzzy_input(args.region)
+    elif not regions and not args.region:
+        regions = resolve_regions_from_fuzzy_input(ALL_ENABLED_REGIONS)
+        if regions:
+            logger.warning(
+                "WARN: No explicit --region input provided, scanning ALL enabled regions: %s",
+                regions,
+            )
+
     if not regions:
         logger.error("No regions provided")
         exit(1)
@@ -1513,6 +1534,7 @@ def main():  # pragma: no cover
         check_cli_args_valid(args)
 
     if args.list_instances:
+        init_cmdb_and_apply_schema_migrations_if_needed(args)
         list_instances_and_exit(args)
 
     if args.list_instances_cmdb:

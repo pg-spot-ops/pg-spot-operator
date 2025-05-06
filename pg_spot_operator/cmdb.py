@@ -3,7 +3,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Sequence
 from uuid import uuid4
 
 import sqlalchemy
@@ -768,6 +768,11 @@ def get_short_lifetime_instance_types_with_zone_if_any(
 
 def get_all_non_deleted_instances() -> list[Instance]:
     with Session(engine) as session:
-        # Check if exists
         stmt = select(Instance).where(Instance.deleted_on.is_(None))
         return session.scalars(stmt).all()  # type: ignore
+
+
+def get_all_distinct_instance_regions() -> Sequence[str]:
+    with Session(engine) as session:
+        stmt = select(Instance.region).distinct()
+        return session.scalars(stmt).all()
