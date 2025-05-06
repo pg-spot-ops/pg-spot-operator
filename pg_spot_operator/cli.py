@@ -809,8 +809,8 @@ def display_selected_skus_for_region(
                     if i.instance_storage
                     else "EBS only"
                 ).ljust(max_inst_stor_len),
-                f"{i.monthly_spot_price}",
-                f"{i.monthly_ondemand_price}",
+                f"{i.monthly_spot_price} ({i.hourly_spot_price}/h)",
+                f"{i.monthly_ondemand_price} ({i.hourly_ondemand_price}/h)",
                 calc_discount_rate_str(
                     i.monthly_spot_price, i.monthly_ondemand_price
                 ),
