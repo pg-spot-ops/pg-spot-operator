@@ -49,6 +49,7 @@ from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.operator import clean_up_old_logs_if_any
 from pg_spot_operator.pgtuner import TUNING_PROFILES
 from pg_spot_operator.util import (
+    calc_discount_rate_str,
     check_default_ssh_key_exists_and_readable,
     extract_mtf_months_from_eviction_rate_group_label,
     extract_region_from_az,
@@ -772,24 +773,15 @@ def display_selected_skus_for_region(
             "Local storage",
             "$ Spot",
             "$ On-Demand",
-            "Discount",
+            "Discount (%)",
             "Evic. rate",
         ]
     ]
-    ec2_discount_rate = "N/A"
 
     for i in selected_skus:
         if not i.monthly_ondemand_price:
             i.monthly_ondemand_price = try_get_monthly_ondemand_price_for_sku(
                 i.region, i.instance_type
-            )
-        if i.monthly_ondemand_price and i.monthly_spot_price:
-            ec2_discount_rate = str(
-                round(
-                    100.0
-                    * (i.monthly_spot_price - i.monthly_ondemand_price)
-                    / i.monthly_ondemand_price
-                )
             )
 
         max_reg_len = max([len(x.region) for x in selected_skus])
@@ -819,8 +811,9 @@ def display_selected_skus_for_region(
                 ).ljust(max_inst_stor_len),
                 f"{i.monthly_spot_price}",
                 f"{i.monthly_ondemand_price}",
-                f"{ec2_discount_rate}"
-                + ("%" if ec2_discount_rate != "N/A" else ""),
+                calc_discount_rate_str(
+                    i.monthly_spot_price, i.monthly_ondemand_price
+                ),
                 (
                     i.eviction_rate_group_label
                     if i.eviction_rate_group_label
@@ -1336,6 +1329,8 @@ def list_vm_create_events_and_exit(args: ArgumentParser) -> None:
         "Instance name",
         "InstanceId",
         "InstanceType",
+        "$ (Mon.)",
+        "EC2 discount (%)",
     ]
     tab = PrettyTable(vm_create_cols)
 
@@ -1366,8 +1361,7 @@ def list_vm_create_events_and_exit(args: ArgumentParser) -> None:
 
     # Fetch all historic VMs for (filtered) active instances
     vms: list[tuple[cmdb.Vm, cmdb.Instance]] = []
-    # print(cmdb.get_all_vms_by_instance_name("smoke-test-1-network-storage"))
-    # exit()
+
     for i in instances_to_list:
         vms.extend(cmdb.get_all_vms_by_instance_name(i))
 
@@ -1383,6 +1377,8 @@ def list_vm_create_events_and_exit(args: ArgumentParser) -> None:
                 ins.instance_name,
                 vm.provider_id,
                 vm.sku,
+                vm.price_spot,
+                calc_discount_rate_str(vm.price_spot, vm.price_ondemand),
             ]
         )
 

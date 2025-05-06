@@ -533,3 +533,21 @@ def utc_datetime_to_local_time_zone(
     return dt_with_no_tzinfo.replace(tzinfo=datetime.timezone.utc).astimezone(
         tz=None
     )
+
+
+def calc_discount_rate_str(
+    price_spot: float | None, price_ondemand: float | None, precision: int = 0
+) -> str:
+    if price_spot and price_ondemand:
+        if precision:
+            return str(
+                round(
+                    100.0 * (price_spot - price_ondemand) / price_ondemand,
+                    precision,
+                )
+            )
+        else:
+            return str(
+                round(100.0 * (price_spot - price_ondemand) / price_ondemand)
+            )
+    return "N/A"
