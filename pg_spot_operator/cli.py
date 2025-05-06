@@ -3,9 +3,11 @@ import logging
 import os.path
 import re
 import shutil
+from zoneinfo import ZoneInfo
 
 import humanize
 import requests
+import tzlocal
 import yaml
 from prettytable import PrettyTable
 from tap import Tap
@@ -1371,9 +1373,14 @@ def list_vm_create_events_and_exit(args: ArgumentParser) -> None:
     vms.sort(key=lambda x: (x[0]).created_on)
 
     for vm, ins in vms:
+        created_on_utc = vm.created_on.replace(
+            tzinfo=ZoneInfo("UTC")
+        )  # Everything is UTC in Sqlite
+        local_time = created_on_utc.astimezone(tzlocal.get_localzone())
+
         tab.add_row(
             [
-                vm.created_on,
+                local_time,
                 vm.region,
                 vm.availability_zone,
                 ins.instance_name,
