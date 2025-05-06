@@ -4,6 +4,40 @@ Changelog
 
 (unreleased)
 ------------
+- Add also hourly prices to --check-price output. [Kaarel Moppel]
+
+  For easier comparisons with other big clouds, which mostly show hourly
+  prices
+- Fail early in --connstr-only if no matching SKUs found. [Kaarel
+  Moppel]
+
+  And make the error msg less ugly
+- --list-instances: don't scan all AWS regions immediately when region
+  not provided. [Kaarel Moppel]
+
+  Try first to look for CMDB known regions
+- Merge pull request #149 from pg-spot-ops/add-uptime-flag. [Kaarel
+  Moppel]
+
+  Add a new --list-vm-creates flag
+- Add spot price + discount % to --list-vm-creates. [Kaarel Moppel]
+- Show also --list-instances / --list-instances-cmdb times in local
+  zone. [Kaarel Moppel]
+- Do UTC conversion via stdlib and move to util.py. [Kaarel Moppel]
+- Show VM created_on in local time zone. [Kaarel Moppel]
+- Rename to more descriptive --list-vm-creates. [Kaarel Moppel]
+- Add a new --list-creates flag. [Kaarel Moppel]
+- Fix --list-instances output for instances with volumes. [Kaarel
+  Moppel]
+- README: --check-price doesn't require Ansible. [Kaarel Moppel]
+
+  Plus remove enterprise version info
+- Smoke testing script - add a success notify URL. [Kaarel Moppel]
+
+
+0.9.54 (2025-04-21)
+-------------------
+- Release: version 0.9.54 🚀 [Kaarel Moppel]
 - Fix leftover debug from last, breaking --connstr-only mode. [Kaarel
   Moppel]
 
