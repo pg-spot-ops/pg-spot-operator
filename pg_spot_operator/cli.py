@@ -1207,7 +1207,9 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
                     if len(i.get("BlockDeviceMappings", [])) > 1
                     else None
                 ),
-                timestamp_to_human_readable_delta(i.get("LaunchTime")),
+                timestamp_to_human_readable_delta(
+                    utc_datetime_to_local_time_zone(i.get("LaunchTime"))  # type: ignore
+                ),
                 i.get("PrivateIpAddress"),
                 i.get("PublicIpAddress"),
                 i.get("VpcId"),
@@ -1238,7 +1240,7 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
                 [
                     v.get("AvailabilityZone"),
                     v.get("Tags", {}).get(SPOT_OPERATOR_ID_TAG),
-                    humanize.naturaltime(v.get("CreateTime")),  # type: ignore
+                    humanize.naturaltime(utc_datetime_to_local_time_zone(v.get("CreateTime"))),  # type: ignore
                     v.get("VolumeId"),
                     v.get("Size"),
                     v.get("VolumeType"),
@@ -1304,14 +1306,14 @@ def list_instances_from_cmdb_and_exit() -> None:
             [
                 nd_ins.instance_name,
                 is_running,
-                nd_ins.created_on,
+                utc_datetime_to_local_time_zone(nd_ins.created_on),
                 nd_ins.region,
                 vm.availability_zone,
                 nd_ins.cpu_min,
                 nd_ins.ram_min,
                 nd_ins.storage_type,
                 nd_ins.storage_min,
-                vm.created_on,
+                utc_datetime_to_local_time_zone(vm.created_on),
                 vm.provider_id,
                 nd_ins.stopped_on,
                 not (
