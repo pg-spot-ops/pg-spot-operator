@@ -14,6 +14,7 @@ from pg_spot_operator.util import (
     timestamp_to_human_readable_delta,
     extract_mtf_months_from_eviction_rate_group_label,
     pg_size_bytes,
+    calc_discount_rate_str,
 )
 from tests.test_manifests import TEST_MANIFEST_VAULT_SECRETS
 
@@ -131,3 +132,9 @@ def test_pg_size_bytes():
 
     with pytest.raises(ValueError, match=r"Unknown size unit: .*"):
         pg_size_bytes("10 XB")
+
+
+def test_calc_discount_rate_as_str():
+    assert calc_discount_rate_str(10, 0) == "N/A"
+    assert calc_discount_rate_str(10, 100) == "-90"
+    assert calc_discount_rate_str(10, 100, 1) == "-90.0"

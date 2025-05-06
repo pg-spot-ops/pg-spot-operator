@@ -1,6 +1,7 @@
 import fcntl
 import logging
 import os.path
+import re
 import shutil
 
 import humanize
@@ -48,6 +49,7 @@ from pg_spot_operator.manifests import InstanceManifest
 from pg_spot_operator.operator import clean_up_old_logs_if_any
 from pg_spot_operator.pgtuner import TUNING_PROFILES
 from pg_spot_operator.util import (
+    calc_discount_rate_str,
     check_default_ssh_key_exists_and_readable,
     extract_mtf_months_from_eviction_rate_group_label,
     extract_region_from_az,
@@ -55,6 +57,7 @@ from pg_spot_operator.util import (
     region_regex_to_actual_region_codes,
     timestamp_to_human_readable_delta,
     try_download_ansible_from_github,
+    utc_datetime_to_local_time_zone,
 )
 
 SQLITE_DBNAME = "pgso.db"
@@ -122,6 +125,9 @@ class ArgumentParser(Tap):
     list_strategies: bool = str_to_bool(
         os.getenv("LIST_STRATEGIES", "false")
     )  # Display available instance selection strategies and exit
+    list_vm_creates: bool = str_to_bool(
+        os.getenv("LIST_VM_CREATES", "false")
+    )  # Show VM provisioning times for active instances. Region / instance name filtering applies
     check_manifest: bool = str_to_bool(
         os.getenv("CHECK_MANIFEST", "false")
     )  # Validate instance manifests and exit
@@ -323,6 +329,7 @@ def running_in_check_or_list_mode(args: ArgumentParser) -> bool:
         or args.list_regions
         or args.list_strategies
         or args.list_avg_spot_savings
+        or args.list_vm_creates
         or args.check_manifest
     )
 
@@ -480,6 +487,7 @@ def need_ssh_access(a: ArgumentParser) -> bool:
         or a.list_regions
         or a.list_strategies
         or a.list_avg_spot_savings
+        or a.list_vm_creates
         or a.dry_run
         or a.teardown
         or a.teardown_region
@@ -514,6 +522,7 @@ def check_cli_args_valid(args: ArgumentParser):
             args.check_price
             or args.list_instances
             or args.list_instances_cmdb
+            or args.list_vm_creates
             or args.stop
             or args.resume
             or args.teardown
@@ -558,6 +567,7 @@ def check_cli_args_valid(args: ArgumentParser):
                 args.check_price
                 or args.list_instances
                 or args.list_instances_cmdb
+                or args.list_vm_creates
             )
             and len(args.region.split("-")) != 3
         ):
@@ -668,13 +678,14 @@ def check_cli_args_valid(args: ArgumentParser):
         args.check_price
         or args.list_instances
         or args.list_instances_cmdb
+        or args.list_vm_creates
         or args.vm_host
         or args.stop
         or args.resume
         or args.teardown
     ) and not is_explicit_aws_region_code(args.region):
         logger.error(
-            "Fuzzy or regex --region input only allowed in --check-price mode",
+            "Fuzzy or regex --region input only allowed in --check-price and --list-* modes",
         )
         exit(1)
     if (
@@ -762,24 +773,15 @@ def display_selected_skus_for_region(
             "Local storage",
             "$ Spot",
             "$ On-Demand",
-            "Discount",
+            "Discount (%)",
             "Evic. rate",
         ]
     ]
-    ec2_discount_rate = "N/A"
 
     for i in selected_skus:
         if not i.monthly_ondemand_price:
             i.monthly_ondemand_price = try_get_monthly_ondemand_price_for_sku(
                 i.region, i.instance_type
-            )
-        if i.monthly_ondemand_price and i.monthly_spot_price:
-            ec2_discount_rate = str(
-                round(
-                    100.0
-                    * (i.monthly_spot_price - i.monthly_ondemand_price)
-                    / i.monthly_ondemand_price
-                )
             )
 
         max_reg_len = max([len(x.region) for x in selected_skus])
@@ -809,8 +811,9 @@ def display_selected_skus_for_region(
                 ).ljust(max_inst_stor_len),
                 f"{i.monthly_spot_price}",
                 f"{i.monthly_ondemand_price}",
-                f"{ec2_discount_rate}"
-                + ("%" if ec2_discount_rate != "N/A" else ""),
+                calc_discount_rate_str(
+                    i.monthly_spot_price, i.monthly_ondemand_price
+                ),
                 (
                     i.eviction_rate_group_label
                     if i.eviction_rate_group_label
@@ -1197,7 +1200,9 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
                     if len(i.get("BlockDeviceMappings", [])) > 1
                     else None
                 ),
-                timestamp_to_human_readable_delta(i.get("LaunchTime")),
+                timestamp_to_human_readable_delta(
+                    utc_datetime_to_local_time_zone(i.get("LaunchTime"))  # type: ignore
+                ),
                 i.get("PrivateIpAddress"),
                 i.get("PublicIpAddress"),
                 i.get("VpcId"),
@@ -1228,7 +1233,7 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
                 [
                     v.get("AvailabilityZone"),
                     v.get("Tags", {}).get(SPOT_OPERATOR_ID_TAG),
-                    humanize.naturaltime(v.get("CreateTime")),  # type: ignore
+                    humanize.naturaltime(utc_datetime_to_local_time_zone(v.get("CreateTime"))),  # type: ignore
                     v.get("VolumeId"),
                     v.get("Size"),
                     v.get("VolumeType"),
@@ -1294,14 +1299,14 @@ def list_instances_from_cmdb_and_exit() -> None:
             [
                 nd_ins.instance_name,
                 is_running,
-                nd_ins.created_on,
+                utc_datetime_to_local_time_zone(nd_ins.created_on),
                 nd_ins.region,
                 vm.availability_zone,
                 nd_ins.cpu_min,
                 nd_ins.ram_min,
                 nd_ins.storage_type,
                 nd_ins.storage_min,
-                vm.created_on,
+                utc_datetime_to_local_time_zone(vm.created_on),
                 vm.provider_id,
                 nd_ins.stopped_on,
                 not (
@@ -1314,6 +1319,72 @@ def list_instances_from_cmdb_and_exit() -> None:
     print(tab)
 
     exit()
+
+
+def list_vm_create_events_and_exit(args: ArgumentParser) -> None:
+    vm_create_cols = [
+        "Created on",
+        "Region",
+        "AZ",
+        "Instance name",
+        "InstanceId",
+        "InstanceType",
+        "$ (Mon.)",
+        "EC2 discount (%)",
+    ]
+    tab = PrettyTable(vm_create_cols)
+
+    # Active instances - name / region filtering
+    instances_to_list: list[str] = []
+    for ins in cmdb.get_all_non_deleted_instances():
+        if args.region and not re.findall(
+            args.region, ins.region, re.IGNORECASE
+        ):
+            logger.debug(
+                "Skipping ins %s in region %s due to --region=%s filter",
+                ins.instance_name,
+                ins.region,
+                args.region,
+            )
+            continue
+        if args.instance_name and not re.findall(
+            args.instance_name, ins.instance_name, re.IGNORECASE
+        ):
+            logger.debug(
+                "Skipping ins %s in region %s due to --instance-name=%s filter",
+                ins.instance_name,
+                ins.region,
+                args.instance_name,
+            )
+            continue
+        instances_to_list.append(ins.instance_name)
+
+    # Fetch all historic VMs for (filtered) active instances
+    vms: list[tuple[cmdb.Vm, cmdb.Instance]] = []
+
+    for i in instances_to_list:
+        vms.extend(cmdb.get_all_vms_by_instance_name(i))
+
+    vms.sort(key=lambda x: (x[0]).created_on)
+
+    for vm, ins in vms:
+
+        tab.add_row(
+            [
+                utc_datetime_to_local_time_zone(vm.created_on),
+                vm.region,
+                vm.availability_zone,
+                ins.instance_name,
+                vm.provider_id,
+                vm.sku,
+                vm.price_spot,
+                calc_discount_rate_str(vm.price_spot, vm.price_ondemand),
+            ]
+        )
+
+    print(tab)
+
+    exit(0)
 
 
 def show_regional_spot_pricing_and_eviction_summary_and_exit(
@@ -1389,6 +1460,7 @@ def any_action_flags_set(a: ArgumentParser) -> bool:
         or a.list_instances
         or a.list_instances_cmdb
         or a.list_avg_spot_savings
+        or a.list_vm_creates
         or a.check_price
         or a.check_manifest
         or a.manifest
@@ -1410,6 +1482,7 @@ def main():  # pragma: no cover
                 args.check_price
                 or args.list_instances
                 or args.list_instances_cmdb
+                or args.list_vm_creates
             )
             else (
                 "%(asctime)s %(levelname)s %(threadName)s %(filename)s:%(lineno)d %(message)s"
@@ -1441,9 +1514,14 @@ def main():  # pragma: no cover
 
     if args.list_instances:
         list_instances_and_exit(args)
+
     if args.list_instances_cmdb:
         init_cmdb_and_apply_schema_migrations_if_needed(args)
         list_instances_from_cmdb_and_exit()
+
+    if args.list_vm_creates:
+        init_cmdb_and_apply_schema_migrations_if_needed(args)
+        list_vm_create_events_and_exit(args)
 
     logger.debug("Args: %s", args.as_dict()) if args.debug else None
 
@@ -1512,6 +1590,7 @@ def main():  # pragma: no cover
         or args.debug
         or args.list_regions
         or args.list_instances
+        or args.list_vm_creates
     ):
         operator.operator_config_dir = args.config_dir
         clean_up_old_logs_if_any()
