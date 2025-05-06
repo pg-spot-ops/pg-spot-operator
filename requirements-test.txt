@@ -23,4 +23,3 @@ sqlalchemy
 unidecode
 prettytable
 humanize
-tzlocal

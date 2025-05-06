@@ -523,3 +523,11 @@ def check_setup_completed_marker_file_exists(
             e,
         )
     return False
+
+
+def utc_datetime_to_local_time_zone(
+    dt_with_no_tzinfo: datetime.datetime,
+) -> datetime.datetime:
+    return dt_with_no_tzinfo.replace(tzinfo=datetime.timezone.utc).astimezone(
+        tz=None
+    )

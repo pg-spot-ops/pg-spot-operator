@@ -3,11 +3,9 @@ import logging
 import os.path
 import re
 import shutil
-from zoneinfo import ZoneInfo
 
 import humanize
 import requests
-import tzlocal
 import yaml
 from prettytable import PrettyTable
 from tap import Tap
@@ -58,6 +56,7 @@ from pg_spot_operator.util import (
     region_regex_to_actual_region_codes,
     timestamp_to_human_readable_delta,
     try_download_ansible_from_github,
+    utc_datetime_to_local_time_zone,
 )
 
 SQLITE_DBNAME = "pgso.db"
@@ -1373,14 +1372,10 @@ def list_vm_create_events_and_exit(args: ArgumentParser) -> None:
     vms.sort(key=lambda x: (x[0]).created_on)
 
     for vm, ins in vms:
-        created_on_utc = vm.created_on.replace(
-            tzinfo=ZoneInfo("UTC")
-        )  # Everything is UTC in Sqlite
-        local_time = created_on_utc.astimezone(tzlocal.get_localzone())
 
         tab.add_row(
             [
-                local_time,
+                utc_datetime_to_local_time_zone(vm.created_on),
                 vm.region,
                 vm.availability_zone,
                 ins.instance_name,
