@@ -402,6 +402,19 @@ def get_latest_vm_by_uuid(
     return None
 
 
+def get_all_vms_by_instance_name(
+    instance_name: str,
+) -> list[tuple[Vm, Instance]]:
+    with Session(engine) as session:
+        stmt = (
+            select(Vm, Instance)
+            .join(Instance, Instance.uuid == Vm.instance_uuid)
+            .where(Instance.instance_name == instance_name)
+            .order_by(Vm.created_on)
+        )
+        return session.execute(stmt).all()  # type: ignore
+
+
 def mark_any_active_vms_as_deleted(instance_uuid: str) -> None:
     with Session(engine) as session:
         stmt = (

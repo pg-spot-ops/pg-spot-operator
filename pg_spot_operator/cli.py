@@ -1,6 +1,7 @@
 import fcntl
 import logging
 import os.path
+import re
 import shutil
 
 import humanize
@@ -122,6 +123,9 @@ class ArgumentParser(Tap):
     list_strategies: bool = str_to_bool(
         os.getenv("LIST_STRATEGIES", "false")
     )  # Display available instance selection strategies and exit
+    list_creates: bool = str_to_bool(
+        os.getenv("LIST_CREATES", "false")
+    )  # Show VM provisioning times for active instances. Region / instance name filtering applies
     check_manifest: bool = str_to_bool(
         os.getenv("CHECK_MANIFEST", "false")
     )  # Validate instance manifests and exit
@@ -323,6 +327,7 @@ def running_in_check_or_list_mode(args: ArgumentParser) -> bool:
         or args.list_regions
         or args.list_strategies
         or args.list_avg_spot_savings
+        or args.list_creates
         or args.check_manifest
     )
 
@@ -480,6 +485,7 @@ def need_ssh_access(a: ArgumentParser) -> bool:
         or a.list_regions
         or a.list_strategies
         or a.list_avg_spot_savings
+        or a.list_creates
         or a.dry_run
         or a.teardown
         or a.teardown_region
@@ -514,6 +520,7 @@ def check_cli_args_valid(args: ArgumentParser):
             args.check_price
             or args.list_instances
             or args.list_instances_cmdb
+            or args.list_creates
             or args.stop
             or args.resume
             or args.teardown
@@ -558,6 +565,7 @@ def check_cli_args_valid(args: ArgumentParser):
                 args.check_price
                 or args.list_instances
                 or args.list_instances_cmdb
+                or args.list_creates
             )
             and len(args.region.split("-")) != 3
         ):
@@ -668,13 +676,14 @@ def check_cli_args_valid(args: ArgumentParser):
         args.check_price
         or args.list_instances
         or args.list_instances_cmdb
+        or args.list_creates
         or args.vm_host
         or args.stop
         or args.resume
         or args.teardown
     ) and not is_explicit_aws_region_code(args.region):
         logger.error(
-            "Fuzzy or regex --region input only allowed in --check-price mode",
+            "Fuzzy or regex --region input only allowed in --check-price and --list-* modes",
         )
         exit(1)
     if (
@@ -1316,6 +1325,68 @@ def list_instances_from_cmdb_and_exit() -> None:
     exit()
 
 
+def list_creates_and_exit(args: ArgumentParser) -> None:
+    vm_create_cols = [
+        "Created on",
+        "Region",
+        "AZ",
+        "Instance name",
+        "InstanceId",
+        "InstanceType",
+    ]
+    tab = PrettyTable(vm_create_cols)
+
+    # Active instances - name / region filtering
+    instances_to_list: list[str] = []
+    for ins in cmdb.get_all_non_deleted_instances():
+        if args.region and not re.findall(
+            args.region, ins.region, re.IGNORECASE
+        ):
+            logger.debug(
+                "Skipping ins %s in region %s due to --region=%s filter",
+                ins.instance_name,
+                ins.region,
+                args.region,
+            )
+            continue
+        if args.instance_name and not re.findall(
+            args.instance_name, ins.instance_name, re.IGNORECASE
+        ):
+            logger.debug(
+                "Skipping ins %s in region %s due to --instance-name=%s filter",
+                ins.instance_name,
+                ins.region,
+                args.instance_name,
+            )
+            continue
+        instances_to_list.append(ins.instance_name)
+
+    # Fetch all historic VMs for (filtered) active instances
+    vms: list[tuple[cmdb.Vm, cmdb.Instance]] = []
+    # print(cmdb.get_all_vms_by_instance_name("smoke-test-1-network-storage"))
+    # exit()
+    for i in instances_to_list:
+        vms.extend(cmdb.get_all_vms_by_instance_name(i))
+
+    vms.sort(key=lambda x: (x[0]).created_on)
+
+    for vm, ins in vms:
+        tab.add_row(
+            [
+                vm.created_on,
+                vm.region,
+                vm.availability_zone,
+                ins.instance_name,
+                vm.provider_id,
+                vm.sku,
+            ]
+        )
+
+    print(tab)
+
+    exit(0)
+
+
 def show_regional_spot_pricing_and_eviction_summary_and_exit(
     args: ArgumentParser,
 ) -> None:
@@ -1389,6 +1460,7 @@ def any_action_flags_set(a: ArgumentParser) -> bool:
         or a.list_instances
         or a.list_instances_cmdb
         or a.list_avg_spot_savings
+        or a.list_creates
         or a.check_price
         or a.check_manifest
         or a.manifest
@@ -1410,6 +1482,7 @@ def main():  # pragma: no cover
                 args.check_price
                 or args.list_instances
                 or args.list_instances_cmdb
+                or args.list_creates
             )
             else (
                 "%(asctime)s %(levelname)s %(threadName)s %(filename)s:%(lineno)d %(message)s"
@@ -1441,9 +1514,14 @@ def main():  # pragma: no cover
 
     if args.list_instances:
         list_instances_and_exit(args)
+
     if args.list_instances_cmdb:
         init_cmdb_and_apply_schema_migrations_if_needed(args)
         list_instances_from_cmdb_and_exit()
+
+    if args.list_creates:
+        init_cmdb_and_apply_schema_migrations_if_needed(args)
+        list_creates_and_exit(args)
 
     logger.debug("Args: %s", args.as_dict()) if args.debug else None
 
@@ -1512,6 +1590,7 @@ def main():  # pragma: no cover
         or args.debug
         or args.list_regions
         or args.list_instances
+        or args.list_creates
     ):
         operator.operator_config_dir = args.config_dir
         clean_up_old_logs_if_any()

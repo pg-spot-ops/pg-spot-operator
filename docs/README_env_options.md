@@ -7,6 +7,7 @@
 * **--list-regions / LIST_REGIONS** List AWS datacenter locations and exit
 * **--list-strategies / LIST_STRATEGIES** Display available instance selection strategies and exit
 * **--list-avg-spot-savings / LIST_AVG_SPOT_SAVINGS** Display avg. regional Spot savings and eviction rates to choose the best region. Can apply the --region filter.
+* **--list-creates / LIST_CREATES** Show VM provisioning times for active instances. Region / instance name filtering applies.
 * **--check-price / CHECK_PRICE** Just resolve the HW reqs, show Spot price / discount rate and exit. No AWS creds required.
 * **--check-manifest / CHECK_PRICE** Validate CLI input or instance manifest file and exit
 * **--dry-run / DRY_RUN** Perform a dry-run VM create + create the Ansible skeleton. For example to check if cloud credentials allow Spot VM creation.
