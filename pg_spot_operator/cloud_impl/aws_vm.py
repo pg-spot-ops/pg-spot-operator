@@ -14,7 +14,7 @@ from pg_spot_operator.cloud_impl.aws_cache import (
 from pg_spot_operator.cloud_impl.aws_client import get_client
 from pg_spot_operator.cloud_impl.cloud_structs import CloudVM, InstanceTypeInfo
 from pg_spot_operator.cloud_impl.cloud_util import (
-    aws_list_tags_to_dict,
+    add_aws_tags_dict_from_list_tags,
     extract_instance_family_from_instance_type_code,
     network_volume_nr_to_device_name,
 )
@@ -761,11 +761,11 @@ def get_existing_data_volumes_for_instance_if_any(
         )
         resp = client.describe_volumes(Filters=filters)
         if resp and resp.get("Volumes"):
-            resp = aws_list_tags_to_dict(resp["Volumes"])
+            resp = add_aws_tags_dict_from_list_tags(resp["Volumes"])
             stripe_sorted_vols = sorted(
                 resp,
                 key=lambda x: int(
-                    x.get("Tags", {}).get(SPOT_OPERATOR_VOLUME_ID_TAG, "1")
+                    x.get("TagsDict", {}).get(SPOT_OPERATOR_VOLUME_ID_TAG, "1")
                 ),
             )
             logger.debug(

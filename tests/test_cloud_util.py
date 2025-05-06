@@ -6,7 +6,7 @@ from pg_spot_operator.cloud_impl.cloud_util import (
     extract_instance_family_from_instance_type_code,
     infer_cpu_arch_from_aws_instance_type_name,
     network_volume_nr_to_device_name,
-    aws_list_tags_to_dict,
+    add_aws_tags_dict_from_list_tags,
 )
 from pg_spot_operator.constants import CPU_ARCH_ARM, CPU_ARCH_X86
 
@@ -73,7 +73,7 @@ def test_aws_list_tags_to_dict():
             ],
         }
     ]
-    kv = aws_list_tags_to_dict(inlist)
+    kv = add_aws_tags_dict_from_list_tags(inlist)
     assert kv
-    assert "Tags" in kv[0]
-    assert kv[0]["Tags"]["pg-spot-operator-instance"] == "remount3"
+    assert "TagsDict" in kv[0]
+    assert kv[0]["TagsDict"]["pg-spot-operator-instance"] == "remount3"

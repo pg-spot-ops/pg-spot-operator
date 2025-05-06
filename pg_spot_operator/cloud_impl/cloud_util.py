@@ -229,9 +229,11 @@ def network_volume_nr_to_device_name(
     return dev_base_name + chr(ord(start_char) - 1 + volume_nr)
 
 
-def aws_list_tags_to_dict(inlist: list[dict]) -> list[dict]:
-    """[{'Tags': [{'Key': 'pg-spot-operator-instance', 'Value': 'remount3'}]} -> [{'Tags': {'pg-spot-operator-instance': 'remount3'}}]"""
+def add_aws_tags_dict_from_list_tags(inlist: list[dict]) -> list[dict]:
+    """PS Modifies the list object! Adds a new 'TagsDict' key to simplify life:
+    [{'InstanceLifecycle': 'spot', ..., 'Tags': [{'Key': 'pg-spot-operator-instance', 'Value': 'remount3'}]} ->
+    [{'InstanceLifecycle': 'spot', ..., 'Tags': [...], 'TagsDict': {'pg-spot-operator-instance': 'remount3'}}]
+    """
     for x in inlist:
-        if x.get("Tags"):
-            x["Tags"] = {kv["Key"]: kv["Value"] for kv in x["Tags"]}
+        x["TagsDict"] = {kv["Key"]: kv["Value"] for kv in x.get("Tags", [])}
     return inlist

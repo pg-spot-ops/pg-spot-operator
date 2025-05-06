@@ -25,7 +25,7 @@ from pg_spot_operator.cloud_impl.cloud_structs import (
     RegionalSpotPricingStats,
 )
 from pg_spot_operator.cloud_impl.cloud_util import (
-    aws_list_tags_to_dict,
+    add_aws_tags_dict_from_list_tags,
     is_explicit_aws_region_code,
     resolve_regions_from_fuzzy_input,
 )
@@ -1106,12 +1106,12 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
                 get_all_active_operator_instances_from_region(reg)
             )
             if instance_descriptions:
+                add_aws_tags_dict_from_list_tags(instance_descriptions)
                 instances.extend(instance_descriptions)
-                tags = aws_list_tags_to_dict(instance_descriptions)
-                for t in tags:
-                    if t.get(SPOT_OPERATOR_ID_TAG):
+                for t in instance_descriptions:
+                    if t.get("TagsDict", {}).get(SPOT_OPERATOR_ID_TAG):
                         region_active_instance_names.add(
-                            t[SPOT_OPERATOR_ID_TAG]
+                            t["TagsDict"][SPOT_OPERATOR_ID_TAG]
                         )
         except Exception:
             logger.error("Failed to complete scan for region %s", reg)
@@ -1160,13 +1160,12 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
     tab = PrettyTable(cols)
 
     for i in instances:
-        vol_tags = {tag["Key"]: tag["Value"] for tag in i.get("Tags", [])}
         region = extract_region_from_az(
             i.get("Placement", {}).get("AvailabilityZone", "")
         )
         tab.add_row(
             [
-                vol_tags.get(SPOT_OPERATOR_ID_TAG),
+                i.get("TagsDict", {}).get(SPOT_OPERATOR_ID_TAG),
                 i.get("Placement", {}).get("AvailabilityZone"),
                 i.get("InstanceId"),
                 i.get("InstanceType"),
@@ -1202,7 +1201,7 @@ def list_instances_and_exit(args: ArgumentParser) -> None:
                 i.get("PrivateIpAddress"),
                 i.get("PublicIpAddress"),
                 i.get("VpcId"),
-                vol_tags.get(SPOT_OPERATOR_EXPIRES_TAG),
+                i.get("TagsDict", {}).get(SPOT_OPERATOR_EXPIRES_TAG),
             ]
         )
 
