@@ -123,8 +123,8 @@ class ArgumentParser(Tap):
     list_strategies: bool = str_to_bool(
         os.getenv("LIST_STRATEGIES", "false")
     )  # Display available instance selection strategies and exit
-    list_creates: bool = str_to_bool(
-        os.getenv("LIST_CREATES", "false")
+    list_vm_creates: bool = str_to_bool(
+        os.getenv("LIST_VM_CREATES", "false")
     )  # Show VM provisioning times for active instances. Region / instance name filtering applies
     check_manifest: bool = str_to_bool(
         os.getenv("CHECK_MANIFEST", "false")
@@ -327,7 +327,7 @@ def running_in_check_or_list_mode(args: ArgumentParser) -> bool:
         or args.list_regions
         or args.list_strategies
         or args.list_avg_spot_savings
-        or args.list_creates
+        or args.list_vm_creates
         or args.check_manifest
     )
 
@@ -485,7 +485,7 @@ def need_ssh_access(a: ArgumentParser) -> bool:
         or a.list_regions
         or a.list_strategies
         or a.list_avg_spot_savings
-        or a.list_creates
+        or a.list_vm_creates
         or a.dry_run
         or a.teardown
         or a.teardown_region
@@ -520,7 +520,7 @@ def check_cli_args_valid(args: ArgumentParser):
             args.check_price
             or args.list_instances
             or args.list_instances_cmdb
-            or args.list_creates
+            or args.list_vm_creates
             or args.stop
             or args.resume
             or args.teardown
@@ -565,7 +565,7 @@ def check_cli_args_valid(args: ArgumentParser):
                 args.check_price
                 or args.list_instances
                 or args.list_instances_cmdb
-                or args.list_creates
+                or args.list_vm_creates
             )
             and len(args.region.split("-")) != 3
         ):
@@ -676,7 +676,7 @@ def check_cli_args_valid(args: ArgumentParser):
         args.check_price
         or args.list_instances
         or args.list_instances_cmdb
-        or args.list_creates
+        or args.list_vm_creates
         or args.vm_host
         or args.stop
         or args.resume
@@ -1325,7 +1325,7 @@ def list_instances_from_cmdb_and_exit() -> None:
     exit()
 
 
-def list_creates_and_exit(args: ArgumentParser) -> None:
+def list_vm_create_events_and_exit(args: ArgumentParser) -> None:
     vm_create_cols = [
         "Created on",
         "Region",
@@ -1460,7 +1460,7 @@ def any_action_flags_set(a: ArgumentParser) -> bool:
         or a.list_instances
         or a.list_instances_cmdb
         or a.list_avg_spot_savings
-        or a.list_creates
+        or a.list_vm_creates
         or a.check_price
         or a.check_manifest
         or a.manifest
@@ -1482,7 +1482,7 @@ def main():  # pragma: no cover
                 args.check_price
                 or args.list_instances
                 or args.list_instances_cmdb
-                or args.list_creates
+                or args.list_vm_creates
             )
             else (
                 "%(asctime)s %(levelname)s %(threadName)s %(filename)s:%(lineno)d %(message)s"
@@ -1519,9 +1519,9 @@ def main():  # pragma: no cover
         init_cmdb_and_apply_schema_migrations_if_needed(args)
         list_instances_from_cmdb_and_exit()
 
-    if args.list_creates:
+    if args.list_vm_creates:
         init_cmdb_and_apply_schema_migrations_if_needed(args)
-        list_creates_and_exit(args)
+        list_vm_create_events_and_exit(args)
 
     logger.debug("Args: %s", args.as_dict()) if args.debug else None
 
@@ -1590,7 +1590,7 @@ def main():  # pragma: no cover
         or args.debug
         or args.list_regions
         or args.list_instances
-        or args.list_creates
+        or args.list_vm_creates
     ):
         operator.operator_config_dir = args.config_dir
         clean_up_old_logs_if_any()
