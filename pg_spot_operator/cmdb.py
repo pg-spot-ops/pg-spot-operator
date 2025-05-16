@@ -640,6 +640,7 @@ def finalize_ensure_vm(m: InstanceManifest, vm: CloudVM):
         cmdb_vm.user_tags = m.user_tags
         cmdb_vm.volume_ids = vm.volume_ids  # If using block storage
         cmdb_vm.last_modified_on = datetime.utcnow()
+        cmdb_vm.created_on = vm.created_on or datetime.utcnow()
 
         session.add(cmdb_vm)
 
