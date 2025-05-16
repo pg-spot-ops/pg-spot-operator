@@ -1398,7 +1398,7 @@ def list_vm_create_events_and_exit(args: ArgumentParser) -> None:
                 ins.instance_name,
                 vm.provider_id,
                 vm.sku,
-                vm.price_spot,
+                vm.price_spot or "N/A",
                 calc_discount_rate_str(vm.price_spot, vm.price_ondemand),
             ]
         )
