@@ -51,7 +51,7 @@ from pg_spot_operator.constants import (
     DEFAULT_CONFIG_DIR,
     DEFAULT_INSTANCE_SELECTION_STRATEGY,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
-    SPOT_OPERATOR_EXPIRES_TAG,
+    SPOT_OPERATOR_EXPIRES_TAG, ACTION_COMPLETED_MARKER_FILE,
 )
 from pg_spot_operator.instance_type_selection import InstanceTypeSelection
 from pg_spot_operator.manifests import InstanceManifest
@@ -1544,6 +1544,10 @@ def do_main_loop(
                 ):
                     vm_created_recreated = (
                         True  # Re-run setup if marker file not there / deleted
+                    )
+                    logger.info(
+                        "'setup completed' marker file at %s not found, Ansible setup required ...",
+                        ACTION_COMPLETED_MARKER_FILE,
                     )
 
             diff = m.diff_manifests(

@@ -1,1 +1,1 @@
-operator_setup_completed_marker_file_path: /var/lib/postgresql/operator_setup_completed_marker
+operator_setup_completed_marker_file_path: /root/pg_spot_operator_setup_completed_marker

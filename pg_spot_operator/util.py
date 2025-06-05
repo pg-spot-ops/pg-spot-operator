@@ -484,7 +484,7 @@ def check_setup_completed_marker_file_exists(
     private_key_file: str = "",
 ) -> bool:
     """Assume False on errors"""
-    logger.info(
+    logger.debug(
         "Checking if 'setup completed' marker file %s exists on %s  ...",
         ACTION_COMPLETED_MARKER_FILE,
         host,
