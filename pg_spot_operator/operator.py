@@ -46,12 +46,13 @@ from pg_spot_operator.cmdb import (
     get_ssh_connstr,
 )
 from pg_spot_operator.constants import (
+    ACTION_COMPLETED_MARKER_FILE,
     ACTION_INSTANCE_SETUP,
     BACKUP_TYPE_PGBACKREST,
     DEFAULT_CONFIG_DIR,
     DEFAULT_INSTANCE_SELECTION_STRATEGY,
     MF_SEC_VM_STORAGE_TYPE_LOCAL,
-    SPOT_OPERATOR_EXPIRES_TAG, ACTION_COMPLETED_MARKER_FILE,
+    SPOT_OPERATOR_EXPIRES_TAG,
 )
 from pg_spot_operator.instance_type_selection import InstanceTypeSelection
 from pg_spot_operator.manifests import InstanceManifest
@@ -1530,7 +1531,7 @@ def do_main_loop(
                     logger.info("SSH connect OK")
             else:
                 vm_created_recreated, vm_provider_id, vm_ip = ensure_vm(m)
-                if vm_created_recreated and not m.vm_only and not cli_dry_run:
+                if vm_created_recreated and not cli_dry_run:
                     # Wait until SSH reachable so that first Ansible Postgres loop succeeds
                     check_ssh_ping_ok(
                         m.vm.login_user,
