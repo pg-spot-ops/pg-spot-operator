@@ -158,7 +158,7 @@ def extract_instance_storage_size_and_type_from_aws_pricing_storage_string(
     else:
         # "125 GB NVMe SSD"
         m = re.match(r"^\s*(\d+)\s*(.*)$", storage_string)
-        if not m or not m.group(1):
+        if not m or len(m.groups()) != 2:
             logger.error(
                 "Unexpected EC2 storage string, can't parse size / type, not assuming any local storage. %s",
                 storage_string,
