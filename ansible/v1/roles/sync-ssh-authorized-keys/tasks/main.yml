@@ -1,0 +1,53 @@
+---
+# Copy .ssh/authorized_keys entries from one user to the other
+
+- name: Get passwd entry for SOURCE_USER
+  ansible.builtin.command: getent passwd {{ SOURCE_USER }}
+  register: passwd_entry
+
+- name: Extract home directory from passwd entry
+  set_fact:
+    source_user_home: "{{ passwd_entry.stdout.split(':')[5] }}"
+
+- name: Get passwd entry for TARGET_USER
+  ansible.builtin.command: getent passwd {{ TARGET_USER }}
+  register: passwd_entry
+
+- name: Extract home directory from passwd entry
+  set_fact:
+    target_user_home: "{{ passwd_entry.stdout.split(':')[5] }}"
+
+- name: Debug the home directory
+  debug:
+    msg: "SOURCE_USER {{ SOURCE_USER }} HOME = {{ source_user_home }} TARGET_USER {{ TARGET_USER }} HOME = {{ target_user_home }}"
+
+- name: Ensure TARGET_USER .ssh directory exists
+  ansible.builtin.file:
+    path: "{{ target_user_home }}/.ssh"
+    state: directory
+    owner: "{{ TARGET_USER }}"
+    mode: '0700'
+
+- name: Slurp authorized_keys from SOURCE_USER
+  ansible.builtin.slurp:
+    src: "{{ source_user_home }}/.ssh/authorized_keys"
+  register: source_user_keys
+
+#- debug:
+#    msg: "{{ source_user_keys.content | b64decode }}"
+- block:
+  - name: Split TARGET_USER keys into list
+    ansible.builtin.set_fact:
+      source_user_key_lines: "{{ source_user_keys.content | b64decode | split('\n') }}"
+
+  #- debug:
+  #    var: source_user_key_lines
+
+  - name: Add each key from {{ SOURCE_USER }} to {{ TARGET_USER }}'s authorized_keys
+    ansible.posix.authorized_key:
+      user: "{{ TARGET_USER }}"
+      key: "{{ item }}"
+    loop: "{{ source_user_key_lines }}"
+    when: item and item.startswith('ssh-rsa')
+
+  when: source_user_keys.content | d('')

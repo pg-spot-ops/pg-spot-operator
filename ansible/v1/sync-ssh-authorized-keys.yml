@@ -1,0 +1,10 @@
+---
+
+- hosts: all
+  become: yes
+  become_method: sudo
+  any_errors_fatal: true
+  gather_facts: true
+
+  roles:
+    - role: sync-ssh-authorized-keys

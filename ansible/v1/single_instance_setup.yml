@@ -15,6 +15,7 @@
     - role: install_os_pg_prereqs
     - role: os_setup
     - role: init_pg_instance
+    - role: sync-ssh-authorized-keys
     - role: configure_pgbackrest
       when: backup.type | d('none') == "pgbackrest"
     - role: pgbackrest_restore

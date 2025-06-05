@@ -1,0 +1,2 @@
+SOURCE_USER: "{{ vm.login_user | d('pgspotops') }}"
+TARGET_USER: postgres
