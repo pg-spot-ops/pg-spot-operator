@@ -4,6 +4,30 @@ Changelog
 
 (unreleased)
 ------------
+- Add user SSH key also to "postgres" for convenient access. [Kaarel
+  Moppel]
+
+  Only for full setups, i.e. not for --vm-only
+- Make --vm-only 1st loop more robust. [Kaarel Moppel]
+
+  Also check if SSH conn ok
+- Move the Ansible setup_completed_marker to root. [Kaarel Moppel]
+
+  To avoid possible privileges problems on remounting. Also means
+  "postgres" user can't order a reconfigure on the VM by removing the file
+- More robust storage type detection from disk info string. [Kaarel
+  Moppel]
+- Store the actual VM launch time on CMDB re-register. [Kaarel Moppel]
+
+  When CMDB gets wiped. Allows for correct created_on displain in --list-vm-creates
+- None -> N/A in --list-vm-creates. [Kaarel Moppel]
+
+  When no create info avaialble in CMDB, e.g. when Sqlite reset
+
+
+0.9.55 (2025-05-06)
+-------------------
+- Release: version 0.9.55 🚀 [Kaarel Moppel]
 - Add also hourly prices to --check-price output. [Kaarel Moppel]
 
   For easier comparisons with other big clouds, which mostly show hourly
