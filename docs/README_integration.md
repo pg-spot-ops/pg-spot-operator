@@ -8,6 +8,10 @@ they cope with the possible service interruptions of course) by either:
 * Specifying an S3 (or compatible) bucket where to push the connect string
 * Writing the connect string to a file on the engine node
 
+PS The connect string can be outputted in following formats:
+
+`--connstr-format = auto* | ssh | ansible | postgres`
+
 ## Pipe-friendly `--connstr-only` mode
 
 Engine ensures VM, sets up Postgres if needed in quiet mode, prints connstr and exits. Example usage:
