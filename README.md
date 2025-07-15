@@ -5,6 +5,7 @@
 [![Status](https://img.shields.io/badge/status-beta-orange)](https://img.shields.io/badge/status-beta-orange)
 [![Codecov](https://codecov.io/gh/pg-spot-ops/pg-spot-operator/graph/badge.svg?token=DVAAIQXKFO)](https://codecov.io/gh/pg-spot-ops/pg-spot-operator)
 [![Licence](https://img.shields.io/badge/license-Apache_2.0-green)](https://img.shields.io/badge/license-Apache_2.0-green)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/pg-spot-ops/pg-spot-operator)
 
 # PG Spot Operator
 
