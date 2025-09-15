@@ -503,6 +503,11 @@ echo "Starting at `date`"
 
 set -e
 
+# Load profile as otherwise won't work for Cron + custom Ansible install location
+if [ -f ~/.profile ]; then
+  source ~/.profile
+fi
+
 EXTRA_ARGS="{extra_args}"
 
 ansible-galaxy install -r requirements.yml
