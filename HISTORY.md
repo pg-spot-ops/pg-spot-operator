@@ -4,6 +4,48 @@ Changelog
 
 (unreleased)
 ------------
+- Merge branch 'main' into dependabot/github_actions/actions/checkout-5.
+  [Kaarel Moppel]
+- Bump actions/setup-python from 5 to 6. [dependabot[bot]]
+
+  Bumps [actions/setup-python](https://github.com/actions/setup-python) from 5 to 6.
+  - [Release notes](https://github.com/actions/setup-python/releases)
+  - [Commits](https://github.com/actions/setup-python/compare/v5...v6)
+
+  ---
+  updated-dependencies:
+  - dependency-name: actions/setup-python
+    dependency-version: '6'
+    dependency-type: direct:production
+    update-type: version-update:semver-major
+  ...
+- Support Cron + custom Ansible install locations. [Kaarel Moppel]
+
+  The generated action handler script now tries to load the user's env profile file,
+  which should include the Ansible commands
+- Expand action handler exec privs to group as well. [Kaarel Moppel]
+- Bump actions/checkout from 4 to 5. [dependabot[bot]]
+
+  Bumps [actions/checkout](https://github.com/actions/checkout) from 4 to 5.
+  - [Release notes](https://github.com/actions/checkout/releases)
+  - [Changelog](https://github.com/actions/checkout/blob/main/CHANGELOG.md)
+  - [Commits](https://github.com/actions/checkout/compare/v4...v5)
+
+  ---
+  updated-dependencies:
+  - dependency-name: actions/checkout
+    dependency-version: '5'
+    dependency-type: direct:production
+    update-type: version-update:semver-major
+  ...
+- README - add a DeepWiki badge / link. [Kaarel Moppel]
+- List available connect string formats in docs/README_integration.md.
+  [Kaarel Moppel]
+
+
+0.9.56 (2025-06-05)
+-------------------
+- Release: version 0.9.56 🚀 [Kaarel Moppel]
 - Add user SSH key also to "postgres" for convenient access. [Kaarel
   Moppel]
 
