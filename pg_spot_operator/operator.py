@@ -503,6 +503,11 @@ echo "Starting at `date`"
 
 set -e
 
+# Load profile as otherwise won't work for Cron + custom Ansible install location
+if [ -f ~/.profile ]; then
+  source ~/.profile
+fi
+
 EXTRA_ARGS="{extra_args}"
 
 ansible-galaxy install -r requirements.yml
@@ -517,7 +522,7 @@ echo "Done at `date`"
     with open(exec_full_path, "w") as f:
         f.writelines(run_template)
     st = os.stat(exec_full_path)
-    os.chmod(exec_full_path, st.st_mode | stat.S_IEXEC)
+    os.chmod(exec_full_path, st.st_mode | stat.S_IEXEC | stat.S_IXUSR | stat.S_IXGRP)
     return exec_full_path
 
 
