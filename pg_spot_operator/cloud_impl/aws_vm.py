@@ -26,7 +26,7 @@ SPOT_OPERATOR_ID_TAG = "pg-spot-operator-instance"
 SPOT_OPERATOR_VOLUME_ID_TAG = "pg-spot-operator-volume-id"
 STORAGE_TYPE_NETWORK = "network"
 MAX_WAIT_SECONDS: int = 300
-OS_IMAGE_FAMILY = "debian-12"
+OS_IMAGE_FAMILY = "debian-13"
 
 
 logger = logging.getLogger(__name__)
