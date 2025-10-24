@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
+from pg_spot_operator.cloud_impl.aws_vm import STORAGE_TYPE_NETWORK
 from pg_spot_operator.util import pg_size_bytes
 
 logger = logging.getLogger(__name__)
@@ -71,6 +72,17 @@ def apply_base_tuning(ti: TuningInput) -> dict[str, Any]:
         o["max_parallel_workers"] = ti.cpus
         o["max_parallel_workers_per_gather"] = int(min(ti.cpus / 4, 4)) or 2
         o["max_parallel_maintenance_workers"] = int(min(ti.cpus / 4, 4)) or 2
+    if ti.cpus >= 16 and ti.postgres_version >= 18:
+        # For (16, 20, 32, 64, 96)  CPU-s:
+        # EBS -> [4, 5, 8, 16, 16]
+        # Local storage -> [3, 4, 6, 12, 16]
+        o["io_workers"] = int(
+            min(
+                ti.cpus
+                / (4 if ti.storage_type == STORAGE_TYPE_NETWORK else 5),
+                16,
+            )
+        )
 
     return o
 
