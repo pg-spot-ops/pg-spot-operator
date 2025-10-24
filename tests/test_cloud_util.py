@@ -7,6 +7,7 @@ from pg_spot_operator.cloud_impl.cloud_util import (
     infer_cpu_arch_from_aws_instance_type_name,
     network_volume_nr_to_device_name,
     add_aws_tags_dict_from_list_tags,
+    extract_instance_storage_disk_count_from_aws_pricing_storage_string,
 )
 from pg_spot_operator.constants import CPU_ARCH_ARM, CPU_ARCH_X86
 
@@ -77,3 +78,37 @@ def test_aws_list_tags_to_dict():
     assert kv
     assert "TagsDict" in kv[0]
     assert kv[0]["TagsDict"]["pg-spot-operator-instance"] == "remount3"
+
+
+def test_extract_instance_storage_disk_count_from_aws_pricing_storage_string():
+    assert (
+        extract_instance_storage_disk_count_from_aws_pricing_storage_string(
+            {"Storage": "8 x 7500 NVMe SSD"}
+        )
+        == 8
+    )
+    assert (
+        extract_instance_storage_disk_count_from_aws_pricing_storage_string(
+            {"Storage": "900 GB NVMe SSD"}
+        )
+        == 1
+    )
+    assert (
+        extract_instance_storage_disk_count_from_aws_pricing_storage_string(
+            {"Storage": "EBS only"}
+        )
+        == 0
+    )
+    assert (
+        extract_instance_storage_disk_count_from_aws_pricing_storage_string(
+            {
+                "InstanceStorageInfo": {
+                    "TotalSizeInGB": 15200,
+                    "Disks": [{"SizeInGB": 1900, "Count": 8, "Type": "ssd"}],
+                    "NvmeSupport": "required",
+                    "EncryptionSupport": "required",
+                },
+            }
+        )
+        == 8
+    )

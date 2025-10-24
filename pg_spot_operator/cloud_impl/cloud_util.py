@@ -115,6 +115,44 @@ def parse_aws_pricing_json_storage_string(
         return size, storage_speed_class
 
 
+def extract_instance_storage_disk_count_from_aws_pricing_storage_string(
+    instance_description: dict,
+) -> int:
+    r"""Storage strings look something like:
+    http "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/EU%20(Stockholm)/Linux/index.json" \
+      | jq | grep '"Storage":'  | sed 's/^[ \t]*\(.*[^ \t]\)[ \t]*$/\1/'  | sort | uniq
+    ...
+    "Storage": "8 x 7500 NVMe SSD", -> 8
+    "Storage": "900 GB NVMe SSD", -> 1
+    "Storage": "EBS only", -> 0
+    """
+    if not instance_description:
+        return 0
+    if instance_description.get("Storage"):  # Static pricing data
+        storage_string = instance_description["Storage"]
+        if storage_string.upper().startswith("EBS"):
+            return 0
+        if " x " in storage_string:
+            # "2 x 1900 NVMe SSD"
+            splits = storage_string.split(" x ")
+            if len(splits) == 2 and splits[0].strip().isdigit():
+                return int(splits[0].strip())
+    elif instance_description.get("InstanceStorageInfo"):  # boto3 data
+        iso = instance_description["InstanceStorageInfo"]
+        # "InstanceStorageInfo": {
+        #     "TotalSizeInGB": 59,
+        #     "Disks": [{"SizeInGB": 59, "Count": 1, "Type": "ssd"}],
+        #     "NvmeSupport": "required",
+        #     "EncryptionSupport": "required",
+        # },
+        if iso.get("Disks"):
+            disks = 0
+            for d in iso.get("Disks"):
+                disks += d.get("Count", 0)
+            return disks
+    return 1
+
+
 def extract_instance_storage_size_and_type_from_aws_pricing_storage_string(
     storage_string: str,
 ) -> tuple[int, str]:
@@ -126,8 +164,10 @@ def extract_instance_storage_size_and_type_from_aws_pricing_storage_string(
     "Storage": "8 x 940 NVMe SSD",
     "Storage": "900 GB NVMe SSD",
     "Storage": "EBS only",
+
+    Returns a tuple of total disk(s) size and storage speed class (hdd, ssd, nvme)
     """
-    if "EBS only" in storage_string:
+    if storage_string.upper().startswith("EBS"):
         return 0, ""
     if " x " in storage_string:
         # "2 x 1900 NVMe SSD"

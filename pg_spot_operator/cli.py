@@ -27,6 +27,7 @@ from pg_spot_operator.cloud_impl.cloud_structs import (
 )
 from pg_spot_operator.cloud_impl.cloud_util import (
     add_aws_tags_dict_from_list_tags,
+    extract_instance_storage_disk_count_from_aws_pricing_storage_string,
     is_explicit_aws_region_code,
     resolve_regions_from_fuzzy_input,
 )
@@ -790,14 +791,21 @@ def display_selected_skus_for_region(
         max_inst_stor_len = max(
             [
                 len(
-                    f"{x.instance_storage} GB {x.storage_speed_class}"
-                    if x.instance_storage
-                    else "EBS only"
+                    f"{i.instance_storage} GB {i.storage_speed_class}"
+                    if i.instance_storage
+                    else (
+                        "EBS only"
+                        if not m.vm.storage_min
+                        else f"EBS (~${int(m.vm.storage_min * APPROX_EBS_PRICE_PER_GB)}/mo)"
+                    )
                 )
                 for x in selected_skus
             ]
         )
         ram_gb = round(i.ram_mb / 1024)
+        disks_count = extract_instance_storage_disk_count_from_aws_pricing_storage_string(
+            i.provider_description
+        )
         table.append(
             [
                 i.region.ljust(max_reg_len, " "),
@@ -806,7 +814,14 @@ def display_selected_skus_for_region(
                 i.cpu,
                 f"{ram_gb} GB",
                 (
-                    f"{i.instance_storage} GB {i.storage_speed_class}"
+                    (
+                        f"{i.instance_storage} GB {i.storage_speed_class}"
+                        + (
+                            f" ({disks_count} disks)"
+                            if disks_count > 1
+                            else ""
+                        )
+                    )
                     if i.instance_storage
                     else (
                         "EBS only"
