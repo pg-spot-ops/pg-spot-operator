@@ -45,7 +45,7 @@ default_manifest:
 #              # in case expiration_date set
 #    app: backend
   postgres:
-    version: 17                   # Optional. Minimum supported version is v15. Defaults to latest stable
+    version: 18                   # Optional. Minimum supported version is v15. Defaults to latest stable
     admin_is_superuser: false
     admin_user:                   # Set if remote Postgres access needed
     admin_password:          # Needs to be provided if admin_user set
