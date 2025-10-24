@@ -33,6 +33,7 @@ from pg_spot_operator.cloud_impl.cloud_util import (
 from pg_spot_operator.cmdb_impl import schema_manager
 from pg_spot_operator.constants import (
     ALL_ENABLED_REGIONS,
+    APPROX_EBS_PRICE_PER_GB,
     BACKUP_TYPE_NONE,
     CONNSTR_FORMAT_AUTO,
     DEFAULT_SSH_PUBKEY_PATH,
@@ -761,7 +762,7 @@ def ensure_single_instance_running(instance_name: str):
 
 
 def display_selected_skus_for_region(
-    selected_skus: list[InstanceTypeInfo],
+    selected_skus: list[InstanceTypeInfo], m: InstanceManifest
 ) -> None:
     table: list[list] = [
         [
@@ -807,7 +808,11 @@ def display_selected_skus_for_region(
                 (
                     f"{i.instance_storage} GB {i.storage_speed_class}"
                     if i.instance_storage
-                    else "EBS only"
+                    else (
+                        "EBS only"
+                        if not m.vm.storage_min
+                        else f"EBS (~${int(m.vm.storage_min * APPROX_EBS_PRICE_PER_GB)}/mo)"
+                    )
                 ).ljust(max_inst_stor_len),
                 f"{i.monthly_spot_price} ({i.hourly_spot_price}/h)",
                 f"{i.monthly_ondemand_price} ({i.hourly_ondemand_price}/h)",
@@ -909,7 +914,7 @@ def resolve_manifest_and_display_price(
             m.vm.instance_selection_strategy,
         )
 
-    display_selected_skus_for_region(selected_skus)
+    display_selected_skus_for_region(selected_skus, m)
 
     return
 

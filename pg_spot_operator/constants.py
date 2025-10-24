@@ -48,3 +48,6 @@ CONNSTR_FORMAT_ANSIBLE = "ansible"
 CONNSTR_FORMAT_POSTGRES = "postgres"
 
 DEFAULT_VM_LOGIN_USER = "pgspotops"
+
+# https://aws.amazon.com/ebs/pricing/
+APPROX_EBS_PRICE_PER_GB = 0.08  # For most regions as of 2025 Oct
