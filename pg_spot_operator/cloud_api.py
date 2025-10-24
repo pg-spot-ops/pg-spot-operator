@@ -84,8 +84,11 @@ def resolve_hardware_requirements_to_instance_types(
 
     for region in regions or [m.region]:
         try:
-            logger.debug("Processing region %s ...", region)
             if use_boto3:
+                logger.debug(
+                    "Fetching instance types for region %s using boto3 ...",
+                    region,
+                )
                 all_boto3_instance_types_for_region = (
                     get_all_ec2_spot_instance_types(
                         region,
@@ -100,6 +103,10 @@ def resolve_hardware_requirements_to_instance_types(
                     )
                 )
             else:
+                logger.debug(
+                    "Fetching instance types for region %s using AWS static pricing files ...",
+                    region,
+                )
                 all_instances_for_region = (
                     get_all_instance_types_from_aws_regional_pricing_info(
                         region, get_aws_static_ondemand_pricing_info(region)

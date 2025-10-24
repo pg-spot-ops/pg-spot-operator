@@ -384,6 +384,11 @@ def filter_instance_types_by_hw_req(
             ):
                 continue
             if (
+                storage_speed_class.lower() == "ssd"
+                and ii.storage_speed_class == "hdd"
+            ):
+                continue
+            if (
                 storage_speed_class == "nvme"
                 and ii.storage_speed_class != "nvme"
             ):
