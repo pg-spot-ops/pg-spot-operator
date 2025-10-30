@@ -956,8 +956,9 @@ def destroy_instance(
     )
     logger.info("Volumes found: %s", vol_ids_and_sizes)
     if not dry_run and vol_ids_and_sizes:
-        logger.info("OK. Sleeping 60s before deleting volumes ...")
-        time.sleep(60)
+        if backing_ins_ids:
+            logger.info("OK. Sleeping 60s before deleting volumes ...")
+            time.sleep(60)
         for vol_id, size in vol_ids_and_sizes:
             logger.info("Deleting VolumeId %s (%s GB) ...", vol_id, size)
             delete_volume_in_region(m.region, vol_id)
@@ -1487,7 +1488,7 @@ def do_main_loop(
                             m.instance_name
                         )  # To make sure externally signalled instance doesn't get resurrected on this engine node")
 
-            if not instance and m.is_expired():
+            if not instance and m.is_expired() and not cli_teardown:
                 if first_loop and not current_manifest_applied_successfully:
                     destroyed = destroy_instance(m)
                 else:
