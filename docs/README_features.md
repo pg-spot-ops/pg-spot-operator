@@ -5,7 +5,7 @@
 * Can just provision the VMs without Postgres setup via `--vm-only`
 * Supports 3 connect string propagation integrations - a generic callback script, writing to S3, pipe mode
 * Installs Postgres from official PGDG repos, meaning you get instant minor version updates
-* Supports Postgres versions v14-v17 (defaults to v16 currently if not specified)
+* Supports Postgres versions v14-v18 (defaults to latest major version if not specified)
 * Supports all extensions available from the official repos
 * Four instance selection strategies - "balanced" (def.), "cheapest", "eviction-rate", "random"
 * Allows also to explicitly specify a list of preferred instance types and cheapest used

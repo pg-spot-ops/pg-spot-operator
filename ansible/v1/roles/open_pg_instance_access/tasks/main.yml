@@ -2,10 +2,10 @@
 - name: Set up postgresql.conf in conf.d
   ansible.builtin.template:
     src: "pg_hba.conf.j2"
-    dest: "/etc/postgresql/{{ postgres.version|d(16) }}/{{ postgres_cluster_name }}/pg_hba.conf"
+    dest: "/etc/postgresql/{{ postgres.version|d(18) }}/{{ postgres_cluster_name }}/pg_hba.conf"
     owner: postgres
     group: postgres
     mode: "640"
 
 - name: Reload Postgres config
-  ansible.builtin.service: "name=postgresql@{{ postgres.version|d(16) }}-{{ postgres_cluster_name }} state=reloaded"
+  ansible.builtin.service: "name=postgresql@{{ postgres.version|d(18) }}-{{ postgres_cluster_name }} state=reloaded"

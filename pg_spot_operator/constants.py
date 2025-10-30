@@ -5,7 +5,7 @@ CLOUD_GCP = "gcp"
 CLOUD_AZURE = "azure"
 CLOUD_VAGRANT_LIBVIRT = "vagrant-libvirt"
 
-DEFAULT_POSTGRES_MAJOR_VER = 16
+DEFAULT_POSTGRES_MAJOR_VER = 18
 MANIFEST_TYPE_INSTANCE: str = "pg_spot_operator_instance"
 
 # Attached to all created cloud resources

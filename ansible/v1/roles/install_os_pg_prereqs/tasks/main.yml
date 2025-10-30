@@ -33,7 +33,7 @@
 
 - name: Install postgres
   ansible.builtin.apt:
-    name: postgresql-{{ postgres.version | d(16) }}
+    name: postgresql-{{ postgres.version | d(18) }}
     state: present
   register: result
   until: result is success
@@ -67,7 +67,7 @@
 
   - name: Install Timescale
     ansible.builtin.apt:
-      name: timescaledb-2-postgresql-{{ postgres.version | d(16) }}
+      name: timescaledb-2-postgresql-{{ postgres.version | d(18) }}
       state: present
 
   when: '"timescaledb" in postgres.extensions | d("")'

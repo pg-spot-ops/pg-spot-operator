@@ -155,7 +155,7 @@ def apply_postgres_tuning(
     """Common starting point for all other profiles"""
 
     if ti.postgres_version < 14:
-        raise Exception("Postgres v14 and below not supported")
+        raise Exception("Postgres v13 and below not supported")
 
     logger.debug("Tuning Postgres based on following HW info: %s", ti)
     base_tuned = apply_base_tuning(ti)
