@@ -379,6 +379,7 @@ def compile_manifest_from_cmdline_params(
     m.vm.ram_min = args.ram_min
     m.vm.ram_max = args.ram_max
     m.vm.os_disk_size = args.os_disk_size
+    m.vm.no_mount_disks = args.no_mount_disks
     m.vm.storage_min = args.storage_min
     m.vm.storage_type = args.storage_type
     m.vm.storage_speed_class = args.storage_speed_class.lower()

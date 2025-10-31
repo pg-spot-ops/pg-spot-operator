@@ -87,6 +87,7 @@ class SectionVm(BaseModel):
     storage_type: str = "network"
     storage_speed_class: str = "ssd"
     os_disk_size: int = 20
+    no_mount_disks: bool = False
     instance_types: list[str] = field(
         default_factory=list
     )  # Min CPU etc. will be ignored then

@@ -3,14 +3,14 @@
 - debug:
     var: vm.storage_type|d('network')
 
-#- name: Detect unmounted disks
-#  debug:
-#    var: item
-#  with_dict: "{{ ansible_devices}}"
-#  when:
-#    - not item.key.startswith('sr')
-#    - not item.key.startswith('dm')
-#    - not item.key.startswith('loop')
+- name: Detect unmounted disks
+  debug:
+    var: item
+  with_dict: "{{ ansible_devices }}"
+  when:
+    - not item.key.startswith('sr')
+    - not item.key.startswith('dm')
+    - not item.key.startswith('loop')
 
 - name: Var to hold unmounted disks
   set_fact:
@@ -32,6 +32,11 @@
 - name: Disks to mount
   debug:
     var: devices_to_mount
+
+- name: Fail if no disks found to mount but vm.no_mount_disks set
+  fail:
+    msg: No data disks found to mount and vm.no_mount_disks not set
+  when: not devices_to_mount and not vm.no_mount_disks|d(False)
 
 - name: Ensure Postgres home exists
   ansible.builtin.file:
