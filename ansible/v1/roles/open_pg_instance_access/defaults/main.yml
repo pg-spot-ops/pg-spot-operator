@@ -6,3 +6,4 @@ postgres_cluster_name: spot
 def_pg_hba_lines:
   - "host all postgres 0.0.0.0/0 reject"
   - "hostssl all all 0.0.0.0/0 scram-sha-256"
+  - "hostssl replication all 0.0.0.0/0 scram-sha-256"
