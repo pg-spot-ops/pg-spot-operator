@@ -58,28 +58,37 @@
 - name: flush_handlers
   ansible.builtin.meta: flush_handlers
 
-- name: Ensure postgres started
-  ansible.builtin.service: "name=postgresql@{{ postgres_version }}-{{ postgres_cluster_name }} state=started"
+- block:
 
-- name: Check if Postgres restart required
-  become: true
-  become_user: postgres
-  ansible.builtin.command:
-    "psql -p 5432 -XAtc \"select bool_or(pending_restart) from pg_settings;\""
-  register: pending_restart
-  changed_when: pending_restart.stdout == 't'
+  - name: Ensure postgres started
+    ansible.builtin.service: "name=postgresql@{{ postgres_version }}-{{ postgres_cluster_name }} state=started"
 
-- name: Restart postgres if necessary
-  service: name=postgresql state=restarted
-  when: pending_restart.stdout == 't'
+  - name: Check if Postgres restart required
+    become: true
+    become_user: postgres
+    ansible.builtin.command:
+      "psql -p 5432 -XAtc \"select bool_or(pending_restart) from pg_settings;\""
+    register: pending_restart
+    changed_when: pending_restart.stdout == 't'
 
-- name: Add a test table to quickly see if restore worked
-  become: true
-  become_user: postgres
-  ansible.builtin.command: "psql -c 'create table dummy as select now() created_on'"
-  when:
-    - add_dummy_data is truthy
-    - not cluster_datadir_exists.stat.exists
+  - name: Restart postgres if necessary
+    service: name=postgresql state=restarted
+    when: pending_restart.stdout == 't'
 
-- name: Extra setup - users / DBs. Not needed when restoring from a backup
-  ansible.builtin.include_tasks: optional_user_db_setup.yml
+  - name: Add a test table to quickly see if restore worked
+    become: true
+    become_user: postgres
+    ansible.builtin.command: "psql -c 'create table dummy as select now() created_on'"
+    when:
+      - add_dummy_data is truthy
+      - not cluster_datadir_exists.stat.exists
+
+  - name: Extra setup - users / DBs. Not needed when restoring from a backup
+    ansible.builtin.include_tasks: optional_user_db_setup.yml
+
+  when: not postgres.primary_host|d('')
+
+# postgres.primary_host set = replica setup
+- name: Replica setup via pg_basebackup
+  ansible.builtin.include_tasks: replica_setup.yml
+  when: postgres.primary_host|d('')

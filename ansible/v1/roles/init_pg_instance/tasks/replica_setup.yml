@@ -1,0 +1,63 @@
+---
+- name: Assert primary_host
+  ansible.builtin.assert:
+    that: postgres.primary_host|d('')
+    quiet: true
+
+- name: Assert primary_replication_user
+  ansible.builtin.assert:
+    that: postgres.primary_replication_user|d('')
+    quiet: true
+
+- name: Assert primary_replication_password
+  ansible.builtin.assert:
+    that: postgres.primary_replication_password|d('')
+    quiet: true
+
+- name: Ensure .pgpass
+  become: true
+  become_user: postgres
+  ansible.builtin.file:
+    path:  ~/.pgpass
+    owner: postgres
+    group: postgres
+    state: touch
+    mode: "0600"
+
+# Ensure / overwrite the password line, respecting any user modifications
+- name: Overwrite local app user pass
+  become: true
+  become_user: postgres
+  ansible.builtin.lineinfile:
+    path: ~/.pgpass
+    regexp: "{{ postgres.primary_host }}:5432:*:{{ postgres.primary_replication_user }}"
+    line: "{{ postgres.primary_host }}:5432:*:{{ postgres.primary_replication_user }}:{{ postgres.primary_replication_password }}"
+    owner: postgres
+    group: postgres
+    mode: "0600"
+
+- name: Ensure postgres stopped
+  ansible.builtin.service: name=postgresql state=stopped
+
+- name: Clean data directory
+  become: true
+  become_user: postgres
+  ansible.builtin.file:
+    path: "{{ postgres_data_directory }}"
+    state: absent
+
+- name: Pull the basebackup
+  become: true
+  become_user: postgres
+  ansible.builtin.command: >
+    pg_basebackup
+    -h {{ postgres.primary_host }}
+    -D {{ postgres_data_directory }}
+    -U {{ postgres.primary_replication_user }}
+    -vP
+    --no-password
+    --checkpoint=fast
+    --write-recovery-conf
+
+- name: Ensure postgres started
+  ansible.builtin.service: name=postgresql state=started

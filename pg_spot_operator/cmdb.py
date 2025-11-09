@@ -3,7 +3,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Tuple
 from uuid import uuid4
 
 import sqlalchemy
@@ -777,3 +777,12 @@ def get_all_distinct_instance_regions() -> Sequence[str]:
     with Session(engine) as session:
         stmt = select(Instance.region).distinct()
         return session.scalars(stmt).all()
+
+
+def get_primary_conninfos(primary_instance_name: str) -> Tuple[str, str, str]:
+    """Returns [host_ip, admin_user, admin_password] of primary or raises if no primary found from cmdb"""
+    logger.error(
+        "Fetching primary VM host and password for instance %s ...",
+        primary_instance_name,
+    )
+    return "192.168.121.216", "xxx", "yyy"

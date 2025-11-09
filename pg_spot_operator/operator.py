@@ -43,6 +43,7 @@ from pg_spot_operator.cmdb import (
     get_instance_connect_string,
     get_instance_connect_string_postgres,
     get_latest_vm_by_uuid,
+    get_primary_conninfos,
     get_ssh_connstr,
 )
 from pg_spot_operator.constants import (
@@ -1609,6 +1610,65 @@ def do_main_loop(
 
                     cmdb.mark_manifest_snapshot_as_succeeded(m)
                 else:
+                    if not m.primary_instance_name:
+                        logger.info(
+                            "Starting Postgres primary setup on %s ...",
+                            m.vm.host,
+                        )
+                    else:
+                        if (
+                            not m.postgres.primary_replication_user
+                            and m.postgres.admin_user
+                        ):
+                            m.postgres.primary_replication_user = (
+                                m.postgres.admin_user
+                            )
+                        if (
+                            not m.postgres.primary_replication_password
+                            and m.postgres.admin_password
+                        ):
+                            m.postgres.primary_replication_password = (
+                                m.postgres.admin_password
+                            )
+
+                        if not (
+                            m.postgres.primary_host
+                            and m.postgres.primary_replication_user
+                            and m.postgres.primary_replication_password
+                        ):
+                            (
+                                m.postgres.primary_host,
+                                m.postgres.primary_replication_user,
+                                m.postgres.primary_replication_password,
+                            ) = get_primary_conninfos(m.primary_instance_name)
+                            if (
+                                "postgres" not in m.session_vars
+                            ):  # PS Setting m.postgres.primary_host won't carry over to instance_manifest.yml
+                                m.session_vars["postgres"] = {}
+                            m.session_vars["postgres"][
+                                "primary_host"
+                            ] = m.postgres.primary_host
+                            m.session_vars["postgres"][
+                                "primary_replication_user"
+                            ] = m.postgres.primary_replication_user
+                            m.session_vars["postgres"][
+                                "primary_replication_password"
+                            ] = m.postgres.primary_replication_password
+
+                        if not (
+                            m.postgres.primary_host
+                            and m.postgres.primary_replication_user
+                            and m.postgres.primary_replication_password
+                        ):
+                            raise Exception(
+                                "For replica building need - primary_host, primary_replication_user, primary_replication_password"
+                            )
+
+                        logger.info(
+                            "Starting Postgres replica setup - primary host = %s ",
+                            m.postgres.primary_host,
+                        )
+
                     run_action(constants.ACTION_INSTANCE_SETUP, m)
 
                     write_connstr_to_s3_if_bucket_set(m)

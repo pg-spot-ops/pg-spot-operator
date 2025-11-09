@@ -66,6 +66,9 @@ class SectionPostgres(BaseModel):
     extensions: list[str] = field(default_factory=list)
     pg_hba_lines: list[str] | None = None
     initdb_opts: list[str] = field(default_factory=list)
+    primary_host: str | None = None
+    primary_replication_user: str | None = None
+    primary_replication_password: str | None = None
 
 
 class SectionVm(BaseModel):
@@ -230,6 +233,7 @@ class InstanceManifest(BaseModel):
     region: str = ""
     instance_name: str
     # Optional fields
+    primary_instance_name: str = ""
     private_ip_only: bool = False
     static_ip_addresses: bool = (
         False  # If True we create an explicit NIC resource
