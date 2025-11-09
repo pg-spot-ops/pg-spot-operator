@@ -36,7 +36,7 @@
 - name: Fail if no disks found to mount but vm.no_mount_disks set
   fail:
     msg: No data disks found to mount and vm.no_mount_disks not set
-  when: not devices_to_mount and not vm.no_mount_disks|d(False)
+  when: not devices_to_mount and not vm.no_mount_disks|d(False) and not vm.host|d('')
 
 - name: Ensure Postgres home exists
   ansible.builtin.file:
