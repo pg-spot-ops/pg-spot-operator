@@ -1492,7 +1492,6 @@ def any_action_flags_set(a: ArgumentParser) -> bool:
         or a.instance_types
         or a.instance_family
         or a.vm_only
-        or a.vm_host
         or a.cpu_min
         or a.storage_min
         or a.teardown
@@ -1536,6 +1535,9 @@ def main():  # pragma: no cover
     )
 
     if not any_action_flags_set(args):
+        if args.vm_host and not args.instance_name:
+            logger.error("Custom hosts still need --instance-name")
+            exit(1)
         args.print_help()
         exit(0)
 
