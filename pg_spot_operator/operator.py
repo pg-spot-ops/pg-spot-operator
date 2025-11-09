@@ -1509,7 +1509,7 @@ def do_main_loop(
                 raise UserExit()
 
             if (
-                prev_success_manifest
+                prev_success_manifest and not m.vm.host
             ):  # HW reqs might have changed so that need to
                 drop_old_instance_if_main_hw_reqs_changed(m, dry_run)
 
