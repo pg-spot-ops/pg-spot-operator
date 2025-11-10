@@ -786,7 +786,7 @@ def get_all_distinct_instance_regions() -> Sequence[str]:
 
 def get_primary_conninfos_for_replica_building(
     primary_instance_name: str,
-) -> Tuple[str, str | None, str | None]:
+) -> Tuple[str | None, str | None, str | None]:
     """Returns [host_ip, admin_user, admin_password] of primary or raises if no primary found from cmdb"""
     logger.debug(
         "Fetching primary VM host and password for instance %s ...",

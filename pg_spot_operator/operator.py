@@ -1362,6 +1362,58 @@ def drop_old_instance_if_main_hw_reqs_changed(
     return True
 
 
+def fetch_primary_infos_for_replica_building(m: InstanceManifest):
+    """Replica building requires: primary host IP, username, password.
+    If no primary_replication_user/password are specified use normal admin user/password if set
+    """
+    if not m.postgres.primary_replication_user and m.postgres.admin_user:
+        m.postgres.primary_replication_user = m.postgres.admin_user
+
+    if (
+        not m.postgres.primary_replication_password
+        and m.postgres.admin_password
+    ):
+        m.postgres.primary_replication_password = m.postgres.admin_password
+
+    primary_replication_user: str | None = None
+    primary_replication_password: str | None = None
+    if not m.postgres.primary_host:
+        (
+            m.postgres.primary_host,
+            primary_replication_user,
+            primary_replication_password,
+        ) = get_primary_conninfos_for_replica_building(m.primary_instance_name)
+
+    if not m.postgres.primary_replication_user and primary_replication_user:
+        m.postgres.primary_replication_user = primary_replication_user
+    if (
+        not m.postgres.primary_replication_password
+        and primary_replication_password
+    ):
+        m.postgres.primary_replication_password = primary_replication_password
+
+    if not (
+        m.postgres.primary_host
+        and m.postgres.primary_replication_user
+        and m.postgres.primary_replication_password
+    ):
+        raise Exception(
+            "For replica building need - primary_host, primary_replication_user, primary_replication_password"
+        )
+
+    if (
+        "postgres" not in m.session_vars
+    ):  # PS Setting m.postgres.primary_host won't carry over to instance_manifest.yml
+        m.session_vars["postgres"] = {}
+        m.session_vars["postgres"]["primary_host"] = m.postgres.primary_host
+        m.session_vars["postgres"][
+            "primary_replication_user"
+        ] = m.postgres.primary_replication_user
+        m.session_vars["postgres"][
+            "primary_replication_password"
+        ] = m.postgres.primary_replication_password
+
+
 def do_main_loop(
     cli_dry_run: bool = False,
     cli_debug: bool = False,
@@ -1616,55 +1668,7 @@ def do_main_loop(
                             m.vm.host,
                         )
                     else:
-                        if (
-                            not m.postgres.primary_replication_user
-                            and m.postgres.admin_user
-                        ):
-                            m.postgres.primary_replication_user = (
-                                m.postgres.admin_user
-                            )
-                        if (
-                            not m.postgres.primary_replication_password
-                            and m.postgres.admin_password
-                        ):
-                            m.postgres.primary_replication_password = (
-                                m.postgres.admin_password
-                            )
-
-                        if not (
-                            m.postgres.primary_host
-                            and m.postgres.primary_replication_user
-                            and m.postgres.primary_replication_password
-                        ):
-                            (
-                                m.postgres.primary_host,
-                                m.postgres.primary_replication_user,
-                                m.postgres.primary_replication_password,
-                            ) = get_primary_conninfos_for_replica_building(
-                                m.primary_instance_name
-                            )
-                            if (
-                                "postgres" not in m.session_vars
-                            ):  # PS Setting m.postgres.primary_host won't carry over to instance_manifest.yml
-                                m.session_vars["postgres"] = {}
-                            m.session_vars["postgres"][
-                                "primary_host"
-                            ] = m.postgres.primary_host
-                            m.session_vars["postgres"][
-                                "primary_replication_user"
-                            ] = m.postgres.primary_replication_user
-                            m.session_vars["postgres"][
-                                "primary_replication_password"
-                            ] = m.postgres.primary_replication_password
-
-                        if not (
-                            m.postgres.primary_host
-                            and m.postgres.primary_replication_user
-                            and m.postgres.primary_replication_password
-                        ):
-                            raise Exception(
-                                "For replica building need - primary_host, primary_replication_user, primary_replication_password"
-                            )
+                        fetch_primary_infos_for_replica_building(m)
 
                         logger.info(
                             "Starting Postgres replica setup - primary host = %s ",
