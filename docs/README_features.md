@@ -9,7 +9,7 @@
 * Supports all extensions available from the official repos
 * Four instance selection strategies - "balanced" (def.), "cheapest", "eviction-rate", "random"
 * Allows also to explicitly specify a list of preferred instance types and cheapest used
-* Uses Debian 12 base images / AMI-s
+* Uses Debian 13 base images / AMI-s
 * Allows override of ALL `postgresql.conf` settings if user wishes so
 * Built-in basic Postgres tuning profiles for most common workloads (default, oltp, analytics, web, throwaway)
 * Maintains a single instance per daemon to keep things simple
@@ -22,6 +22,8 @@
 * Fire-and-forget/self-terminating mode for the VM to expire itself automatically on expiration date
 * Optional on-the-VM detailed hardware monitoring support via node_exporter + Grafana
 * Supports Ansible Vault encrypted secrets in the manifests
+* Supports adding replicas to a previously built primary via the `--primary-instance-name` param. AZ placement is random by default,
+  use `--zone` to set.
 
 ## Non-features
 

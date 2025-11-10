@@ -362,7 +362,7 @@ one can save thousands by going from a 99.95% SLA to 99.9%!
 Below a list of cool features that could be added. Sponsoring the project is a good way to see some of them get done.
 
   * Hybrid-provisioning - fall back to regular non-spot VMs once downtime budget burned
-  * HA / multi-node setups
+  * HA setups via Patroni (currently only standalone replicas can be built using the `--primary-instance-name` flag)
   * GCP and Azure support
   * Volume extensions
   * Stop / sleep schedules for even more savings
