@@ -16,6 +16,7 @@ from pg_spot_operator.constants import (
     BACKUP_TYPE_NONE,
     BACKUP_TYPE_PGBACKREST,
     CLOUD_AWS,
+    CLOUD_UNKNOWN,
     DEFAULT_POSTGRES_MAJOR_VER,
     DEFAULT_VM_LOGIN_USER,
     SPOT_OPERATOR_EXPIRES_TAG,
@@ -404,7 +405,7 @@ class InstanceManifest(BaseModel):
 
     @model_validator(mode="after")
     def check_aws(self) -> Self:
-        if self.cloud != CLOUD_AWS:
+        if not (self.cloud == CLOUD_AWS or self.cloud == CLOUD_UNKNOWN):
             raise ValueError("Only aws cloud supported for now")
         return self
 

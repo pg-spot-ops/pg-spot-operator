@@ -3,6 +3,7 @@ DEFAULT_API_VERSION: str = "v1"
 CLOUD_AWS = "aws"
 CLOUD_GCP = "gcp"
 CLOUD_AZURE = "azure"
+CLOUD_UNKNOWN = "unknown"
 CLOUD_VAGRANT_LIBVIRT = "vagrant-libvirt"
 
 DEFAULT_POSTGRES_MAJOR_VER = 18

@@ -43,7 +43,7 @@ from pg_spot_operator.cmdb import (
     get_instance_connect_string,
     get_instance_connect_string_postgres,
     get_latest_vm_by_uuid,
-    get_primary_conninfos,
+    get_primary_conninfos_for_replica_building,
     get_ssh_connstr,
 )
 from pg_spot_operator.constants import (
@@ -1640,7 +1640,9 @@ def do_main_loop(
                                 m.postgres.primary_host,
                                 m.postgres.primary_replication_user,
                                 m.postgres.primary_replication_password,
-                            ) = get_primary_conninfos(m.primary_instance_name)
+                            ) = get_primary_conninfos_for_replica_building(
+                                m.primary_instance_name
+                            )
                             if (
                                 "postgres" not in m.session_vars
                             ):  # PS Setting m.postgres.primary_host won't carry over to instance_manifest.yml

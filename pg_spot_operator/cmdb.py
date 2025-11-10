@@ -223,6 +223,7 @@ def register_instance_or_get_uuid(
         i = Instance()
         i.uuid = m.uuid
         i.cloud = m.cloud
+        logger.error("region %s cloud %s", m.region, m.cloud)
         i.region = m.region
         i.instance_name = m.instance_name
         i.postgres_version = m.postgres.version
@@ -779,7 +780,9 @@ def get_all_distinct_instance_regions() -> Sequence[str]:
         return session.scalars(stmt).all()
 
 
-def get_primary_conninfos(primary_instance_name: str) -> Tuple[str, str, str]:
+def get_primary_conninfos_for_replica_building(
+    primary_instance_name: str,
+) -> Tuple[str, str, str]:
     """Returns [host_ip, admin_user, admin_password] of primary or raises if no primary found from cmdb"""
     logger.error(
         "Fetching primary VM host and password for instance %s ...",

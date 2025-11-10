@@ -36,6 +36,7 @@ from pg_spot_operator.constants import (
     ALL_ENABLED_REGIONS,
     APPROX_EBS_PRICE_PER_GB,
     BACKUP_TYPE_NONE,
+    CLOUD_UNKNOWN,
     CONNSTR_FORMAT_AUTO,
     DEFAULT_SSH_PUBKEY_PATH,
     DEFAULT_VM_LOGIN_USER,
@@ -347,7 +348,7 @@ def compile_manifest_from_cmdline_params(
 
     m = InstanceManifest(
         api_version="v1",
-        cloud="aws",
+        cloud=args.cloud,
         kind="pg_spot_operator_instance",
         instance_name=args.instance_name,
         region=(
@@ -1544,6 +1545,9 @@ def main():  # pragma: no cover
             exit(1)
         args.print_help()
         exit(0)
+
+    if args.vm_host:  # Using an existing VM
+        args.cloud = CLOUD_UNKNOWN
 
     if args.list_regions:
         list_regions_and_exit()
