@@ -60,7 +60,6 @@ class Instance(Base):
     tuning_profile: Mapped[Optional[str]]
     user_tags: Mapped[dict] = mapped_column(JSON, nullable=False)
     admin_user: Mapped[Optional[str]]
-    admin_password: Mapped[Optional[str]]
     admin_is_real_superuser: Mapped[Optional[bool]]
     created_on: Mapped[datetime] = mapped_column(
         DateTime, server_default=text("DEFAULT")
@@ -236,7 +235,6 @@ def register_instance_or_get_uuid(
         i.tuning_profile = m.postgres.tuning_profile
         i.user_tags = m.user_tags
         i.admin_user = m.postgres.admin_user
-        i.admin_password = m.postgres.admin_password
         i.admin_is_real_superuser = m.postgres.admin_is_superuser
 
         session.add(i)
@@ -273,7 +271,6 @@ def update_instance_if_main_data_changed(m: InstanceManifest) -> None:
             or row.tuning_profile != m.postgres.tuning_profile
             or row.user_tags != m.user_tags
             or row.admin_user != m.postgres.admin_user
-            or row.admin_password != m.postgres.admin_password
             or row.admin_is_real_superuser != m.postgres.admin_is_superuser
         ):
             row.cpu_min = m.vm.cpu_min
@@ -282,7 +279,6 @@ def update_instance_if_main_data_changed(m: InstanceManifest) -> None:
             row.tuning_profile = m.postgres.tuning_profile
             row.user_tags = m.user_tags
             row.admin_user = m.postgres.admin_user
-            row.admin_password = m.postgres.admin_password
             row.admin_is_real_superuser = m.postgres.admin_is_superuser
             row.last_modified_on = datetime.utcnow()
 
@@ -786,6 +782,8 @@ def get_all_distinct_instance_regions() -> Sequence[str]:
 
 def get_primary_conninfos_for_replica_building(
     primary_instance_name: str,
+    primary_replication_user: str | None,
+    primary_replication_password: str | None,
 ) -> Tuple[str | None, str | None, str | None]:
     """Returns [host_ip, admin_user, admin_password] of primary or raises if no primary found from cmdb"""
     logger.debug(
@@ -809,10 +807,19 @@ def get_primary_conninfos_for_replica_building(
         host_ip = vm.ip_public  # type: ignore
         # TODO use private IP for intra region?
 
+    if not primary_replication_user or not primary_replication_password:
+        mf = get_last_successful_manifest_if_any(i.uuid)
+        if mf:
+            mf.decrypt_secrets_if_any()
+            if not primary_replication_user and mf.postgres.admin_user:
+                primary_replication_user = mf.postgres.admin_user
+            if not primary_replication_password and mf.postgres.admin_password:
+                primary_replication_password = mf.postgres.admin_password
+
     if not host_ip:
         raise Exception(
             "No primary host IP found from CMDB for instance %s to build replica",
             primary_instance_name,
         )
 
-    return host_ip, i.admin_user, i.admin_password
+    return host_ip, primary_replication_user, primary_replication_password
