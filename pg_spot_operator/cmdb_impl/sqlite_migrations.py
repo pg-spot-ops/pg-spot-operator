@@ -2,6 +2,8 @@ DDL_MIGRATIONS: list[str] = []
 
 # Roll-forward only approach!
 # Sqlite driver handles only 1 stmt at a time
+# PS before going stable / v1 release not bothering with migrations - after breaking updates
+# need to drop the CMDB at ~/.pg-spot-operator/pgso.db
 DDL_MIGRATIONS.append(
     """
 /*
@@ -17,6 +19,7 @@ CREATE TABLE instance (
   "uuid" text PRIMARY KEY NOT NULL,
   cloud text NOT NULL,
   region text NOT NULL,
+  vpc_id text,
   instance_name text NOT NULL,
   postgres_version int NOT NULL,
   cpu_min int,
@@ -31,7 +34,8 @@ CREATE TABLE instance (
   admin_is_real_superuser boolean NOT NULL DEFAULT true,
   created_on datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_modified_on datetime,
-  deleted_on datetime
+  deleted_on datetime,
+  stopped_on datetime
 );
 """
 )
@@ -98,5 +102,3 @@ CREATE TABLE ignored_instance (
 );
 """
 )
-
-DDL_MIGRATIONS.append("""ALTER TABLE instance ADD stopped_on datetime;""")
