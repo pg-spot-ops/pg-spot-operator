@@ -48,6 +48,7 @@ class Instance(Base):
     )
     cloud: Mapped[str] = mapped_column(String, nullable=False)
     region: Mapped[str] = mapped_column(String, nullable=False)
+    vpc_id: Mapped[Optional[str]]
     instance_name: Mapped[str] = mapped_column(String, nullable=False)
     postgres_version: Mapped[Optional[int]] = mapped_column(
         Integer, nullable=False
@@ -225,6 +226,7 @@ def register_instance_or_get_uuid(
         i.uuid = m.uuid
         i.cloud = m.cloud
         i.region = m.region
+        i.vpc_id = m.aws.vpc_id
         i.instance_name = m.instance_name
         i.postgres_version = m.postgres.version
         i.cpu_min = m.vm.cpu_min
@@ -784,6 +786,9 @@ def get_primary_conninfos_for_replica_building(
     primary_instance_name: str,
     primary_replication_user: str | None,
     primary_replication_password: str | None,
+    cloud: str | None,
+    region: str | None,
+    vpc_id: str | None,
 ) -> Tuple[str | None, str | None, str | None]:
     """Returns [host_ip, admin_user, admin_password] of primary or raises if no primary found from cmdb"""
     logger.debug(
@@ -805,7 +810,15 @@ def get_primary_conninfos_for_replica_building(
                 primary_instance_name,
             )
         host_ip = vm.ip_public  # type: ignore
-        # TODO use private IP for intra region?
+        if (
+            vm.ip_private
+            and cloud == vm.cloud
+            and region == vm.region
+            and vpc_id == i.vpc_id
+        ):
+            host_ip = (
+                vm.ip_private
+            )  # Use private IP for intra region, doesn't count for bandwidth costs
 
     if not primary_replication_user or not primary_replication_password:
         mf = get_last_successful_manifest_if_any(i.uuid)
