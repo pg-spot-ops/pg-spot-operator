@@ -25,6 +25,7 @@ from pg_spot_operator import manifests, util
 from pg_spot_operator.cloud_impl.cloud_structs import CloudVM
 from pg_spot_operator.cmdb_impl import sqlite
 from pg_spot_operator.constants import (
+    CLOUD_UNKNOWN,
     CONNSTR_FORMAT_ANSIBLE,
     CONNSTR_FORMAT_AUTO,
     CONNSTR_FORMAT_POSTGRES,
@@ -59,6 +60,7 @@ class Instance(Base):
     tuning_profile: Mapped[Optional[str]]
     user_tags: Mapped[dict] = mapped_column(JSON, nullable=False)
     admin_user: Mapped[Optional[str]]
+    admin_password: Mapped[Optional[str]]
     admin_is_real_superuser: Mapped[Optional[bool]]
     created_on: Mapped[datetime] = mapped_column(
         DateTime, server_default=text("DEFAULT")
@@ -223,7 +225,6 @@ def register_instance_or_get_uuid(
         i = Instance()
         i.uuid = m.uuid
         i.cloud = m.cloud
-        logger.error("region %s cloud %s", m.region, m.cloud)
         i.region = m.region
         i.instance_name = m.instance_name
         i.postgres_version = m.postgres.version
@@ -235,6 +236,7 @@ def register_instance_or_get_uuid(
         i.tuning_profile = m.postgres.tuning_profile
         i.user_tags = m.user_tags
         i.admin_user = m.postgres.admin_user
+        i.admin_password = m.postgres.admin_password
         i.admin_is_real_superuser = m.postgres.admin_is_superuser
 
         session.add(i)
@@ -271,6 +273,7 @@ def update_instance_if_main_data_changed(m: InstanceManifest) -> None:
             or row.tuning_profile != m.postgres.tuning_profile
             or row.user_tags != m.user_tags
             or row.admin_user != m.postgres.admin_user
+            or row.admin_password != m.postgres.admin_password
             or row.admin_is_real_superuser != m.postgres.admin_is_superuser
         ):
             row.cpu_min = m.vm.cpu_min
@@ -279,6 +282,7 @@ def update_instance_if_main_data_changed(m: InstanceManifest) -> None:
             row.tuning_profile = m.postgres.tuning_profile
             row.user_tags = m.user_tags
             row.admin_user = m.postgres.admin_user
+            row.admin_password = m.postgres.admin_password
             row.admin_is_real_superuser = m.postgres.admin_is_superuser
             row.last_modified_on = datetime.utcnow()
 
@@ -782,10 +786,33 @@ def get_all_distinct_instance_regions() -> Sequence[str]:
 
 def get_primary_conninfos_for_replica_building(
     primary_instance_name: str,
-) -> Tuple[str, str, str]:
+) -> Tuple[str, str | None, str | None]:
     """Returns [host_ip, admin_user, admin_password] of primary or raises if no primary found from cmdb"""
-    logger.error(
+    logger.debug(
         "Fetching primary VM host and password for instance %s ...",
         primary_instance_name,
     )
-    return "192.168.121.216", "xxx", "yyy"
+    i = get_instance_by_name(primary_instance_name)
+    if not i:
+        raise Exception(
+            "No primary name %s found from CMDB", primary_instance_name
+        )
+    if i.cloud == CLOUD_UNKNOWN:
+        host_ip = i.region
+    else:
+        vm = get_latest_vm_by_uuid(i.uuid)
+        if not vm:
+            raise Exception(
+                "No latest VM found from CMDB for instance %s",
+                primary_instance_name,
+            )
+        host_ip = vm.ip_public  # type: ignore
+        # TODO use private IP for intra region?
+
+    if not host_ip:
+        raise Exception(
+            "No primary host IP found from CMDB for instance %s to build replica",
+            primary_instance_name,
+        )
+
+    return host_ip, i.admin_user, i.admin_password

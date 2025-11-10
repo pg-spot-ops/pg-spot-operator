@@ -27,6 +27,7 @@ CREATE TABLE instance (
   tuning_profile text,
   user_tags json NOT NULL DEFAULT '{}',
   admin_user text,
+  admin_password text,
   admin_is_real_superuser boolean NOT NULL DEFAULT true,
   created_on datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_modified_on datetime,
