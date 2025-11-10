@@ -22,6 +22,8 @@
 ## Instance
 
 * **--instance-name / INSTANCE_NAME** Required if not using a YAML manifest
+* **--primary-instance-name / PRIMARY_INSTANCE_NAME** Add a replica to a previously built primary identified by param value.
+  AZ placement is random by default, use `--zone` to set.
 * **--region / REGION** Required for modes that actually do something, as we don't assume a persistent config store. Optional if --zone set.
   *PS* Note that it can also be a regex in `--check-price` mode, to select the cheapest region of a continent, e.g. 'eu-'
 * **--zone / ZONE** To fix the placement within the region. Not recommended, as prices differ considerably within regions' zones.
