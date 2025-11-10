@@ -1382,7 +1382,11 @@ def fetch_primary_infos_for_replica_building(m: InstanceManifest):
             m.postgres.primary_host,
             primary_replication_user,
             primary_replication_password,
-        ) = get_primary_conninfos_for_replica_building(m.primary_instance_name)
+        ) = get_primary_conninfos_for_replica_building(
+            m.primary_instance_name,
+            m.postgres.primary_replication_user,
+            m.postgres.primary_replication_password,
+        )
 
     if not m.postgres.primary_replication_user and primary_replication_user:
         m.postgres.primary_replication_user = primary_replication_user
