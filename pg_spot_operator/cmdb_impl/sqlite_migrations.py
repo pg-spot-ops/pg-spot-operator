@@ -21,6 +21,7 @@ CREATE TABLE instance (
   region text NOT NULL,
   vpc_id text,
   instance_name text NOT NULL,
+  primary_instance_name text,
   postgres_version int NOT NULL,
   cpu_min int,
   ram_min int,
