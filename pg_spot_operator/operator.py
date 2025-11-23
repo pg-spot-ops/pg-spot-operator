@@ -40,6 +40,7 @@ from pg_spot_operator.cloud_impl.aws_vm import (
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
 from pg_spot_operator.cmdb import (
     Instance,
+    get_active_replicas_for_instance_by_name,
     get_instance_connect_string,
     get_instance_connect_string_postgres,
     get_latest_vm_by_uuid,
@@ -930,6 +931,43 @@ def destroy_instance(
             exit(1)
         m.region = ins.region
 
+    if (
+        not m.primary_instance_name
+    ):  # If not itself a replica, check if any replicas attached, destroy them first
+        active_replicas = get_active_replicas_for_instance_by_name(
+            m.instance_name
+        )
+        for ar in active_replicas:
+            logger.debug("Found active replica: %s", ar)
+            logger.info("Deleting replica instance %s", ar.instance_name)
+            replica_ins = cmdb.get_instance_by_name(ar.instance_name)
+            ar_mf: InstanceManifest | None
+            if not replica_ins:  # Handle CMDB reset, force replica cleanup
+                logger.warning(
+                    "Failed to find replica instance %s from CMDB - compiling a manual manifest instead to force resource cleanup",
+                    ar.instance_name,
+                )
+                ar_mf = InstanceManifest(
+                    instance_name=ar.instance_name,
+                    cloud=m.cloud,
+                    region=ar.region,
+                    availability_zone=m.availability_zone,
+                    primary_instance_name=m.instance_name,
+                    api_version="v1",
+                    kind="pg_spot_operator_instance",
+                )
+                destroy_instance(ar_mf)
+            else:
+                ar_mf = cmdb.get_last_successful_manifest_if_any(
+                    replica_ins.uuid, use_last_manifest=True
+                )
+                if not ar_mf:
+                    raise Exception(
+                        "No previous manifest found for replica instance %s - manual check needed",
+                        ar.instance_name,
+                    )
+                destroy_instance(ar_mf)
+
     logger.info(
         "Destroying cloud resources if any for instance %s ...",
         m.instance_name,
@@ -992,7 +1030,11 @@ def destroy_instance(
         "OK - cloud resources for instance %s cleaned-up", m.instance_name
     )
 
-    if m.backup.destroy_backups and m.backup.s3_bucket:
+    if (
+        not m.primary_instance_name
+        and m.backup.destroy_backups
+        and m.backup.s3_bucket
+    ):
         destroy_backups_if_any(m)
 
     cmdb.finalize_destroy_instance(m)

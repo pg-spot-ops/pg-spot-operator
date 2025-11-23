@@ -3,7 +3,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 from uuid import uuid4
 
 import sqlalchemy
@@ -50,6 +50,7 @@ class Instance(Base):
     region: Mapped[str] = mapped_column(String, nullable=False)
     vpc_id: Mapped[Optional[str]]
     instance_name: Mapped[str] = mapped_column(String, nullable=False)
+    primary_instance_name: Mapped[Optional[str]]
     postgres_version: Mapped[Optional[int]] = mapped_column(
         Integer, nullable=False
     )
@@ -197,6 +198,20 @@ def get_instance_by_name(instance_name: str) -> Instance | None:
         return None
 
 
+def get_active_replicas_for_instance_by_name(
+    primary_instance_name: str,
+) -> List[Instance]:
+    """Return non-deleted replicas for given primary instance name if any"""
+    with Session(engine) as session:
+        # Check if exists
+        stmt = (
+            select(Instance)
+            .where(Instance.primary_instance_name == primary_instance_name)
+            .where(Instance.deleted_on.is_(None))
+        )
+        return session.scalars(stmt).all()  # type: ignore
+
+
 def register_instance_or_get_uuid(
     m: InstanceManifest,
 ) -> str | None:
@@ -228,6 +243,7 @@ def register_instance_or_get_uuid(
         i.region = m.region
         i.vpc_id = m.aws.vpc_id
         i.instance_name = m.instance_name
+        i.primary_instance_name = m.primary_instance_name
         i.postgres_version = m.postgres.version
         i.cpu_min = m.vm.cpu_min
         i.ram_min = m.vm.ram_min
@@ -783,6 +799,62 @@ def get_all_distinct_instance_regions() -> Sequence[str]:
 
 
 def get_primary_conninfos_for_replica_building(
+    primary_instance_name: str,
+    primary_replication_user: str | None,
+    primary_replication_password: str | None,
+    cloud: str | None,
+    region: str | None,
+    vpc_id: str | None,
+) -> Tuple[str | None, str | None, str | None]:
+    """Returns [host_ip, admin_user, admin_password] of primary or raises if no primary found from cmdb"""
+    logger.debug(
+        "Fetching primary VM host and password for instance %s ...",
+        primary_instance_name,
+    )
+    i = get_instance_by_name(primary_instance_name)
+    if not i:
+        raise Exception(
+            "No primary name %s found from CMDB", primary_instance_name
+        )
+    if i.cloud == CLOUD_UNKNOWN:
+        host_ip = i.region
+    else:
+        vm = get_latest_vm_by_uuid(i.uuid)
+        if not vm:
+            raise Exception(
+                "No latest VM found from CMDB for instance %s",
+                primary_instance_name,
+            )
+        host_ip = vm.ip_public  # type: ignore
+        if (
+            vm.ip_private
+            and cloud == vm.cloud
+            and region == vm.region
+            and vpc_id == i.vpc_id
+        ):
+            host_ip = (
+                vm.ip_private
+            )  # Use private IP for intra region, doesn't count for bandwidth costs
+
+    if not primary_replication_user or not primary_replication_password:
+        mf = get_last_successful_manifest_if_any(i.uuid)
+        if mf:
+            mf.decrypt_secrets_if_any()
+            if not primary_replication_user and mf.postgres.admin_user:
+                primary_replication_user = mf.postgres.admin_user
+            if not primary_replication_password and mf.postgres.admin_password:
+                primary_replication_password = mf.postgres.admin_password
+
+    if not host_ip:
+        raise Exception(
+            "No primary host IP found from CMDB for instance %s to build replica",
+            primary_instance_name,
+        )
+
+    return host_ip, primary_replication_user, primary_replication_password
+
+
+def get_replicas_for_primary_if_any(
     primary_instance_name: str,
     primary_replication_user: str | None,
     primary_replication_password: str | None,
