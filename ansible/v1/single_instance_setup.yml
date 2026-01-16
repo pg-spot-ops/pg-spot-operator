@@ -5,7 +5,15 @@
   become_method: sudo
   any_errors_fatal: true
   gather_facts: true
-
+  
+  tasks:
+    - name: Validate instance_name. Must be provided by the caller / Python code
+      assert:
+        that:
+          - instance_name is defined
+          - instance_name | length > 0
+        fail_msg: "instance_name must be defined and not empty"
+  
   roles:
     - role: show_merged_vars
       when: verbose | d(False)
