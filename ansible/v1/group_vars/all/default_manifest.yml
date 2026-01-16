@@ -127,3 +127,5 @@ default_manifest:
       admin_password: ""
       anonymous_access: true
       protocol: https
+    pgwatch:
+      enabled: false

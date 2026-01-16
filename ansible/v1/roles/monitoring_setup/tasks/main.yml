@@ -48,7 +48,6 @@
       state: present
     loop:
       - apt-transport-https
-      - software-properties-common
       - wget
 
   - name: Import the GPG key
@@ -143,15 +142,17 @@
 
 - block:
     # pgwatch setup
-  - name: Check if pgwatch exist already
-    ansible.builtin.stat:
-      path: /usr/bin/pgwatch
-    register: pgwatch_exists
-
-  - name: Install a .deb package from the internet
+  - name: Install pgwatch from PGDG APT repo
     ansible.builtin.apt:
-      deb: https://github.com/cybertec-postgresql/pgwatch/releases/download/3.0.0/pgwatch_Linux_{{ ansible_architecture }}.deb
-    when: not pgwatch_exists.stat.exists
+      name: pgwatch
+      state: present
+
+  - name: Ensure /etc/pgwatch
+    ansible.builtin.file:
+      path: /etc/pgwatch
+      state: directory
+      owner: postgres
+      group: postgres
 
   - name: Set up a sources file
     # https://github.com/cybertec-postgresql/pgwatch/blob/master/internal/sources/sample.sources.yaml
@@ -164,7 +165,7 @@
       src: pgwatch.service.j2
       dest: /etc/systemd/system/pgwatch.service
 
-  - name: Provisiong pgwatch prom dashboards
+  - name: Provision pgwatch prom dashboards
     ansible.builtin.copy:
       src: files/{{ item }}
       dest: /var/lib/grafana/dashboards/{{ item }}
