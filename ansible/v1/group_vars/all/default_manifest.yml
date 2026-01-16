@@ -32,6 +32,7 @@ default_manifest:
   #  volume_throughput:  # MBs. For provisioned / paid throughput for gp3, io1 and io2. gp3 default is 125
                         # gp2 max 250, gp3 / io1 max 1000, io2 max 4000. PS Not that not all instance types can achieve max!
     detailed_monitoring: false  # As incurs extra costs
+    no_mount_disks: false  # If 'false' and no disks found then fail early
   os:
     unattended_security_upgrades: true  # Might result in nightly restarts
     kernel_tuning: true  # Basic memory over-commit tuning for databases
