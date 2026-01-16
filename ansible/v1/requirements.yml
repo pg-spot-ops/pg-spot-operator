@@ -4,3 +4,4 @@ collections:
 - community.general
 - community.aws
 - debops.debops
+- prometheus.prometheus
