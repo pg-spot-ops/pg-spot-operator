@@ -39,7 +39,7 @@ default_manifest:
     ssh_brute_force_protection: true  # via fail2ban
     extra_packages: []  # Default: []
 #      - pgbadger
-#      - postgresql-17-cron
+#      - postgresql-18-cron
     ssh_pub_keys: []  # Literal extra pubkeys to add (in addition to default ~/.ssh/id_rsa.pub) to created VMs
     ssh_pub_key_paths: []  # Extra pubkey paths accessible on the engine VM
 #  user_tags:  # In addition to user tags the engine will add a pg-spot-operator-tag + pg-spot-operator-expiration-date

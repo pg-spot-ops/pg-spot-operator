@@ -34,7 +34,7 @@ docker build -f Containerfile -t pg-spot-operator:latest .
 docker run --rm -e INSTANCE_NAME=pg1 -e REGION=eu-north-1 \
   -e CPU_MIN=1 -e STORAGE_MIN=10 -e STORAGE_TYPE=local \
   -e ADMIN_USER=pgspotops -e ADMIN_PASSWORD=topsecret123 \
-  -e SSH_KEYS="$(cat ~/.ssh/id_rsa.pub)" -e POSTGRES_VERSION=17 \
+  -e SSH_KEYS="$(cat ~/.ssh/id_rsa.pub)" -e POSTGRES_VERSION=18 \
   -e AWS_ACCESS_KEY_ID="$(grep -m1 aws_access_key_id ~/.aws/credentials | sed 's/aws_access_key_id = //')" \
   -e AWS_SECRET_ACCESS_KEY="$(grep -m1 aws_secret_access_key ~/.aws/credentials | sed 's/aws_secret_access_key = //')" \
   pg-spot-operator:latest
