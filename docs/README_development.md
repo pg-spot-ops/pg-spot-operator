@@ -1,7 +1,10 @@
 # Local non-cloud development
 
-For Postgres setup testing, manifest handling etc, one can get by with local Virtualbox/Vagrant VMs, by using
-according flags:
+For Postgres setup testing, manifest handling etc, one can get by with local Virtualbox/Vagrant VMs or Docker,
+by using `--vm-host` and `--vm-login-user` flags, which signal that no AWS machine needs to be provisioned.
+
+A sample `Vagrantfile` is also located at `ansible/Vagrantfile` that provides an extra data disk and adds SSH
+keys from user's $HOME to the box for convenient SSH access.   
 
 ```bash
 git clone git@github.com:pg-spot-ops/pg-spot-operator.git
