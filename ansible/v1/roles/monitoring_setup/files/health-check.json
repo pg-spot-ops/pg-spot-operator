@@ -371,7 +371,7 @@
         "y": 4
       },
       "id": 6,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -527,7 +527,7 @@
         "y": 4
       },
       "id": 8,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -606,7 +606,7 @@
         "y": 4
       },
       "id": 9,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -682,7 +682,7 @@
         "y": 8
       },
       "id": 10,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -751,7 +751,7 @@
         "y": 8
       },
       "id": 11,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -821,7 +821,7 @@
         "y": 8
       },
       "id": 12,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -894,7 +894,7 @@
         "y": 8
       },
       "id": 13,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -963,7 +963,7 @@
         "y": 12
       },
       "id": 26,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1032,7 +1032,7 @@
         "y": 12
       },
       "id": 27,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1101,7 +1101,7 @@
         "y": 12
       },
       "id": 28,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1177,7 +1177,7 @@
         "y": 12
       },
       "id": 21,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1394,7 +1394,7 @@
         "y": 16
       },
       "id": 15,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1466,7 +1466,7 @@
         "y": 16
       },
       "id": 16,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1538,7 +1538,7 @@
         "y": 20
       },
       "id": 18,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1611,7 +1611,7 @@
         "y": 20
       },
       "id": 19,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1685,7 +1685,7 @@
         "y": 20
       },
       "id": 20,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1831,7 +1831,7 @@
         "y": 24
       },
       "id": 22,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1978,7 +1978,7 @@
         "y": 24
       },
       "id": 24,
-      "maxDataPoints": 1,
+      "maxDataPoints": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
