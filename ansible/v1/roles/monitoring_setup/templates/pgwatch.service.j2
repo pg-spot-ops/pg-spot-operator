@@ -12,7 +12,7 @@ After=postgresql.service
 [Service]
 User=postgres
 Type=simple
-ExecStart=/usr/bin/pgwatch --sources /etc/pgwatch/sources.yaml --sink=prometheus://:9187 --web-disable --try-create-listed-exts-if-missing=pg_stat_statements
+ExecStart=/usr/bin/pgwatch --sources /etc/pgwatch/sources.yaml --sink=prometheus://localhost:9187 --web-disable --try-create-listed-exts-if-missing=pg_stat_statements
 Restart=on-failure
 TimeoutStartSec=0
 
