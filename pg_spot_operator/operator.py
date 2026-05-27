@@ -29,12 +29,14 @@ from pg_spot_operator.cloud_impl.aws_spot import (
 from pg_spot_operator.cloud_impl.aws_vm import (
     delete_network_interface,
     delete_volume_in_region,
+    ensure_signaling_volume,
     ensure_spot_vm,
     get_addresses,
     get_all_active_operator_instances_in_region,
     get_existing_signaling_volume_for_instance_if_any,
     get_non_self_terminating_network_interfaces,
     get_operator_volumes_in_region,
+    get_random_az_for_region,
     release_address_by_allocation_id_in_region,
     terminate_instances_in_region,
 )
@@ -817,6 +819,26 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str, str]:
         m.uuid,
     )
 
+    # Create a 1GB dummy signaling volume for primary-replica coordination if replication need is signaled.
+    # S3 for example would be in theory better for such purposes but has potentially other issues.
+    # Used only currently to signal deletion of a whole "cluster", so that replica loops would not resurrect VMs.
+    # Doing "ensure" here not lower as to enable setting "repl-ready" also for already running instances.
+    if m.repl_ready and not m.primary_instance_name:
+        svol_created, svol_desc = ensure_signaling_volume(
+            m,
+            (
+                m.availability_zone
+                if m.availability_zone
+                else get_random_az_for_region(m.region)
+            ),
+        )
+        if svol_created:
+            logger.info(
+                "Signaling volume %s created for instance %s",
+                svol_desc["VolumeId"],
+                m.instance_name,
+            )
+
     vm = cmdb.get_latest_vm_by_uuid(m.uuid)
     if (
         vm and not vm.deleted_on and vm.provider_id
@@ -894,9 +916,9 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str, str]:
             m.vm.instance_selection_strategy,
         )
 
-    if m.primary_instance_name:
+    if m.primary_instance_name:  # Creating a replica
         vol_desc = get_existing_signaling_volume_for_instance_if_any(
-            m.region, m.instance_name
+            m.region, m.primary_instance_name
         )
         if not vol_desc:
             logger.warning(
@@ -1676,7 +1698,7 @@ def do_main_loop(
                         m.vm.login_user,
                         vm_ip,
                         m.ansible.private_key,
-                        max_wait_seconds=30,
+                        max_wait_seconds=45,
                     )
             if not vm_created_recreated or m.vm.host:
                 if not check_setup_completed_marker_file_exists(

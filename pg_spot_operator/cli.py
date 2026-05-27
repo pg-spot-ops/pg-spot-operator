@@ -364,6 +364,7 @@ def compile_manifest_from_cmdline_params(
 
     m.instance_name = args.instance_name
     m.primary_instance_name = args.primary_instance_name
+    m.repl_ready = args.repl_ready
     if not m.region and m.availability_zone:
         m.region = extract_region_from_az(m.availability_zone)
     m.vm.persistent_vms = args.persistent_vms

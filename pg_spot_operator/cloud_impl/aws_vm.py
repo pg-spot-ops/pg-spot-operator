@@ -1,6 +1,7 @@
 import logging
 import math
 import os
+import random
 import time
 from datetime import datetime
 from typing import Any
@@ -937,7 +938,10 @@ def wait_until_volume_available(
 def ensure_signaling_volume(m: InstanceManifest, az: str) -> tuple[bool, dict]:
     """Ensure one 1GB volume per instance for setting "cluster" relevant labels.
     Returns ( created?, vol_description)"""
-    logger.debug("Checking if signaling volume exists for instance %s ...")
+    logger.debug(
+        "Checking if signaling volume exists for instance %s ...",
+        m.instance_name,
+    )
     vol_desc = get_existing_signaling_volume_for_instance_if_any(
         m.region, m.instance_name
     )
@@ -1171,21 +1175,6 @@ def ensure_spot_vm(
     if not i_desc:
         raise Exception("No running instance found / failed to launch")
 
-    # Create a 1GB dummy signaling volume for primary-replica coordination if replication need is signaled.
-    # S3 for example would be in theory better for such purposes but has potentially other issues.
-    # Used only currently to signal deletion of a whole "cluster", so that replica loops would not resurrect VMs
-    if m.repl_ready and not m.primary_instance_name:
-        svol_created, svol_desc = ensure_signaling_volume(
-            m, i_desc["Placement"]["AvailabilityZone"]
-        )
-        if svol_created:
-            logger.info(
-                "Signaling volume %s created for instance %s in AZ %s",
-                svol_desc["VolumeId"],
-                i_desc["InstanceId"],
-                i_desc["Placement"]["AvailabilityZone"],
-            )
-
     if m.vm.storage_type == STORAGE_TYPE_NETWORK:
         if (
             m.vm.storage_min == -1
@@ -1223,3 +1212,15 @@ def ensure_spot_vm(
     )
 
     return ret, new_vm_created
+
+
+def get_random_az_for_region(region: str) -> str:
+    client = get_client("ec2", region)
+
+    resp = client.describe_availability_zones()
+
+    if not resp or not resp.get("AvailabilityZones"):
+        raise Exception(f"Could not determine AZ for region {region}")
+
+    zones = [x["ZoneName"] for x in resp["AvailabilityZones"]]
+    return random.choice(zones)
