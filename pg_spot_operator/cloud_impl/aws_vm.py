@@ -610,9 +610,13 @@ def get_all_active_operator_instances_in_region(region: str) -> list[str]:
 
 
 def get_operator_volumes_in_region(
-    region: str, instance_name: str = ""
+    region: str,
+    instance_name: str = "",
+    include_signaling_volumes: bool = False,
 ) -> list[tuple[str, int]]:
     """Returns [(volId, size),...]"""
+    ret_vols = []
+
     client = get_client("ec2", region)
 
     if instance_name:
@@ -625,8 +629,34 @@ def get_operator_volumes_in_region(
         ]
     resp = client.describe_volumes(Filters=filters)
     if resp and resp.get("Volumes"):
-        return [(x["VolumeId"], x["Size"]) for x in resp["Volumes"]]
-    return []
+        ret_vols.extend([(x["VolumeId"], x["Size"]) for x in resp["Volumes"]])
+
+    if include_signaling_volumes:
+        logger.debug("Checking for signaling volumes ...")
+        if instance_name:
+            filters = [
+                {
+                    "Name": f"tag:{SPOT_OPERATOR_SIGNALING_VOLUME_ID_TAG}",
+                    "Values": [instance_name],
+                },
+            ]
+        else:
+            filters = [
+                {
+                    "Name": "tag-key",
+                    "Values": [SPOT_OPERATOR_SIGNALING_VOLUME_ID_TAG],
+                },
+            ]
+        resp = client.describe_volumes(Filters=filters)
+        if resp and resp.get("Volumes"):
+            ret_vols.extend(
+                [(x["VolumeId"], x["Size"]) for x in resp["Volumes"]]
+            )
+            logger.debug(
+                "Found signaling volumes: %s", len(resp.get("Volumes"))
+            )
+
+    return ret_vols
 
 
 def get_operator_volumes_in_region_full(region: str) -> list[dict]:

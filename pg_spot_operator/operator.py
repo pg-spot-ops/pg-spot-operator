@@ -32,6 +32,7 @@ from pg_spot_operator.cloud_impl.aws_vm import (
     ensure_spot_vm,
     get_addresses,
     get_all_active_operator_instances_in_region,
+    get_existing_signaling_volume_for_instance_if_any,
     get_non_self_terminating_network_interfaces,
     get_operator_volumes_in_region,
     release_address_by_allocation_id_in_region,
@@ -893,6 +894,15 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str, str]:
             m.vm.instance_selection_strategy,
         )
 
+    if m.primary_instance_name:
+        vol_desc = get_existing_signaling_volume_for_instance_if_any(
+            m.region, m.instance_name
+        )
+        if not vol_desc:
+            logger.warning(
+                "No signaling volume found needed for replication, 'cluster' not declared or could have been already dropped. Exiting"
+            )
+            raise UserExit("No signaling volume found")
     cloud_vm, created = ensure_spot_vm(
         m, resolved_instance_types, dry_run=dry_run
     )
@@ -1004,6 +1014,21 @@ def destroy_instance(
             logger.info("Deleting VolumeId %s (%s GB) ...", vol_id, size)
             delete_volume_in_region(m.region, vol_id)
 
+    signaling_vol_desc = get_existing_signaling_volume_for_instance_if_any(
+        m.region, m.instance_name
+    )
+    if signaling_vol_desc:
+        logger.info(
+            "Signaling volume %s found ...", signaling_vol_desc["VolumeId"]
+        )
+        if not dry_run:
+            logger.info(
+                "Deleting VolumeId %s ...", signaling_vol_desc["VolumeId"]
+            )
+            delete_volume_in_region(m.region, signaling_vol_desc["VolumeId"])
+    else:
+        logger.info("No signaling volume found to delete")
+
     # TODO Explicit NICs now not created anymore, can remove after some time
     logger.info("Looking for explicit NICs to delete ....")
     nic_ids = get_non_self_terminating_network_interfaces(
@@ -1079,7 +1104,9 @@ def teardown_region(
                     time.sleep(30)
 
             logger.info("Looking for EBS Volumes to delete ....")
-            vol_ids_and_sizes = get_operator_volumes_in_region(region)
+            vol_ids_and_sizes = get_operator_volumes_in_region(
+                region, include_signaling_volumes=True
+            )
             logger.info("Volumes found: %s", vol_ids_and_sizes)
             if not dry_run and vol_ids_and_sizes:
                 for vol_id, size in vol_ids_and_sizes:
