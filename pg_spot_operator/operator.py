@@ -29,6 +29,8 @@ from pg_spot_operator.cloud_impl.aws_spot import (
 from pg_spot_operator.cloud_impl.aws_vm import (
     delete_network_interface,
     delete_volume_in_region,
+    deregister_replica_name_from_signaling_volume_tags_if_any,
+    ensure_replica_name_registered_to_signaling_volume_tags,
     ensure_signaling_volume,
     ensure_spot_vm,
     get_addresses,
@@ -37,13 +39,13 @@ from pg_spot_operator.cloud_impl.aws_vm import (
     get_non_self_terminating_network_interfaces,
     get_operator_volumes_in_region,
     get_random_az_for_region,
+    get_replica_names_for_primary_instance_via_signaling_volume_tags,
     release_address_by_allocation_id_in_region,
     terminate_instances_in_region,
 )
 from pg_spot_operator.cloud_impl.cloud_structs import InstanceTypeInfo
 from pg_spot_operator.cmdb import (
     Instance,
-    get_active_replicas_for_instance_by_name,
     get_instance_connect_string,
     get_instance_connect_string_postgres,
     get_latest_vm_by_uuid,
@@ -916,7 +918,7 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str, str]:
             m.vm.instance_selection_strategy,
         )
 
-    if m.primary_instance_name:  # Creating a replica
+    if m.primary_instance_name and not dry_run:  # Creating a replica
         vol_desc = get_existing_signaling_volume_for_instance_if_any(
             m.region, m.primary_instance_name
         )
@@ -925,6 +927,11 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str, str]:
                 "No signaling volume found needed for replication, 'cluster' not declared or could have been already dropped. Exiting"
             )
             raise UserExit("No signaling volume found")
+
+        ensure_replica_name_registered_to_signaling_volume_tags(
+            m.region, vol_desc, m.instance_name
+        )
+
     cloud_vm, created = ensure_spot_vm(
         m, resolved_instance_types, dry_run=dry_run
     )
@@ -966,41 +973,39 @@ def destroy_instance(
     if (
         not m.primary_instance_name
     ):  # If not itself a replica, check if any replicas attached, destroy them first
-        active_replicas = get_active_replicas_for_instance_by_name(
-            m.instance_name
+        active_replica_names = (
+            get_replica_names_for_primary_instance_via_signaling_volume_tags(
+                m.region, m.instance_name
+            )
         )
-        for ar in active_replicas:
-            logger.debug("Found active replica: %s", ar)
-            # get_synchronization_volume_labels_if_any
-            # signal destroy
-            logger.info("Deleting replica instance %s", ar.instance_name)
-            replica_ins = cmdb.get_instance_by_name(ar.instance_name)
+        for replica_name in active_replica_names:
+            logger.info("Deleting replica instance %s", replica_name)
+            replica_ins = cmdb.get_instance_by_name(replica_name)
             ar_mf: InstanceManifest | None
             if not replica_ins:  # Handle CMDB reset, force replica cleanup
                 logger.warning(
                     "Failed to find replica instance %s from CMDB - compiling a manual manifest instead to force resource cleanup",
-                    ar.instance_name,
+                    replica_name,
                 )
                 ar_mf = InstanceManifest(
-                    instance_name=ar.instance_name,
+                    instance_name=replica_name,
                     cloud=m.cloud,
-                    region=ar.region,
+                    region=m.region,
                     availability_zone=m.availability_zone,
                     primary_instance_name=m.instance_name,
                     api_version="v1",
                     kind="pg_spot_operator_instance",
                 )
-                destroy_instance(ar_mf)
             else:
                 ar_mf = cmdb.get_last_successful_manifest_if_any(
                     replica_ins.uuid, use_last_manifest=True
                 )
                 if not ar_mf:
                     raise Exception(
-                        "No previous manifest found for replica instance %s - manual check needed",
-                        ar.instance_name,
+                        f"No previous manifest found for replica instance {replica_name} - manual check needed"
                     )
-                destroy_instance(ar_mf)
+
+            destroy_instance(ar_mf)
 
     logger.info(
         "Destroying cloud resources if any for instance %s ...",
@@ -1085,6 +1090,11 @@ def destroy_instance(
         and m.backup.s3_bucket
     ):
         destroy_backups_if_any(m)
+
+    if m.primary_instance_name:
+        deregister_replica_name_from_signaling_volume_tags_if_any(
+            m.region, m.instance_name, m.primary_instance_name
+        )
 
     cmdb.finalize_destroy_instance(m)
     cmdb.mark_manifest_snapshot_as_succeeded(m)

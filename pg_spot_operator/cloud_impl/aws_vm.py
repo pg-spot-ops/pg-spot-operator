@@ -21,12 +21,12 @@ from pg_spot_operator.cloud_impl.cloud_util import (
 )
 from pg_spot_operator.constants import CLOUD_AWS, DEFAULT_VM_LOGIN_USER
 from pg_spot_operator.manifests import InstanceManifest
-from pg_spot_operator.util import timed_cache
 
 # Attached to all created cloud resources
 SPOT_OPERATOR_ID_TAG = "pg-spot-operator-instance"
 SPOT_OPERATOR_VOLUME_ID_TAG = "pg-spot-operator-volume-id"
 SPOT_OPERATOR_SIGNALING_VOLUME_ID_TAG = "pg-spot-operator-signaling-volume"
+SPOT_OPERATOR_SIGVOL_REPLICA_ID_TAG = "pg-spot-operator-replica"
 STORAGE_TYPE_NETWORK = "network"
 MAX_WAIT_SECONDS: int = 300
 OS_IMAGE_FAMILY = "debian-13"
@@ -768,9 +768,8 @@ def delete_network_interface(region: str, nic_id: str) -> None:
     client.delete_network_interface(NetworkInterfaceId=nic_id)
 
 
-@timed_cache(seconds=30)
 def get_existing_signaling_volume_for_instance_if_any(
-    region: str, instance_name: str
+    region: str, primary_instance_name: str
 ) -> dict:
     """
     Returns something like:
@@ -812,12 +811,13 @@ def get_existing_signaling_volume_for_instance_if_any(
             {
                 "Name": "tag:" + SPOT_OPERATOR_SIGNALING_VOLUME_ID_TAG,
                 "Values": [
-                    instance_name,
+                    primary_instance_name,
                 ],
             },
         ]
         logger.debug(
-            "Calling describe_volumes for instance %s ...", instance_name
+            "Calling describe_volumes for instance %s ...",
+            primary_instance_name,
         )
         resp = client.describe_volumes(Filters=filters)
         if resp and resp.get("Volumes"):
@@ -825,7 +825,9 @@ def get_existing_signaling_volume_for_instance_if_any(
     except Exception as e:
         logger.error(e)
         raise
-    logger.debug("No signaling volume found for instance %s", instance_name)
+    logger.debug(
+        "No signaling volume found for instance %s", primary_instance_name
+    )
     return {}
 
 
@@ -1224,3 +1226,79 @@ def get_random_az_for_region(region: str) -> str:
 
     zones = [x["ZoneName"] for x in resp["AvailabilityZones"]]
     return random.choice(zones)
+
+
+def get_replica_names_for_primary_instance_via_signaling_volume_tags(
+    region: str, primary_instance_name: str
+) -> list[str]:
+
+    sigvol_desc = get_existing_signaling_volume_for_instance_if_any(
+        region, primary_instance_name
+    )
+
+    if not sigvol_desc:
+        raise Exception(
+            f"Could not determine replica names for primary instance {primary_instance_name} via signaling volume tags"
+        )
+
+    return [
+        tag["Value"]
+        for tag in sigvol_desc["Tags"]
+        if tag["Key"] == SPOT_OPERATOR_SIGVOL_REPLICA_ID_TAG
+    ]
+
+
+def ensure_replica_name_registered_to_signaling_volume_tags(
+    region: str, vol_desc: dict, replica_instance_name: str
+) -> None:
+    replica_registered = False
+
+    tags: list[dict] = vol_desc["Tags"]
+    for tag in tags:
+        if (
+            tag["Key"] == SPOT_OPERATOR_SIGVOL_REPLICA_ID_TAG
+            and tag["Value"] == replica_instance_name
+        ):
+            replica_registered = True
+            break
+
+    if not replica_registered:
+        tags.append(
+            {
+                "Key": SPOT_OPERATOR_SIGVOL_REPLICA_ID_TAG,
+                "Value": replica_instance_name,
+            }
+        )
+
+        client = get_client("ec2", region)
+
+        logger.debug(
+            "Registering a replica tag on signaling volume %s",
+            vol_desc["VolumeId"],
+        )
+        resp = client.create_tags(Resources=[vol_desc["VolumeId"]], Tags=tags)
+        logger.debug("Replica tag created. Response: %s", resp)
+
+
+def deregister_replica_name_from_signaling_volume_tags_if_any(
+    region: str, replica_instance_name: str, primary_instance_name: str
+) -> None:
+    logger.debug(
+        f"Deregistering replica named '{replica_instance_name}' from signaling volume ..."
+    )
+    vol_desc = get_existing_signaling_volume_for_instance_if_any(
+        region, primary_instance_name
+    )
+
+    client = get_client("ec2", region)
+
+    client.delete_tags(
+        Resources=[vol_desc["VolumeId"]],
+        Tags=[
+            {
+                "Key": SPOT_OPERATOR_SIGVOL_REPLICA_ID_TAG,
+                "Value": replica_instance_name,
+            }
+        ],
+    )
+    logger.debug("OK")
