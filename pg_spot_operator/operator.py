@@ -939,6 +939,8 @@ def destroy_instance(
         )
         for ar in active_replicas:
             logger.debug("Found active replica: %s", ar)
+            # get_synchronization_volume_labels_if_any
+            # signal destroy
             logger.info("Deleting replica instance %s", ar.instance_name)
             replica_ins = cmdb.get_instance_by_name(ar.instance_name)
             ar_mf: InstanceManifest | None

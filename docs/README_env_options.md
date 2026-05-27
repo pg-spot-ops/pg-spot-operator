@@ -37,6 +37,7 @@
 * **--expiration-date / EXPIRATION_DATE** ISO 8601 datetime. E.g.: "2025-02-01 00:00+02"
 * **--self-termination / SELF_TERMINATION** On --expiration-date. Assumes --self-termination-access-key-id / --self-termination-secret-access-key set.
 * **--user-tags / USER_TAGS** Any custom tags / labels to attach to the VM. E.g. team=backend
+* **--repl-ready / REPL_READY** Allow replica creation. Create a dummy signaling volume
 
 ## Integration
 

@@ -20,10 +20,12 @@ from pg_spot_operator.cloud_impl.cloud_util import (
 )
 from pg_spot_operator.constants import CLOUD_AWS, DEFAULT_VM_LOGIN_USER
 from pg_spot_operator.manifests import InstanceManifest
+from pg_spot_operator.util import timed_cache
 
 # Attached to all created cloud resources
 SPOT_OPERATOR_ID_TAG = "pg-spot-operator-instance"
 SPOT_OPERATOR_VOLUME_ID_TAG = "pg-spot-operator-volume-id"
+SPOT_OPERATOR_SIGNALING_VOLUME_ID_TAG = "pg-spot-operator-signaling-volume"
 STORAGE_TYPE_NETWORK = "network"
 MAX_WAIT_SECONDS: int = 300
 OS_IMAGE_FAMILY = "debian-13"
@@ -152,6 +154,38 @@ def create_new_volume_for_instance(
 
     logger.info(
         "New %s GB volume with ID %s created in AZ %s",
+        volume_size,
+        resp["VolumeId"],
+        availability_zone,
+    )
+    return resp
+
+
+def create_new_signaling_volume_for_instance(
+    region: str, availability_zone: str, instance_id: str, volume_size: int = 1
+) -> dict:
+    """https://docs.aws.amazon.com/cli/latest/reference/ec2/create-volume.html"""
+    client = get_client("ec2", region)
+
+    logger.debug(
+        f"Creating a new {volume_size} GB EBS volume for instance {instance_id} in AZ {availability_zone} ... "
+    )
+
+    tags = [
+        {"Key": SPOT_OPERATOR_SIGNALING_VOLUME_ID_TAG, "Value": instance_id},
+    ]
+
+    resp = client.create_volume(
+        AvailabilityZone=availability_zone,
+        Encrypted=True,
+        Size=int(volume_size),
+        TagSpecifications=[
+            {"ResourceType": "volume", "Tags": tags},
+        ],
+    )
+
+    logger.info(
+        "New %s GB signaling volume with ID %s created in AZ %s",
         volume_size,
         resp["VolumeId"],
         availability_zone,
@@ -703,6 +737,67 @@ def delete_network_interface(region: str, nic_id: str) -> None:
     client.delete_network_interface(NetworkInterfaceId=nic_id)
 
 
+@timed_cache(seconds=30)
+def get_existing_signaling_volume_for_instance_if_any(
+    region: str, instance_name: str
+) -> dict:
+    """
+    Returns something like:
+
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2/client/describe_volumes.html#describe-volumes
+
+    {
+        "AvailabilityZoneId": "eun1-az2",
+        "Iops": 100,
+        "Tags": [
+            {
+                "Key": "pg-spot-operator-signaling-volume",
+                "Value": "repl0"
+            }
+        ],
+        "VolumeType": "gp2",
+        "MultiAttachEnabled": false,
+        "Operator": {
+            "Managed": false,
+            "HiddenByDefault": false
+        },
+        "VolumeId": "vol-010cdcf5c0ae468bc",
+        "Size": 1,
+        "SnapshotId": "",
+        "AvailabilityZone": "eu-north-1b",
+        "State": "available",
+        "CreateTime": "2026-05-27T14:54:52.645000+00:00",
+        "Attachments": [],
+        "Encrypted": true,
+        "KmsKeyId": "arn:aws:kms:eu-north-1:491085393968:key/04385f98-7c3a-4af9-98c6-6231a0096682"
+    }
+
+    """
+
+    try:
+        client = get_client("ec2", region)
+
+        filters = [
+            {
+                "Name": "tag:" + SPOT_OPERATOR_SIGNALING_VOLUME_ID_TAG,
+                "Values": [
+                    instance_name,
+                ],
+            },
+        ]
+        logger.debug(
+            "Calling describe_volumes for instance %s ...", instance_name
+        )
+        resp = client.describe_volumes(Filters=filters)
+        if resp and resp.get("Volumes"):
+            return resp["Volumes"][0]
+    except Exception as e:
+        logger.error(e)
+        raise
+    logger.debug("No signaling volume found for instance %s", instance_name)
+    return {}
+
+
 def get_existing_data_volumes_for_instance_if_any(
     region: str, instance_name: str
 ) -> list[dict]:
@@ -806,6 +901,24 @@ def wait_until_volume_available(
             time.sleep(10)
     raise Exception(
         f"Volume {volume_id} not in 'available' state within {max_wait_seconds}"
+    )
+
+
+def ensure_signaling_volume(m: InstanceManifest, az: str) -> tuple[bool, dict]:
+    """Ensure one 1GB volume per instance for setting "cluster" relevant labels.
+    Returns ( created?, vol_description)"""
+    logger.debug("Checking if signaling volume exists for instance %s ...")
+    vol_desc = get_existing_signaling_volume_for_instance_if_any(
+        m.region, m.instance_name
+    )
+    if vol_desc:
+        return False, vol_desc
+
+    logger.info(
+        "Creating signaling volume for instance %s ...", m.instance_name
+    )
+    return True, create_new_signaling_volume_for_instance(
+        m.region, az, m.instance_name
     )
 
 
@@ -1027,6 +1140,21 @@ def ensure_spot_vm(
 
     if not i_desc:
         raise Exception("No running instance found / failed to launch")
+
+    # Create a 1GB dummy signaling volume for primary-replica coordination if replication need is signaled.
+    # S3 for example would be in theory better for such purposes but has potentially other issues.
+    # Used only currently to signal deletion of a whole "cluster", so that replica loops would not resurrect VMs
+    if m.repl_ready and not m.primary_instance_name:
+        svol_created, svol_desc = ensure_signaling_volume(
+            m, i_desc["Placement"]["AvailabilityZone"]
+        )
+        if svol_created:
+            logger.info(
+                "Signaling volume %s created for instance %s in AZ %s",
+                svol_desc["VolumeId"],
+                i_desc["InstanceId"],
+                i_desc["Placement"]["AvailabilityZone"],
+            )
 
     if m.vm.storage_type == STORAGE_TYPE_NETWORK:
         if (

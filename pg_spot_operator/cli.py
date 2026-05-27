@@ -171,6 +171,9 @@ class ArgumentParser(Tap):
     instance_name: str = os.getenv(
         "INSTANCE_NAME", ""
     )  # If set other below params become relevant
+    repl_ready: bool = str_to_bool(
+        os.getenv("REPL_READY", "false")
+    )  # Signal that replicas will be created
     primary_instance_name: str = os.getenv(
         "PRIMARY_INSTANCE_NAME", ""
     )  # Build a replica for --instance-name

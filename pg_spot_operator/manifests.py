@@ -235,6 +235,7 @@ class InstanceManifest(BaseModel):
     instance_name: str
     # Optional fields
     primary_instance_name: str = ""
+    repl_ready: bool = False
     private_ip_only: bool = False
     static_ip_addresses: bool = (
         False  # If True we create an explicit NIC resource
