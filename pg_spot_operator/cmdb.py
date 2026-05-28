@@ -394,6 +394,8 @@ def get_last_successful_manifest_if_any(
             return None
         m.manifest_snapshot_id = row.id
         m.original_manifest = row.manifest  # type: ignore
+        if not m.uuid:
+            m.uuid = uuid
 
         return m
 
