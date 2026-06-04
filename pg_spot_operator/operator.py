@@ -532,6 +532,7 @@ echo "Done at `date`"
     os.chmod(
         exec_full_path, st.st_mode | stat.S_IEXEC | stat.S_IXUSR | stat.S_IXGRP
     )
+    logger.debug("Wrote Ansible playbook to %s", exec_full_path)
     return exec_full_path
 
 

@@ -174,6 +174,9 @@ class ArgumentParser(Tap):
     repl_ready: bool = str_to_bool(
         os.getenv("REPL_READY", "false")
     )  # Signal that replicas will be created
+    sync_repl: bool = str_to_bool(
+        os.getenv("SYNC_REPL", "false")
+    )  # Sets synchronous_standby_names to '*' on the primary
     primary_instance_name: str = os.getenv(
         "PRIMARY_INSTANCE_NAME", ""
     )  # Build a replica for --instance-name
@@ -441,6 +444,11 @@ def compile_manifest_from_cmdline_params(
         m.postgres.config_lines["shared_preload_libraries"] = (
             args.shared_preload_libraries
         )
+    if (
+        args.sync_repl
+        and "synchronous_standby_names" not in m.postgres.config_lines
+    ):
+        m.postgres.config_lines["synchronous_standby_names"] = "*"
     if args.extensions:
         m.postgres.extensions = args.extensions.strip().split(",")
     if args.os_extra_packages:
