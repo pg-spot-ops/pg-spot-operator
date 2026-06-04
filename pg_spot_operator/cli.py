@@ -180,6 +180,9 @@ class ArgumentParser(Tap):
     primary_instance_name: str = os.getenv(
         "PRIMARY_INSTANCE_NAME", ""
     )  # Build a replica for --instance-name
+    primary_host: str = os.getenv(
+        "PRIMARY_HOST", ""
+    )  # For replica building on VMs
     postgres_version: int = int(os.getenv("POSTGRES_VERSION", "18"))
     instance_types: str = os.getenv(
         "INSTANCE_TYPES", ""
@@ -367,6 +370,7 @@ def compile_manifest_from_cmdline_params(
 
     m.instance_name = args.instance_name
     m.primary_instance_name = args.primary_instance_name
+    m.postgres.primary_host = args.primary_host
     m.repl_ready = args.repl_ready
     if not m.region and m.availability_zone:
         m.region = extract_region_from_az(m.availability_zone)

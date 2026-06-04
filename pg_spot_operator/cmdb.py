@@ -802,6 +802,7 @@ def get_all_distinct_instance_regions() -> Sequence[str]:
 
 def get_primary_conninfos_for_replica_building(
     primary_instance_name: str,
+    primary_host: str,
     primary_replication_user: str | None,
     primary_replication_password: str | None,
     cloud: str | None,
@@ -818,8 +819,8 @@ def get_primary_conninfos_for_replica_building(
         raise Exception(
             "No primary name %s found from CMDB", primary_instance_name
         )
-    if i.cloud == CLOUD_UNKNOWN:
-        host_ip = i.region
+    if primary_host:
+        host_ip = primary_host
     else:
         vm = get_latest_vm_by_uuid(i.uuid)
         if not vm:

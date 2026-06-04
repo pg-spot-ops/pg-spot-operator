@@ -1488,6 +1488,7 @@ def fetch_primary_infos_for_replica_building(m: InstanceManifest):
             primary_replication_password,
         ) = get_primary_conninfos_for_replica_building(
             m.primary_instance_name,
+            m.primary_host,
             m.postgres.primary_replication_user,
             m.postgres.primary_replication_password,
             m.cloud,
@@ -1773,7 +1774,9 @@ def do_main_loop(
 
                     cmdb.mark_manifest_snapshot_as_succeeded(m)
                 else:
-                    if not m.primary_instance_name:
+                    if not (
+                        m.primary_instance_name or m.postgres.primary_host
+                    ):
                         logger.info(
                             "Starting Postgres primary setup on %s ...",
                             m.vm.host,
