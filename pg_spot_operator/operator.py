@@ -494,7 +494,10 @@ def os_execute_setup_finished_callback_vm_only(
 
 
 def generate_ansible_run_script_for_action(
-    action: str, temp_workdir: str, m: InstanceManifest
+    action: str,
+    temp_workdir: str,
+    m: InstanceManifest,
+    extra_vars: dict | None = None,
 ) -> str:
     """Currently invoking Ansible via Bash but might want to look at ansible-runner later"""
     extra_args = ""
@@ -504,6 +507,10 @@ def generate_ansible_run_script_for_action(
         extra_args = "--vault-password-file " + m.vault_password_file
     if logger.root.level == logging.DEBUG:  # Some extra Ansible log output
         extra_args += " -v"
+    if extra_vars:
+        with open(os.path.join(temp_workdir, "extra_vars.json"), "w") as f:
+            f.write(json.dumps(extra_vars))
+        extra_args += " --extra-vars @extra_vars.json"
     run_template = f"""#!/bin/bash
 
 echo "Starting at `date`"
@@ -690,13 +697,11 @@ def clean_up_old_logs_if_any(
                 shutil.rmtree(expired_path, ignore_errors=True)
 
 
-def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
+def run_action(
+    action: str, m: InstanceManifest, extra_vars: dict | None = None
+) -> tuple[bool, dict]:
     """Returns: (OK, action outputs)
-    Steps:
-    - Copy handler folder to a temp directory
-    - Move manifests to "inputs" folder
-    - Start a subprocess and add it to actions_in_progress
-    - Collect "output" folder contents on successful exit
+    NB! extra_vars, if set, overwrites, not merges, in case of dicts
     """
 
     logging.debug(
@@ -714,7 +719,7 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
     generate_ansible_inventory_file_for_action(action, m, temp_workdir)
 
     executable_full_path = generate_ansible_run_script_for_action(
-        action, temp_workdir, m
+        action, temp_workdir, m, extra_vars
     )
 
     if dry_run:
@@ -1545,7 +1550,11 @@ def set_synchronous_standby_names_on_primary(
         m.postgres.primary_host,
     )
 
-    run_action(constants.ACTION_ALTER_SYSTEM, m_prim)
+    run_action(
+        constants.ACTION_ALTER_SYSTEM,
+        m_prim,
+        {"postgres": {"config_lines": m_prim.postgres.config_lines}},
+    )
 
 
 def do_main_loop(
