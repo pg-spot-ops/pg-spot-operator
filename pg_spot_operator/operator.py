@@ -1526,6 +1526,28 @@ def fetch_primary_infos_for_replica_building(m: InstanceManifest):
         ] = m.postgres.primary_replication_password
 
 
+def set_synchronous_standby_names_on_primary(
+    m: InstanceManifest, synchronous_standby_names_value: str
+) -> None:
+    """As can't run SQL directly on hosts (no PG port access in private IP mode) need an Ansible workaround"""
+    if not m.postgres.primary_host:
+        raise Exception("Primary host not set")
+
+    m_prim = m.clone()
+    m_prim.vm.host = m.postgres.primary_host
+    m_prim.postgres.config_lines = {
+        "synchronous_standby_names": synchronous_standby_names_value
+    }
+
+    logger.debug(
+        "Setting synchronous_standby_names to %s via Ansible on primary host %s ...",
+        synchronous_standby_names_value,
+        m.postgres.primary_host,
+    )
+
+    run_action(constants.ACTION_ALTER_SYSTEM, m_prim)
+
+
 def do_main_loop(
     cli_dry_run: bool = False,
     cli_debug: bool = False,
@@ -1790,6 +1812,11 @@ def do_main_loop(
                         )
 
                     run_action(constants.ACTION_INSTANCE_SETUP, m)
+
+                    if (
+                        m.postgres.primary_host or m.primary_instance_name
+                    ) and m.sync_repl:
+                        set_synchronous_standby_names_on_primary(m, "*")
 
                     write_connstr_to_s3_if_bucket_set(m)
 

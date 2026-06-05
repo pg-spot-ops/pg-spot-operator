@@ -453,6 +453,7 @@ def compile_manifest_from_cmdline_params(
         and "synchronous_standby_names" not in m.postgres.config_lines
     ):
         m.postgres.config_lines["synchronous_standby_names"] = "*"
+        m.sync_repl = True
     if args.extensions:
         m.postgres.extensions = args.extensions.strip().split(",")
     if args.os_extra_packages:

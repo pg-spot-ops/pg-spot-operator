@@ -457,6 +457,9 @@ class InstanceManifest(BaseModel):
             raise ValueError("region or availability_zone must be set")
         return self
 
+    def clone(self) -> Self:
+        return self.model_copy(deep=True)
+
 
 def load_manifest_from_string(manifest_yaml_str: Any) -> InstanceManifest:
     m = yaml.safe_load(manifest_yaml_str)

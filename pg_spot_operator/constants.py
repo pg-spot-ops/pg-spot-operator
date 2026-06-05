@@ -15,6 +15,7 @@ SPOT_OPERATOR_EXPIRES_TAG = "pg-spot-operator-expiration-date"
 
 ACTION_ENSURE_VM = "ensure_vm"
 ACTION_INSTANCE_SETUP = "single_instance_setup"
+ACTION_ALTER_SYSTEM = "alter_system_with_reload"
 ACTION_MOUNT_DISKS = "mount_unattached_disks"
 ACTION_DESTROY_INSTANCE = "destroy_instance"
 ACTION_DESTROY_BACKUPS = "destroy_backups"

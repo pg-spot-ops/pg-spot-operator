@@ -1,0 +1,3 @@
+postgres:
+  config_lines:
+    statement_timeout: "10min"
