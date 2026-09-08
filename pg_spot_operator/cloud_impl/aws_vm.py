@@ -1,8 +1,9 @@
 import logging
 import math
 import os
+import random
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import botocore
@@ -24,6 +25,11 @@ from pg_spot_operator.manifests import InstanceManifest
 # Attached to all created cloud resources
 SPOT_OPERATOR_ID_TAG = "pg-spot-operator-instance"
 SPOT_OPERATOR_VOLUME_ID_TAG = "pg-spot-operator-volume-id"
+SPOT_OPERATOR_SIGNALING_VOLUME_ID_TAG = "pg-spot-operator-signaling-volume"
+SPOT_OPERATOR_SIGNALING_VOLUME_CREATED_ON_TAG = (
+    "pg-spot-operator-signaling-volume-created-on"
+)
+SPOT_OPERATOR_SIGVOL_REPLICA_ID_TAG = "pg-spot-operator-replica"
 STORAGE_TYPE_NETWORK = "network"
 MAX_WAIT_SECONDS: int = 300
 OS_IMAGE_FAMILY = "debian-13"
@@ -152,6 +158,44 @@ def create_new_volume_for_instance(
 
     logger.info(
         "New %s GB volume with ID %s created in AZ %s",
+        volume_size,
+        resp["VolumeId"],
+        availability_zone,
+    )
+    return resp
+
+
+def create_new_signaling_volume_for_instance(
+    region: str, availability_zone: str, instance_id: str, volume_size: int = 1
+) -> dict:
+    """https://docs.aws.amazon.com/cli/latest/reference/ec2/create-volume.html"""
+    client = get_client("ec2", region)
+
+    logger.debug(
+        f"Creating a new {volume_size} GB EBS volume for instance {instance_id} in AZ {availability_zone} ... "
+    )
+
+    tags = [
+        {"Key": SPOT_OPERATOR_SIGNALING_VOLUME_ID_TAG, "Value": instance_id},
+        {
+            "Key": SPOT_OPERATOR_SIGNALING_VOLUME_CREATED_ON_TAG,
+            "Value": datetime.now(timezone.utc)
+            .replace(microsecond=0)
+            .isoformat(),
+        },
+    ]
+
+    resp = client.create_volume(
+        AvailabilityZone=availability_zone,
+        Encrypted=True,
+        Size=int(volume_size),
+        TagSpecifications=[
+            {"ResourceType": "volume", "Tags": tags},
+        ],
+    )
+
+    logger.info(
+        "New %s GB signaling volume with ID %s created in AZ %s",
         volume_size,
         resp["VolumeId"],
         availability_zone,
@@ -576,9 +620,13 @@ def get_all_active_operator_instances_in_region(region: str) -> list[str]:
 
 
 def get_operator_volumes_in_region(
-    region: str, instance_name: str = ""
+    region: str,
+    instance_name: str = "",
+    include_signaling_volumes: bool = False,
 ) -> list[tuple[str, int]]:
     """Returns [(volId, size),...]"""
+    ret_vols = []
+
     client = get_client("ec2", region)
 
     if instance_name:
@@ -591,8 +639,34 @@ def get_operator_volumes_in_region(
         ]
     resp = client.describe_volumes(Filters=filters)
     if resp and resp.get("Volumes"):
-        return [(x["VolumeId"], x["Size"]) for x in resp["Volumes"]]
-    return []
+        ret_vols.extend([(x["VolumeId"], x["Size"]) for x in resp["Volumes"]])
+
+    if include_signaling_volumes:
+        logger.debug("Checking for signaling volumes ...")
+        if instance_name:
+            filters = [
+                {
+                    "Name": f"tag:{SPOT_OPERATOR_SIGNALING_VOLUME_ID_TAG}",
+                    "Values": [instance_name],
+                },
+            ]
+        else:
+            filters = [
+                {
+                    "Name": "tag-key",
+                    "Values": [SPOT_OPERATOR_SIGNALING_VOLUME_ID_TAG],
+                },
+            ]
+        resp = client.describe_volumes(Filters=filters)
+        if resp and resp.get("Volumes"):
+            ret_vols.extend(
+                [(x["VolumeId"], x["Size"]) for x in resp["Volumes"]]
+            )
+            logger.debug(
+                "Found signaling volumes: %s", len(resp.get("Volumes"))
+            )
+
+    return ret_vols
 
 
 def get_operator_volumes_in_region_full(region: str) -> list[dict]:
@@ -703,6 +777,69 @@ def delete_network_interface(region: str, nic_id: str) -> None:
     client.delete_network_interface(NetworkInterfaceId=nic_id)
 
 
+def get_existing_signaling_volume_for_instance_if_any(
+    region: str, primary_instance_name: str
+) -> dict:
+    """
+    Returns something like:
+
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2/client/describe_volumes.html#describe-volumes
+
+    {
+        "AvailabilityZoneId": "eun1-az2",
+        "Iops": 100,
+        "Tags": [
+            {
+                "Key": "pg-spot-operator-signaling-volume",
+                "Value": "repl0"
+            }
+        ],
+        "VolumeType": "gp2",
+        "MultiAttachEnabled": false,
+        "Operator": {
+            "Managed": false,
+            "HiddenByDefault": false
+        },
+        "VolumeId": "vol-010cdcf5c0ae468bc",
+        "Size": 1,
+        "SnapshotId": "",
+        "AvailabilityZone": "eu-north-1b",
+        "State": "available",
+        "CreateTime": "2026-05-27T14:54:52.645000+00:00",
+        "Attachments": [],
+        "Encrypted": true,
+        "KmsKeyId": "arn:aws:kms:eu-north-1:491085393968:key/04385f98-7c3a-4af9-98c6-6231a0096682"
+    }
+
+    """
+
+    try:
+        client = get_client("ec2", region)
+
+        filters = [
+            {
+                "Name": "tag:" + SPOT_OPERATOR_SIGNALING_VOLUME_ID_TAG,
+                "Values": [
+                    primary_instance_name,
+                ],
+            },
+        ]
+        logger.debug(
+            "Calling describe_volumes for instance %s ...",
+            primary_instance_name,
+        )
+        resp = client.describe_volumes(Filters=filters)
+        if resp and resp.get("Volumes"):
+            return resp["Volumes"][0]
+    except Exception as e:
+        logger.error(e)
+        raise
+    logger.debug(
+        "No signaling volume found for instance %s", primary_instance_name
+    )
+    return {}
+
+
 def get_existing_data_volumes_for_instance_if_any(
     region: str, instance_name: str
 ) -> list[dict]:
@@ -806,6 +943,28 @@ def wait_until_volume_available(
             time.sleep(10)
     raise Exception(
         f"Volume {volume_id} not in 'available' state within {max_wait_seconds}"
+    )
+
+
+def ensure_signaling_volume(m: InstanceManifest, az: str) -> tuple[bool, dict]:
+    """Ensure one 1GB volume per instance in region for "memory / log" + aiding with "cluster / replica" management by
+    setting relevant labels.
+    Returns ( created?, vol_description)"""
+    logger.debug(
+        "Checking if signaling volume exists for instance %s ...",
+        m.instance_name,
+    )
+    vol_desc = get_existing_signaling_volume_for_instance_if_any(
+        m.region, m.instance_name
+    )
+    if vol_desc:
+        return False, vol_desc
+
+    logger.info(
+        "Creating signaling volume for instance %s ...", m.instance_name
+    )
+    return True, create_new_signaling_volume_for_instance(
+        m.region, az, m.instance_name
     )
 
 
@@ -1065,3 +1224,91 @@ def ensure_spot_vm(
     )
 
     return ret, new_vm_created
+
+
+def get_random_az_for_region(region: str) -> str:
+    client = get_client("ec2", region)
+
+    resp = client.describe_availability_zones()
+
+    if not resp or not resp.get("AvailabilityZones"):
+        raise Exception(f"Could not determine AZ for region {region}")
+
+    zones = [x["ZoneName"] for x in resp["AvailabilityZones"]]
+    return random.choice(zones)
+
+
+def get_replica_names_for_primary_instance_via_signaling_volume_tags(
+    region: str, primary_instance_name: str
+) -> list[str]:
+
+    sigvol_desc = get_existing_signaling_volume_for_instance_if_any(
+        region, primary_instance_name
+    )
+    logger.debug(
+        "sigvol_desc for primary %s: %s", primary_instance_name, sigvol_desc
+    )
+    if not sigvol_desc:
+        return []
+
+    return [
+        tag["Value"]
+        for tag in sigvol_desc["Tags"]
+        if tag["Key"] == SPOT_OPERATOR_SIGVOL_REPLICA_ID_TAG
+    ]
+
+
+def ensure_replica_name_registered_to_signaling_volume_tags(
+    region: str, vol_desc: dict, replica_instance_name: str
+) -> None:
+    replica_registered = False
+
+    tags: list[dict] = vol_desc["Tags"]
+    for tag in tags:
+        if (
+            tag["Key"] == SPOT_OPERATOR_SIGVOL_REPLICA_ID_TAG
+            and tag["Value"] == replica_instance_name
+        ):
+            replica_registered = True
+            break
+
+    if not replica_registered:
+        tags.append(
+            {
+                "Key": SPOT_OPERATOR_SIGVOL_REPLICA_ID_TAG,
+                "Value": replica_instance_name,
+            }
+        )
+
+        client = get_client("ec2", region)
+
+        logger.debug(
+            "Registering a replica tag on signaling volume %s",
+            vol_desc["VolumeId"],
+        )
+        resp = client.create_tags(Resources=[vol_desc["VolumeId"]], Tags=tags)
+        logger.debug("Replica tag created. Response: %s", resp)
+
+
+def deregister_replica_name_from_signaling_volume_tags_if_any(
+    region: str, replica_instance_name: str, primary_instance_name: str
+) -> None:
+    logger.debug(
+        f"Deregistering replica named '{replica_instance_name}' from signaling volume ..."
+    )
+    vol_desc = get_existing_signaling_volume_for_instance_if_any(
+        region, primary_instance_name
+    )
+
+    client = get_client("ec2", region)
+
+    client.delete_tags(
+        Resources=[vol_desc["VolumeId"]],
+        Tags=[
+            {
+                "Key": SPOT_OPERATOR_SIGVOL_REPLICA_ID_TAG,
+                "Value": replica_instance_name,
+            }
+        ],
+    )
+    logger.debug("OK")

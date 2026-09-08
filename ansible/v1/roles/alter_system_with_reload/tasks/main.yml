@@ -1,0 +1,16 @@
+- debug:
+    var: postgres.config_lines
+
+- name: Set config flags dynamically
+  become: yes
+  become_user: postgres
+  community.postgresql.postgresql_query:
+    db: postgres
+    login_host: /var/run/postgresql
+    login_port: "5432"
+    autocommit: true
+    query: "ALTER SYSTEM SET {{ item.key }} TO '{{ item.value }}'"
+  with_dict: "{{ postgres.config_lines | d({}) }}"
+
+- name: Reload postgres
+  ansible.builtin.service: name=postgresql state=reloaded

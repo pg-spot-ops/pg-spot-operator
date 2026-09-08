@@ -235,6 +235,8 @@ class InstanceManifest(BaseModel):
     instance_name: str
     # Optional fields
     primary_instance_name: str = ""
+    primary_host: str = ""
+    sync_repl: bool = False
     private_ip_only: bool = False
     static_ip_addresses: bool = (
         False  # If True we create an explicit NIC resource
@@ -453,6 +455,9 @@ class InstanceManifest(BaseModel):
         if not self.region and not self.availability_zone:
             raise ValueError("region or availability_zone must be set")
         return self
+
+    def clone(self) -> Self:
+        return self.model_copy(deep=True)
 
 
 def load_manifest_from_string(manifest_yaml_str: Any) -> InstanceManifest:

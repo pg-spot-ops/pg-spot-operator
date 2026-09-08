@@ -29,11 +29,17 @@ from pg_spot_operator.cloud_impl.aws_spot import (
 from pg_spot_operator.cloud_impl.aws_vm import (
     delete_network_interface,
     delete_volume_in_region,
+    deregister_replica_name_from_signaling_volume_tags_if_any,
+    ensure_replica_name_registered_to_signaling_volume_tags,
+    ensure_signaling_volume,
     ensure_spot_vm,
     get_addresses,
     get_all_active_operator_instances_in_region,
+    get_existing_signaling_volume_for_instance_if_any,
     get_non_self_terminating_network_interfaces,
     get_operator_volumes_in_region,
+    get_random_az_for_region,
+    get_replica_names_for_primary_instance_via_signaling_volume_tags,
     release_address_by_allocation_id_in_region,
     terminate_instances_in_region,
 )
@@ -488,7 +494,10 @@ def os_execute_setup_finished_callback_vm_only(
 
 
 def generate_ansible_run_script_for_action(
-    action: str, temp_workdir: str, m: InstanceManifest
+    action: str,
+    temp_workdir: str,
+    m: InstanceManifest,
+    extra_vars: dict | None = None,
 ) -> str:
     """Currently invoking Ansible via Bash but might want to look at ansible-runner later"""
     extra_args = ""
@@ -498,6 +507,10 @@ def generate_ansible_run_script_for_action(
         extra_args = "--vault-password-file " + m.vault_password_file
     if logger.root.level == logging.DEBUG:  # Some extra Ansible log output
         extra_args += " -v"
+    if extra_vars:
+        with open(os.path.join(temp_workdir, "extra_vars.json"), "w") as f:
+            f.write(json.dumps(extra_vars))
+        extra_args += " --extra-vars @extra_vars.json"
     run_template = f"""#!/bin/bash
 
 echo "Starting at `date`"
@@ -526,6 +539,7 @@ echo "Done at `date`"
     os.chmod(
         exec_full_path, st.st_mode | stat.S_IEXEC | stat.S_IXUSR | stat.S_IXGRP
     )
+    logger.debug("Wrote Ansible playbook to %s", exec_full_path)
     return exec_full_path
 
 
@@ -683,13 +697,11 @@ def clean_up_old_logs_if_any(
                 shutil.rmtree(expired_path, ignore_errors=True)
 
 
-def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
+def run_action(
+    action: str, m: InstanceManifest, extra_vars: dict | None = None
+) -> tuple[bool, dict]:
     """Returns: (OK, action outputs)
-    Steps:
-    - Copy handler folder to a temp directory
-    - Move manifests to "inputs" folder
-    - Start a subprocess and add it to actions_in_progress
-    - Collect "output" folder contents on successful exit
+    NB! extra_vars, if set, overwrites, not merges, in case of dicts
     """
 
     logging.debug(
@@ -707,7 +719,7 @@ def run_action(action: str, m: InstanceManifest) -> tuple[bool, dict]:
     generate_ansible_inventory_file_for_action(action, m, temp_workdir)
 
     executable_full_path = generate_ansible_run_script_for_action(
-        action, temp_workdir, m
+        action, temp_workdir, m, extra_vars
     )
 
     if dry_run:
@@ -815,6 +827,27 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str, str]:
         m.uuid,
     )
 
+    # Create a 1GB dummy signaling volume for primary-replica coordination + memory effect - as when a local disk VM is
+    # terminated / evicted, it's not easily observable outside of the node that launched it (besides AWS Cloudtrail).
+    # S3 would be in theory better for such purposes but has potentially other issues (extra privs, limited count).
+    # Used only currently to signal deletion of a whole "cluster", so that replica loops would not resurrect VMs.
+    # Not created for replicas / fixed IP hosts.
+    if not m.primary_instance_name and not m.vm.host:
+        svol_created, svol_desc = ensure_signaling_volume(
+            m,
+            (
+                m.availability_zone
+                if m.availability_zone
+                else get_random_az_for_region(m.region)
+            ),
+        )
+        if svol_created:
+            logger.info(
+                "Signaling volume %s created for instance %s",
+                svol_desc["VolumeId"],
+                m.instance_name,
+            )
+
     vm = cmdb.get_latest_vm_by_uuid(m.uuid)
     if (
         vm and not vm.deleted_on and vm.provider_id
@@ -892,6 +925,20 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str, str]:
             m.vm.instance_selection_strategy,
         )
 
+    if m.primary_instance_name and not dry_run:  # Creating a replica
+        vol_desc = get_existing_signaling_volume_for_instance_if_any(
+            m.region, m.primary_instance_name
+        )
+        if not vol_desc:
+            logger.warning(
+                "No signaling volume found needed for replication, 'cluster' not declared or could have been already dropped. Exiting"
+            )
+            raise UserExit("No signaling volume found")
+
+        ensure_replica_name_registered_to_signaling_volume_tags(
+            m.region, vol_desc, m.instance_name
+        )
+
     cloud_vm, created = ensure_spot_vm(
         m, resolved_instance_types, dry_run=dry_run
     )
@@ -930,6 +977,43 @@ def destroy_instance(
             exit(1)
         m.region = ins.region
 
+    if (
+        not m.primary_instance_name
+    ):  # If not itself a replica, check if any replicas attached, destroy them first
+        active_replica_names = (
+            get_replica_names_for_primary_instance_via_signaling_volume_tags(
+                m.region, m.instance_name
+            )
+        )
+        for replica_name in active_replica_names:
+            logger.info("Deleting replica instance %s", replica_name)
+            replica_ins = cmdb.get_instance_by_name(replica_name)
+            ar_mf: InstanceManifest | None
+            if not replica_ins:  # Handle CMDB reset, force replica cleanup
+                logger.warning(
+                    "Failed to find replica instance %s from CMDB - compiling a manual manifest instead to force resource cleanup",
+                    replica_name,
+                )
+                ar_mf = InstanceManifest(
+                    instance_name=replica_name,
+                    cloud=m.cloud,
+                    region=m.region,
+                    availability_zone=m.availability_zone,
+                    primary_instance_name=m.instance_name,
+                    api_version="v1",
+                    kind="pg_spot_operator_instance",
+                )
+            else:
+                ar_mf = cmdb.get_last_successful_manifest_if_any(
+                    replica_ins.uuid, use_last_manifest=True
+                )
+                if not ar_mf:
+                    raise Exception(
+                        f"No previous manifest found for replica instance {replica_name} - manual check needed"
+                    )
+
+            destroy_instance(ar_mf)
+
     logger.info(
         "Destroying cloud resources if any for instance %s ...",
         m.instance_name,
@@ -964,6 +1048,21 @@ def destroy_instance(
             logger.info("Deleting VolumeId %s (%s GB) ...", vol_id, size)
             delete_volume_in_region(m.region, vol_id)
 
+    signaling_vol_desc = get_existing_signaling_volume_for_instance_if_any(
+        m.region, m.instance_name
+    )
+    if signaling_vol_desc:
+        logger.info(
+            "Signaling volume %s found ...", signaling_vol_desc["VolumeId"]
+        )
+        if not dry_run:
+            logger.info(
+                "Deleting VolumeId %s ...", signaling_vol_desc["VolumeId"]
+            )
+            delete_volume_in_region(m.region, signaling_vol_desc["VolumeId"])
+    else:
+        logger.info("No signaling volume found to delete")
+
     # TODO Explicit NICs now not created anymore, can remove after some time
     logger.info("Looking for explicit NICs to delete ....")
     nic_ids = get_non_self_terminating_network_interfaces(
@@ -992,8 +1091,17 @@ def destroy_instance(
         "OK - cloud resources for instance %s cleaned-up", m.instance_name
     )
 
-    if m.backup.destroy_backups and m.backup.s3_bucket:
+    if (
+        not m.primary_instance_name
+        and m.backup.destroy_backups
+        and m.backup.s3_bucket
+    ):
         destroy_backups_if_any(m)
+
+    if m.primary_instance_name:
+        deregister_replica_name_from_signaling_volume_tags_if_any(
+            m.region, m.instance_name, m.primary_instance_name
+        )
 
     cmdb.finalize_destroy_instance(m)
     cmdb.mark_manifest_snapshot_as_succeeded(m)
@@ -1035,7 +1143,9 @@ def teardown_region(
                     time.sleep(30)
 
             logger.info("Looking for EBS Volumes to delete ....")
-            vol_ids_and_sizes = get_operator_volumes_in_region(region)
+            vol_ids_and_sizes = get_operator_volumes_in_region(
+                region, include_signaling_volumes=True
+            )
             logger.info("Volumes found: %s", vol_ids_and_sizes)
             if not dry_run and vol_ids_and_sizes:
                 for vol_id, size in vol_ids_and_sizes:
@@ -1384,6 +1494,7 @@ def fetch_primary_infos_for_replica_building(m: InstanceManifest):
             primary_replication_password,
         ) = get_primary_conninfos_for_replica_building(
             m.primary_instance_name,
+            m.primary_host,
             m.postgres.primary_replication_user,
             m.postgres.primary_replication_password,
             m.cloud,
@@ -1419,6 +1530,32 @@ def fetch_primary_infos_for_replica_building(m: InstanceManifest):
         m.session_vars["postgres"][
             "primary_replication_password"
         ] = m.postgres.primary_replication_password
+
+
+def set_synchronous_standby_names_on_primary(
+    m: InstanceManifest, synchronous_standby_names_value: str
+) -> None:
+    """As can't run SQL directly on hosts (no PG port access in private IP mode) need an Ansible workaround"""
+    if not m.postgres.primary_host:
+        raise Exception("Primary host not set")
+
+    m_prim = m.clone()
+    m_prim.vm.host = m.postgres.primary_host
+    m_prim.postgres.config_lines = {
+        "synchronous_standby_names": synchronous_standby_names_value
+    }
+
+    logger.debug(
+        "Setting synchronous_standby_names to %s via Ansible on primary host %s ...",
+        synchronous_standby_names_value,
+        m.postgres.primary_host,
+    )
+
+    run_action(
+        constants.ACTION_ALTER_SYSTEM,
+        m_prim,
+        {"postgres": {"config_lines": m_prim.postgres.config_lines}},
+    )
 
 
 def do_main_loop(
@@ -1605,7 +1742,7 @@ def do_main_loop(
                         m.vm.login_user,
                         vm_ip,
                         m.ansible.private_key,
-                        max_wait_seconds=30,
+                        max_wait_seconds=45,
                     )
             if not vm_created_recreated or m.vm.host:
                 if not check_setup_completed_marker_file_exists(
@@ -1669,7 +1806,9 @@ def do_main_loop(
 
                     cmdb.mark_manifest_snapshot_as_succeeded(m)
                 else:
-                    if not m.primary_instance_name:
+                    if not (
+                        m.primary_instance_name or m.postgres.primary_host
+                    ):
                         logger.info(
                             "Starting Postgres primary setup on %s ...",
                             m.vm.host,
@@ -1683,6 +1822,11 @@ def do_main_loop(
                         )
 
                     run_action(constants.ACTION_INSTANCE_SETUP, m)
+
+                    if (
+                        m.postgres.primary_host or m.primary_instance_name
+                    ) and m.sync_repl:
+                        set_synchronous_standby_names_on_primary(m, "*")
 
                     write_connstr_to_s3_if_bucket_set(m)
 

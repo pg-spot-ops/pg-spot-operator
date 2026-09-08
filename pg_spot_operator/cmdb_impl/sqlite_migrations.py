@@ -4,8 +4,7 @@ DDL_MIGRATIONS: list[str] = []
 # Sqlite driver handles only 1 stmt at a time
 # PS before going stable / v1 release not bothering with migrations - after breaking updates
 # need to drop the CMDB at ~/.pg-spot-operator/pgso.db
-DDL_MIGRATIONS.append(
-    """
+DDL_MIGRATIONS.append("""
 /*
 drop table if exists schema_evolution_log ;
 drop table if exists instance ;
@@ -21,6 +20,7 @@ CREATE TABLE instance (
   region text NOT NULL,
   vpc_id text,
   instance_name text NOT NULL,
+  primary_instance_name text,
   postgres_version int NOT NULL,
   cpu_min int,
   ram_min int,
@@ -37,17 +37,13 @@ CREATE TABLE instance (
   deleted_on datetime,
   stopped_on datetime
 );
-"""
-)
+""")
 
-DDL_MIGRATIONS.append(
-    """
+DDL_MIGRATIONS.append("""
 CREATE UNIQUE INDEX instance_instance_name_uq ON instance (instance_name) WHERE deleted_on IS NULL;
-"""
-)
+""")
 
-DDL_MIGRATIONS.append(
-    """
+DDL_MIGRATIONS.append("""
 CREATE TABLE vm (
   id INTEGER PRIMARY KEY,
   instance_uuid text NOT NULL REFERENCES instance("uuid"),
@@ -71,15 +67,13 @@ CREATE TABLE vm (
   last_modified_on timestamp,
   deleted_on timestamp
 );
-"""
-)
+""")
 
 DDL_MIGRATIONS.append(
     """CREATE INDEX vm_instance_uuid ON vm (instance_uuid);"""
 )
 
-DDL_MIGRATIONS.append(
-    """
+DDL_MIGRATIONS.append("""
 CREATE TABLE manifest_snapshot (
   id INTEGER PRIMARY KEY,
   instance_uuid text NOT NULL REFERENCES instance("uuid"),
@@ -87,18 +81,15 @@ CREATE TABLE manifest_snapshot (
   setup_finished_on datetime,
   manifest text NOT NULL
 );
-"""
-)
+""")
 
 DDL_MIGRATIONS.append(
     """CREATE INDEX manifest_snapshot_instance_uuid ON manifest_snapshot (instance_uuid);"""
 )
 
-DDL_MIGRATIONS.append(
-    """
+DDL_MIGRATIONS.append("""
 CREATE TABLE ignored_instance (
   instance_name text NOT NULL,
   created_on datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-"""
-)
+""")

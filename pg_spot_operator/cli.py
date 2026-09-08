@@ -171,9 +171,15 @@ class ArgumentParser(Tap):
     instance_name: str = os.getenv(
         "INSTANCE_NAME", ""
     )  # If set other below params become relevant
+    sync_repl: bool = str_to_bool(
+        os.getenv("SYNC_REPL", "false")
+    )  # Sets synchronous_standby_names to '*' on the primary
     primary_instance_name: str = os.getenv(
         "PRIMARY_INSTANCE_NAME", ""
     )  # Build a replica for --instance-name
+    primary_host: str = os.getenv(
+        "PRIMARY_HOST", ""
+    )  # For replica building on VMs
     postgres_version: int = int(os.getenv("POSTGRES_VERSION", "18"))
     instance_types: str = os.getenv(
         "INSTANCE_TYPES", ""
@@ -361,6 +367,7 @@ def compile_manifest_from_cmdline_params(
 
     m.instance_name = args.instance_name
     m.primary_instance_name = args.primary_instance_name
+    m.postgres.primary_host = args.primary_host
     if not m.region and m.availability_zone:
         m.region = extract_region_from_az(m.availability_zone)
     m.vm.persistent_vms = args.persistent_vms
@@ -437,6 +444,12 @@ def compile_manifest_from_cmdline_params(
         m.postgres.config_lines["shared_preload_libraries"] = (
             args.shared_preload_libraries
         )
+    if (
+        args.sync_repl
+        and "synchronous_standby_names" not in m.postgres.config_lines
+    ):
+        m.postgres.config_lines["synchronous_standby_names"] = "*"
+        m.sync_repl = True
     if args.extensions:
         m.postgres.extensions = args.extensions.strip().split(",")
     if args.os_extra_packages:
