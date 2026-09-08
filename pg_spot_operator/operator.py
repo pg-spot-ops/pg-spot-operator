@@ -827,11 +827,12 @@ def ensure_vm(m: InstanceManifest) -> tuple[bool, str, str]:
         m.uuid,
     )
 
-    # Create a 1GB dummy signaling volume for primary-replica coordination if replication need is signaled.
-    # S3 for example would be in theory better for such purposes but has potentially other issues.
+    # Create a 1GB dummy signaling volume for primary-replica coordination + memory effect - as when a local disk VM is
+    # terminated / evicted, it's not easily observable outside of the node that launched it (besides AWS Cloudtrail).
+    # S3 would be in theory better for such purposes but has potentially other issues (extra privs, limited count).
     # Used only currently to signal deletion of a whole "cluster", so that replica loops would not resurrect VMs.
-    # Doing "ensure" here not lower as to enable setting "repl-ready" also for already running instances.
-    if m.repl_ready and not m.primary_instance_name:
+    # Not created for replicas / fixed IP hosts.
+    if not m.primary_instance_name and not m.vm.host:
         svol_created, svol_desc = ensure_signaling_volume(
             m,
             (

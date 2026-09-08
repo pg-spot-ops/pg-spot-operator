@@ -3,7 +3,7 @@ import math
 import os
 import random
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import botocore
@@ -26,6 +26,9 @@ from pg_spot_operator.manifests import InstanceManifest
 SPOT_OPERATOR_ID_TAG = "pg-spot-operator-instance"
 SPOT_OPERATOR_VOLUME_ID_TAG = "pg-spot-operator-volume-id"
 SPOT_OPERATOR_SIGNALING_VOLUME_ID_TAG = "pg-spot-operator-signaling-volume"
+SPOT_OPERATOR_SIGNALING_VOLUME_CREATED_ON_TAG = (
+    "pg-spot-operator-signaling-volume-created-on"
+)
 SPOT_OPERATOR_SIGVOL_REPLICA_ID_TAG = "pg-spot-operator-replica"
 STORAGE_TYPE_NETWORK = "network"
 MAX_WAIT_SECONDS: int = 300
@@ -174,6 +177,12 @@ def create_new_signaling_volume_for_instance(
 
     tags = [
         {"Key": SPOT_OPERATOR_SIGNALING_VOLUME_ID_TAG, "Value": instance_id},
+        {
+            "Key": SPOT_OPERATOR_SIGNALING_VOLUME_CREATED_ON_TAG,
+            "Value": datetime.now(timezone.utc)
+            .replace(microsecond=0)
+            .isoformat(),
+        },
     ]
 
     resp = client.create_volume(
@@ -938,7 +947,8 @@ def wait_until_volume_available(
 
 
 def ensure_signaling_volume(m: InstanceManifest, az: str) -> tuple[bool, dict]:
-    """Ensure one 1GB volume per instance for setting "cluster" relevant labels.
+    """Ensure one 1GB volume per instance in region for "memory / log" + aiding with "cluster / replica" management by
+    setting relevant labels.
     Returns ( created?, vol_description)"""
     logger.debug(
         "Checking if signaling volume exists for instance %s ...",

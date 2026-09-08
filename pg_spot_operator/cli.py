@@ -171,9 +171,6 @@ class ArgumentParser(Tap):
     instance_name: str = os.getenv(
         "INSTANCE_NAME", ""
     )  # If set other below params become relevant
-    repl_ready: bool = str_to_bool(
-        os.getenv("REPL_READY", "false")
-    )  # Signal that replicas will be created
     sync_repl: bool = str_to_bool(
         os.getenv("SYNC_REPL", "false")
     )  # Sets synchronous_standby_names to '*' on the primary
@@ -371,7 +368,6 @@ def compile_manifest_from_cmdline_params(
     m.instance_name = args.instance_name
     m.primary_instance_name = args.primary_instance_name
     m.postgres.primary_host = args.primary_host
-    m.repl_ready = args.repl_ready
     if not m.region and m.availability_zone:
         m.region = extract_region_from_az(m.availability_zone)
     m.vm.persistent_vms = args.persistent_vms

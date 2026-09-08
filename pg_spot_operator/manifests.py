@@ -236,7 +236,6 @@ class InstanceManifest(BaseModel):
     # Optional fields
     primary_instance_name: str = ""
     primary_host: str = ""
-    repl_ready: bool = False
     sync_repl: bool = False
     private_ip_only: bool = False
     static_ip_addresses: bool = (
