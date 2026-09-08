@@ -1235,11 +1235,11 @@ def get_replica_names_for_primary_instance_via_signaling_volume_tags(
     sigvol_desc = get_existing_signaling_volume_for_instance_if_any(
         region, primary_instance_name
     )
-
+    logger.debug(
+        "sigvol_desc for primary %s: %s", primary_instance_name, sigvol_desc
+    )
     if not sigvol_desc:
-        raise Exception(
-            f"Could not determine replica names for primary instance {primary_instance_name} via signaling volume tags"
-        )
+        return []
 
     return [
         tag["Value"]
