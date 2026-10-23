@@ -1,6 +1,6 @@
 ---
 postgres:
-  version: 16
+  version: 18
 packages_general:
 #  - python3-pip
 #  - curl
@@ -13,5 +13,8 @@ packages_general:
   - locales-all
   - tmux
   - cron
+  - git
+  - dstat
+  - rsync
 os:
   extra_packages: [pgbadger]
