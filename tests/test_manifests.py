@@ -2,7 +2,6 @@ import tempfile
 
 from pg_spot_operator import manifests
 
-
 TEST_MANIFEST = """
 ---
 api_version: v1

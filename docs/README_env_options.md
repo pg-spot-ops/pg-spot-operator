@@ -22,8 +22,9 @@
 ## Instance
 
 * **--instance-name / INSTANCE_NAME** Required if not using a YAML manifest
-* **--primary-instance-name / PRIMARY_INSTANCE_NAME** Add a replica to a previously built primary identified by param value.
+* **--primary-instance-name / PRIMARY_INSTANCE_NAME** Add a replica to a previously built primary identified by param value. NB! Currently only adding one replica supported!
   AZ placement is random by default, use `--zone` to set.
+* **--primary-host / PRIMARY_HOST** Add a replica to a custom VM
 * **--region / REGION** Required for modes that actually do something, as we don't assume a persistent config store. Optional if --zone set.
   *PS* Note that it can also be a regex in `--check-price` mode, to select the cheapest region of a continent, e.g. 'eu-'
 * **--zone / ZONE** To fix the placement within the region. Not recommended, as prices differ considerably within regions' zones.
@@ -37,6 +38,7 @@
 * **--expiration-date / EXPIRATION_DATE** ISO 8601 datetime. E.g.: "2025-02-01 00:00+02"
 * **--self-termination / SELF_TERMINATION** On --expiration-date. Assumes --self-termination-access-key-id / --self-termination-secret-access-key set.
 * **--user-tags / USER_TAGS** Any custom tags / labels to attach to the VM. E.g. team=backend
+* **--sync-repl / SYNC_REPL** Sets synchronous_standby_names to '*' on the primary
 
 ## Integration
 
