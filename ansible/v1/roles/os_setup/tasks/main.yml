@@ -26,6 +26,12 @@
       value: '1'
     ignore_errors: true
 
+  - name: Setting kernel parameters - kernel.numa_balancing (disable automatic NUMA balancing)
+    ansible.posix.sysctl:
+      name: kernel.numa_balancing
+      value: '0'
+    ignore_errors: true
+
   when: os.kernel_tuning|d(True)
 
 # Disable Transparent Huge Pages, generally considered bad for databases that manage their own memory
