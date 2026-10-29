@@ -62,7 +62,7 @@ def boto3_api_instance_list_to_instance_type_info(
 
 def resolve_hardware_requirements_to_instance_types(
     m: InstanceManifest,
-    max_skus_to_get: int = 3,  # To be able to retry with a next instance if getting "There is no Spot capacity available"
+    max_skus_to_get: int = 10,  # To be able to retry with a next instance if getting "There is no Spot capacity available"
     skus_to_avoid: list[str] | None = None,
     use_boto3: bool = True,
     regions: list[str] | None = None,
