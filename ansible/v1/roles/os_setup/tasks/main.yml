@@ -30,10 +30,9 @@
     ansible.posix.sysctl:
       name: kernel.numa_balancing
       value: '0'
+      # Dedicated drop-in so it is applied reliably regardless of /etc/sysctl.conf contents
       sysctl_file: /etc/sysctl.d/01-numa-balancing.conf
       sysctl_set: true
-      state: present
-      reload: true
     ignore_errors: true
 
   when: os.kernel_tuning|d(True)
