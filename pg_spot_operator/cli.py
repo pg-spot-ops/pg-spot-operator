@@ -1586,11 +1586,11 @@ def main():  # pragma: no cover
         and not args.dry_run
         and not args.vm_only
         and not (args.teardown_region or args.teardown)
-        and not shutil.which("ansible-playbook")
-    ):
-        logger.warning(
-            "ansible-playbook executable not found on the PATH - Postgres setup might not work!"
+    ) and not shutil.which("ansible-playbook"):
+        logger.error(
+            "ansible-playbook executable not found on the PATH - Postgres setup will not work! Use --vm-only to skip Postgres setup via Ansible"
         )
+        exit(1)
 
     if args.teardown_region:
         if not args.dry_run:
