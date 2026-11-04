@@ -12,7 +12,7 @@
 * **--check-manifest / CHECK_PRICE** Validate CLI input or instance manifest file and exit
 * **--dry-run / DRY_RUN** Perform a dry-run VM create + create the Ansible skeleton. For example to check if cloud credentials allow Spot VM creation.
 * **--debug / DEBUG** Don't clean up Ansible run files plus extra developer outputs.
-* **--vm-only / VM_ONLY** Skip Ansible / Postgres setup
+* **--vm-only / VM_ONLY** No Postgres setup (disk mounting and OS extra packages installation could still happen depending on --no-mount-disks and --os-extra-packages)
 * **--no-mount-disks / NO_MOUNT_DISKS** Skip data disks mounting via Ansible. Relevant only is --vm-only set.
 * **--persistent-vms / PERSISTENT_VMS** Run on normal / on-demand VMs instead of Spot. Default: false
 * **--config-dir / CONFIG_DIR** (Default: ~/.pg-spot-operator) Where the engine keeps its internal state / configuration

@@ -1644,6 +1644,8 @@ def do_main_loop(
                         m.vm.storage_min != -1 and not m.no_mount_disks
                     ):  # -1 denotes EBS OS disk only
                         run_action(constants.ACTION_MOUNT_DISKS, m)
+                    if m.os.extra_packages:
+                        run_action(constants.ACTION_INSTALL_OS_PG_PREREQS, m)
                     logger.info("Skipping Postgres setup as vm_only set")
                     logger.info(
                         "*** SSH connect string *** - '%s'", get_ssh_connstr(m)
