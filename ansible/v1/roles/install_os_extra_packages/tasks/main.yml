@@ -1,0 +1,12 @@
+---
+
+- name: Extra postgres extensions / random packages needed by user
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ os.extra_packages }}"
+  register: result
+  until: result is success
+  delay: 30
+  retries: 3
+  when: ( os.extra_packages is defined ) and ( os.extra_packages | type_debug == "list" )

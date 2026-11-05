@@ -21,6 +21,7 @@
       when: os.ssh_brute_force_protection | d(True)
     - role: mount_unattached_disks
     - role: install_os_pg_prereqs
+    - role: install_os_extra_packages
     - role: os_setup
     - role: init_pg_instance
     - role: sync-ssh-authorized-keys

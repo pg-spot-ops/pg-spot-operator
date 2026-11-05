@@ -142,7 +142,7 @@ class ArgumentParser(Tap):
     )  # Don't clean up Ansible run files plus extra developer outputs
     vm_only: bool = str_to_bool(
         os.getenv("VM_ONLY", "false")
-    )  # No Ansible / Postgres setup
+    )  # No Postgres setup (disk mounting and OS extra packages installation could still happen depending on --no-mount-disks and --os-extra-packages)
     no_mount_disks: bool = str_to_bool(
         os.getenv("NO_MOUNT_DISKS", "false")
     )  # Skip data disks mounting via Ansible. Relevant only is --vm-only set

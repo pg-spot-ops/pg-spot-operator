@@ -9,4 +9,5 @@
   roles:
     - role: mount_unattached_disks
     - role: install_os_pg_prereqs
+    - role: install_os_extra_packages
     - role: init_pg_instance
